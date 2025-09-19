@@ -1,13 +1,16 @@
 // Import the Express module to create a web server
 const express = require('express');
-
-
+const staffRoute = require('./routes/staffRoute')
 const mongoose = require('mongoose')
 require('dotenv').config()
 
 
+
 // Initialize the Express application
 const app = express();
+
+app.use(express.json())
+app.use('/api/staff',staffRoute)
 
 const connectDb = async () => {
 
@@ -31,12 +34,5 @@ const connectDb = async () => {
 
 
 connectDb();
-
-
-// Define a route for HTTP GET requests to the root path ('/')
-app.get('/', (req, res) => {
-   // Send a response to the client with the text "Server is Running"
-   res.send('Server is Running');
-});
 
 
