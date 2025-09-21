@@ -3,13 +3,14 @@ const express = require('express');
 const staffRoute = require('./routes/staffRoute')
 const mongoose = require('mongoose')
 require('dotenv').config()
-
-
+const cors = require('cors')
 
 // Initialize the Express application
 const app = express();
+app.use(cors())
 
 app.use(express.json())
+
 app.use('/api/staff',staffRoute)
 
 const connectDb = async () => {
