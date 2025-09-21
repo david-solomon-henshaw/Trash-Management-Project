@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, SafeAreaView } from 'react-native';
 import axios from 'axios'
-import {API_BASE_URL} from '../config'
-import {useRouter} from 'expo-router'
-
+import { API_BASE_URL } from '../config'
+import { useRouter } from 'expo-router'
+import { jwtDecode } from 'jwt-decode';
 
 export default function LoginScreen() {
     const [username, setUsername] = useState('');
@@ -15,22 +15,30 @@ export default function LoginScreen() {
 
         console.log('login button pressed', username, password)
 
-        router.replace('ceo')
 
-//         try {
-//             const response = await axios.post(`${API_BASE_URL}/api/staff/signin`,
-//                 {
-//                     username: username,
-//                     password: password
-//                 }
-//             )
-//             console.log('success', response.data)
-//         }
-//        catch (error) {
-//     console.log('Error status:', error.response?.status);
-//     console.log('Error message:', error.response?.data);
-//     console.log('Full error:', error.message);
-// }
+        try {
+            const response = await axios.post(`${API_BASE_URL}/api/staff/signin`,
+                {
+                    username: username,
+                    password: password
+                }
+            )
+
+            if (response.status === 200) {
+                const decode = jwtDecode(response.data.token)
+                const role = decode.user.role
+                router.replace(`/${role}`)
+
+            } else {
+                console.log(response)
+            }
+
+        }
+        catch (error) {
+            console.log('Error status:', error.response?.status);
+            console.log('Error message:', error.response?.data);
+            console.log('Full error:', error.message);
+        }
     };
 
     return (

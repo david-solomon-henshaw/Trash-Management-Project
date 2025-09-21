@@ -73,7 +73,10 @@ const loginStaff = async (req, res) => {
         const payload = {
             user: {
                 id: existingStaff.id,
-                role: existingStaff.role
+                role: existingStaff.role,
+                full_name: existingStaff.full_name,
+                tel: existingStaff.tel,
+                username: existingStaff.username
             }
         }
 
