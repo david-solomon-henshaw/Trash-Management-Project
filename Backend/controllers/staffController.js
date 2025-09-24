@@ -4,56 +4,82 @@ const jwt = require('jsonwebtoken')
 
 
 const createStaff = async (req, res) => {
+  try {
+    const { username, email, password, tel, role, full_name } = req.body;
 
-    try {
-        // Get all the neccessary fields from the user input
-        const { username, email, password, tel, role, full_name } = req.body
-
-        // Check if there is an existing user with that username exists
-        const existingStaff = await Staff.findOne({ username: username })
-
-        //return a response if a existing 
-        if (existingStaff) {
-            console.log(existingStaff)
-            return res.status(400).json({ message: "user with the same username already exists" })
-        }
-
-        // Hasing the password from the user
-        const salt = await bcrypt.genSalt(10)
-        const hashedPassword = await bcrypt.hash(password, salt)
-
-        // create the new user with the new password field
-        const newStaff = new Staff({ username, email, password: hashedPassword, tel, role, full_name })
-        await newStaff.save()
-
-        const payload = {
-            user: {
-                id: newStaff.id,
-                role: newStaff.role,
-            }
-        }
-
-        jwt.sign(
-            payload,
-            process.env.JWT_SECRET,
-            { expiresIn: '1d' },
-            (error, token) => {
-                if (error) throw error
-                res.status(201).json({ token })
-            }
-
-        )
-
-
-
+    // Validate common fields
+    if (!tel || !role || !full_name) {
+      return res.status(400).json({ message: "Phone, role, and full name are required" });
     }
 
-    catch (error) {
-        console.error(error.message)
-        res.status(500).send('Server error')
+    // --- Generate defaults for driver/field_agent ---
+    let staffUsername = username;
+    let staffEmail = email;
+
+    if (role === 'driver' || role === 'field_agent') {
+      staffUsername = `${role}_${tel}_${Date.now()}`; // Unique username
+      staffEmail = `no-email_${role}_${tel}@ecohaul.com`; // Unique email
     }
 
-}
+    // Check if role requires login credentials
+    if (role !== 'driver' && role !== 'field_agent') {
+      if (!username || !email || !password) {
+        return res.status(400).json({
+          message: "Username, email, and password are required for this role"
+        });
+      }
+
+      // Check for existing staff with same username/email
+      const existingStaff = await Staff.findOne({
+        $or: [
+          { username: staffUsername },
+          { email: staffEmail }
+        ]
+      });
+
+      if (existingStaff) {
+        return res.status(400).json({
+          message: existingStaff.username === staffUsername
+            ? "User with this username already exists"
+            : "User with this email already exists"
+        });
+      }
+
+      // Hash password and create staff
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const newStaff = new Staff({
+        username: staffUsername,
+        email: staffEmail,
+        password: hashedPassword,
+        tel,
+        role,
+        full_name
+      });
+      await newStaff.save();
+      return res.status(201).json({ message: 'Staff account created successfully' });
+
+    } else {
+      // For driver/field_agent: Use generated defaults
+      const newStaff = new Staff({
+        username: staffUsername,
+        email: staffEmail, // Now included (unique default)
+        tel,
+        role,
+        full_name
+      });
+      await newStaff.save();
+      return res.status(201).json({
+        message: `${role} ${full_name} added successfully`
+      });
+    }
+
+  } catch (error) {
+    console.error('Create staff error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 
 const loginStaff = async (req, res) => {
     // accepting the user details 
