@@ -32,6 +32,7 @@ export default function CeoTabLayout() {
         options={{
           title: 'Fleet',
           tabBarIcon: ({ color, size }) => <Ionicons name="car" size={size} color={color} />,
+          headerShown: false
         
         }}
       />
@@ -48,6 +49,8 @@ export default function CeoTabLayout() {
         options={{
           title: 'Reports',
           tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} />,
+          headerShown: false
+
         }}
       />
       <Tabs.Screen
@@ -55,6 +58,8 @@ export default function CeoTabLayout() {
         options={{
           title: 'Map',
           tabBarIcon: ({ color, size }) => <Ionicons name="map" size={size} color={color} />,
+          headerShown: false
+
         }}
       />
     </Tabs>

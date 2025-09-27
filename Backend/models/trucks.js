@@ -1,10 +1,11 @@
+
 const mongoose = require('mongoose');
 
 const truckSchema = new mongoose.Schema({
-  plate: { type: String, required: true, unique: true, trim: true },
-  model: { type: String, required: true, trim: true },
-  capacity: { type: Number, required: true, min: 0 },
-  status: { type: String, enum: ['operational', 'maintenance', 'inactive'], default: 'operational' },
+  plate_number: { type: String, required: true, unique: true, trim: true },
+  truckModel: { type: String, required: true, trim: true },
+  truckCapacity: { type: Number, required: true, min: 0 },
+  truckStatus: { type: String, enum: ['operational', 'maintenance', 'inactive'], default: 'operational' },
   assigned_team: { type: mongoose.Schema.Types.ObjectId, ref: 'Teams' },
   maintenance_history: [{
     issue: { type: String, required: true },
@@ -13,7 +14,7 @@ const truckSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now }
   }],
   assignment_history: [{
-    assigned_to: { type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
+    assigned_team: { type: mongoose.Schema.Types.ObjectId, ref: 'Teams' },
     date: { type: Date, default: Date.now }
   }],
   created_at: { type: Date, default: Date.now },

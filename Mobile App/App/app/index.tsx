@@ -4,6 +4,7 @@ import axios from 'axios'
 import { API_BASE_URL } from '../config'
 import { useRouter } from 'expo-router'
 import { jwtDecode } from 'jwt-decode';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
     const [username, setUsername] = useState('');
@@ -25,6 +26,7 @@ export default function LoginScreen() {
             )
 
             if (response.status === 200) {
+                await AsyncStorage.setItem('token', response.data.token);
                 const decode = jwtDecode(response.data.token)
                 const role = decode.user.role
                 router.replace(`/${role}`)

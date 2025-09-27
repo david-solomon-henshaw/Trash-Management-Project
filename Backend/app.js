@@ -1,6 +1,7 @@
 // Import the Express module to create a web server
 const express = require('express');
 const staffRoute = require('./routes/staffRoute')
+const truckRoute = require('./routes/truckRoute')
 const mongoose = require('mongoose')
 require('dotenv').config()
 const cors = require('cors')
@@ -12,6 +13,18 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api/staff',staffRoute)
+app.use('/api/trucks', truckRoute)
+
+// Handle 404 for unmatched routes
+app.use((req, res, next) => {
+  res.status(404).json({ message: `Route ${req.originalUrl} not found` });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Internal server error' });
+});
 
 const connectDb = async () => {
 
