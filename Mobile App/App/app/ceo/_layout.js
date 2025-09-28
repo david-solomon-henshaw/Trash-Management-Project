@@ -53,6 +53,16 @@ export default function CeoTabLayout() {
 
         }}
       />
+
+<Tabs.Screen
+        name="streets"
+        options={{
+          title: 'Street',
+          tabBarIcon: ({ color, size }) => <Ionicons name="pin" size={size} color={color} />,
+          headerShown: false
+        }}
+      />
+
       <Tabs.Screen
         name="map"
         options={{
@@ -63,5 +73,8 @@ export default function CeoTabLayout() {
         }}
       />
     </Tabs>
+
+    
+    
   );
 }

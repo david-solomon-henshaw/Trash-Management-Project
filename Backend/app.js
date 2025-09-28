@@ -2,6 +2,8 @@
 const express = require('express');
 const staffRoute = require('./routes/staffRoute')
 const truckRoute = require('./routes/truckRoute')
+const streetRoute = require('./routes/streetRoute')
+
 const mongoose = require('mongoose')
 require('dotenv').config()
 const cors = require('cors')
@@ -14,6 +16,7 @@ app.use(express.json())
 
 app.use('/api/staff',staffRoute)
 app.use('/api/trucks', truckRoute)
+app.use('/api/street',streetRoute)
 
 // Handle 404 for unmatched routes
 app.use((req, res, next) => {
