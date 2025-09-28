@@ -23,24 +23,7 @@ const truckSchema = new mongoose.Schema({
     enum: ['operational', 'maintenance', 'inactive'],
     required: [true, 'Truck status is required'],
   },
-  assigned_team: [
-    {
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Users',
-        required: [true, 'User ID is required'],
-      },
-      role: {
-        type: String,
-        enum: ['supervisor', 'driver', 'field_agent'],
-        required: [true, 'Role is required'],
-      },
-      date: {
-        type: Date,
-        required: [true, 'Assignment date is required'],
-      },
-    },
-  ],
+  // Removed assigned_team - now handled through Routes
   maintenance_history: [
     {
       maintenance_date: { type: Date, default: Date.now },
@@ -49,13 +32,8 @@ const truckSchema = new mongoose.Schema({
   ],
   assignment_history: [
     {
-      assigned_team: [
-        {
-          user: { type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
-          role: { type: String, enum: ['supervisor', 'driver', 'packer'] },
-          date: { type: Date },
-        },
-      ],
+      route: { type: mongoose.Schema.Types.ObjectId, ref: 'Routes' },
+      team: { type: mongoose.Schema.Types.ObjectId, ref: 'Teams' },
       logged_at: { type: Date, default: Date.now },
     },
   ],

@@ -1,5 +1,7 @@
 const Truck = require('../models/trucks');
 const Staff = require('../models/staff');
+const Team = require('../models/teams');
+const Route = require('../models/truck_routes');
 
 const createTruck = async (req, res) => {
   if (req.user && req.user.role !== 'ceo') {
@@ -54,12 +56,11 @@ const createTruck = async (req, res) => {
   }
 };
 
-const assignTeamToTruck = async (req, res) => {
-  const { id } = req.params; // Truck ID
-  const { team_members, assignment_date } = req.body; // team_members: [{ user, role }], date
+const assignRouteToTruck = async (req, res) => {
+  const { truck_id, team_members, street_ids, scheduled_date, route_name } = req.body;
 
   if (req.user.role !== 'ceo') {
-    return res.status(403).json({ message: 'Only CEO can assign teams' });
+    return res.status(403).json({ message: 'Only CEO can assign routes' });
   }
 
   // Validate inputs
@@ -67,13 +68,27 @@ const assignTeamToTruck = async (req, res) => {
     return res.status(400).json({ message: 'Team members array is required and cannot be empty' });
   }
 
-  if (!assignment_date) {
-    return res.status(400).json({ message: 'Assignment date is required' });
+  if (!Array.isArray(street_ids) || street_ids.length === 0) {
+    return res.status(400).json({ message: 'Streets array is required and cannot be empty' });
   }
 
-  const parsedDate = new Date(assignment_date);
+  if (!scheduled_date) {
+    return res.status(400).json({ message: 'Scheduled date is required' });
+  }
+
+  if (!route_name || !route_name.trim()) {
+    return res.status(400).json({ message: 'Route name is required' });
+  }
+
+  const parsedDate = new Date(scheduled_date);
   if (isNaN(parsedDate)) {
-    return res.status(400).json({ message: 'Invalid assignment date' });
+    return res.status(400).json({ message: 'Invalid scheduled date' });
+  }
+
+  // Find supervisor in team
+  const supervisor = team_members.find(member => member.role === 'supervisor');
+  if (!supervisor) {
+    return res.status(400).json({ message: 'Team must have a supervisor' });
   }
 
   // Validate team members
@@ -91,40 +106,53 @@ const assignTeamToTruck = async (req, res) => {
   }
 
   try {
-    const truck = await Truck.findById(id);
+    // Check if truck exists
+    const truck = await Truck.findById(truck_id);
     if (!truck) {
       return res.status(404).json({ message: 'Truck not found' });
     }
 
-    // Log current assigned_team to assignment_history
-    if (truck.assigned_team && truck.assigned_team.length > 0) {
-      truck.assignment_history.push({
-        assigned_team: truck.assigned_team,
-        logged_at: new Date(),
-      });
-    }
+    // Create team
+    const team = new Team({
+      team_members: team_members,
+      assignment_date: parsedDate,
+      created_by: req.user.id
+    });
+    await team.save();
 
-    // Assign new team with date
-    truck.assigned_team = team_members.map(member => ({
-      user: member.user,
-      role: member.role,
-      date: parsedDate,
-    }));
+    // Create route
+    const route = new Route({
+      name: route_name.trim(),
+      streets: street_ids,
+      assigned_team: team._id,
+      assigned_truck: truck_id,
+      supervisor: supervisor.user,
+      scheduled_date: parsedDate
+    });
+    await route.save();
+
+    // Update truck assignment history
+    truck.assignment_history.push({
+      route: route._id,
+      team: team._id,
+      logged_at: new Date(),
+    });
     await truck.save();
 
-    return res.status(200).json({
-      message: 'Team assigned successfully',
-      truck: {
-        _id: truck._id,
-        plate_number: truck.plate_number,
-        truckModel: truck.truckModel,
-        truckCapacity: truck.truckCapacity,
-        truckStatus: truck.truckStatus,
-        assigned_team: truck.assigned_team,
+    return res.status(201).json({
+      message: 'Route assigned successfully',
+      route: {
+        _id: route._id,
+        name: route.name,
+        scheduled_date: route.scheduled_date,
+        status: route.status,
+        assigned_truck: truck_id,
+        assigned_team: team._id,
+        supervisor: supervisor.user
       },
     });
   } catch (error) {
-    return res.status(500).json({ message: `Failed to assign team: ${error.message}` });
+    return res.status(500).json({ message: `Failed to assign route: ${error.message}` });
   }
 };
 
@@ -135,8 +163,7 @@ const getAllTrucks = async (req, res) => {
 
   try {
     const trucks = await Truck.find()
-      .select('plate_number truckModel truckCapacity truckStatus assigned_team')
-      .populate('assigned_team.user', 'full_name'); // Populate user names
+      .select('plate_number truckModel truckCapacity truckStatus assignment_history');
 
     if (trucks.length === 0) {
       return res.status(200).json({
@@ -156,4 +183,41 @@ const getAllTrucks = async (req, res) => {
   }
 };
 
-module.exports = { createTruck, assignTeamToTruck, getAllTrucks };
+// New function for supervisors to get their assignments
+const getSupervisorAssignments = async (req, res) => {
+  if (!req.user || req.user.role !== 'supervisor') {
+    return res.status(403).json({ message: 'Only supervisors can view their assignments' });
+  }
+
+  try {
+    const supervisorId = req.user.id;
+    
+    const assignments = await Route.find({ supervisor: supervisorId })
+      .populate('assigned_truck', 'plate_number truckModel truckCapacity truckStatus')
+      .populate({
+        path: 'assigned_team',
+        populate: {
+          path: 'team_members.user',
+          select: 'full_name role'
+        }
+      })
+      .populate('streets', 'name location')
+      .sort({ scheduled_date: -1 });
+
+    return res.status(200).json({
+      message: 'Assignments retrieved successfully',
+      assignments,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: `Failed to retrieve assignments: ${error.message}`,
+    });
+  }
+};
+
+module.exports = { 
+  createTruck, 
+  assignRouteToTruck, 
+  getAllTrucks, 
+  getSupervisorAssignments 
+};
