@@ -10,8 +10,8 @@ const auth = require('../middleware/auth'); // Assuming you have auth middleware
 
 // CEO only routes
 router.post('/create', auth, createTruck);
-router.post('/trucks/assign-route', auth, assignRouteToTruck);
-router.get('/fleet', auth, getAllTrucks);
+router.post('/assign-route', auth, assignRouteToTruck);
+router.get('/', auth, getAllTrucks);
 
 // Supervisor routes
 router.get('/assignments/my-assignments', auth, getSupervisorAssignments);

@@ -25,7 +25,7 @@ const ViewTrucks = () => {
     try {
       const token = await AsyncStorage.getItem('token'); 
       const response = await axios.get(
-        `${API_BASE_URL}/api/trucks/fleet`,
+        `${API_BASE_URL}/api/trucks/`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

@@ -1,3 +1,8 @@
 node_modules
 .env
 config.js
+
+
+
+
+save the teams first to the database so we can get the id of that teams and attach it to the truck routes value for teams

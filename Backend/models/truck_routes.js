@@ -1,11 +1,6 @@
 const mongoose = require('mongoose');
 
 const routeSchema = new mongoose.Schema({
-  name: { 
-    type: String, 
-    required: [true, 'Route name is required'],
-    trim: true 
-  },
   streets: [{ 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Streets' 

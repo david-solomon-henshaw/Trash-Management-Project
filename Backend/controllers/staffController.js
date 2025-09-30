@@ -127,7 +127,19 @@ const loginStaff = async (req, res) => {
 }
 
 
+// Get all staff members
+const getAllStaff = async (req, res) => {
+  try {
+    const staffList = await Staff.find();
+    res.status(200).json(staffList);
+  } catch (error) {
+    console.error('Get all staff error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
     createStaff,
-    loginStaff
+    loginStaff,
+    getAllStaff
 }

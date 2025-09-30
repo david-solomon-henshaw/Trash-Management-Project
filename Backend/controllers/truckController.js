@@ -32,7 +32,7 @@ const createTruck = async (req, res) => {
       return res.status(409).json({ message: `Truck with plate number ${cleanPlate} already exists` });
     }
 
-    const newTruck = new Truck({ 
+    const newTruck = new Truck({
       plate_number: cleanPlate,
       truckModel: cleanModel,
       truckCapacity: cleanCapacity,
@@ -56,8 +56,11 @@ const createTruck = async (req, res) => {
   }
 };
 
+
+
+
 const assignRouteToTruck = async (req, res) => {
-  const { truck_id, team_members, street_ids, scheduled_date, route_name } = req.body;
+  const { truck_id, team_members, street_ids, scheduled_date } = req.body;
 
   if (req.user.role !== 'ceo') {
     return res.status(403).json({ message: 'Only CEO can assign routes' });
@@ -76,11 +79,8 @@ const assignRouteToTruck = async (req, res) => {
     return res.status(400).json({ message: 'Scheduled date is required' });
   }
 
-  if (!route_name || !route_name.trim()) {
-    return res.status(400).json({ message: 'Route name is required' });
-  }
-
   const parsedDate = new Date(scheduled_date);
+
   if (isNaN(parsedDate)) {
     return res.status(400).json({ message: 'Invalid scheduled date' });
   }
@@ -122,7 +122,6 @@ const assignRouteToTruck = async (req, res) => {
 
     // Create route
     const route = new Route({
-      name: route_name.trim(),
       streets: street_ids,
       assigned_team: team._id,
       assigned_truck: truck_id,
@@ -191,7 +190,7 @@ const getSupervisorAssignments = async (req, res) => {
 
   try {
     const supervisorId = req.user.id;
-    
+
     const assignments = await Route.find({ supervisor: supervisorId })
       .populate('assigned_truck', 'plate_number truckModel truckCapacity truckStatus')
       .populate({
@@ -215,9 +214,9 @@ const getSupervisorAssignments = async (req, res) => {
   }
 };
 
-module.exports = { 
-  createTruck, 
-  assignRouteToTruck, 
-  getAllTrucks, 
-  getSupervisorAssignments 
+module.exports = {
+  createTruck,
+  assignRouteToTruck,
+  getAllTrucks,
+  getSupervisorAssignments
 };
