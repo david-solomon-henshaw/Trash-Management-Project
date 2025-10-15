@@ -1,11 +1,27 @@
-const express = require('express')
-const router = express.Router()
-const {addStreet,getAllStreets} = require('../controllers/streetController')
+const express = require('express');
+const router = express.Router();
+const {
+  addStreet,
+  getAllStreets,
+  getStreetById,
+  updateStreet,
+  deleteStreet
+} = require('../controllers/streetController');
 const auth = require('../middleware/auth'); // Assuming you have auth middleware
 
+// Create a new street (CEO only)
+router.post('/create', auth, addStreet);
 
-router.post('/create', auth, addStreet)
-router.get('/',getAllStreets)
+// Get all streets (public or authenticated - adjust as needed)
+router.get('/all', getAllStreets);
 
+// Get single street by ID
+router.get('/:id', auth, getStreetById);
 
-module.exports = router
+// Update street (CEO only)
+router.put('/:id', auth, updateStreet);
+
+// Delete street (CEO only)
+router.delete('/:id', auth, deleteStreet);
+
+module.exports = router;

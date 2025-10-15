@@ -12,18 +12,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { API_BASE_URL } from '../../config';
-import { useRouter } from 'expo-router'
+import { API_BASE_URL } from '../../../config';
+import { useRouter } from 'expo-router';
 
-
-export default function StreetForm({ navigation }) {
+export default function AddStreetForm() {
   const [formData, setFormData] = useState({
     streetName: '',
     details: '',
   });
   const [loading, setLoading] = useState(false);
-    const router = useRouter()
-
+  const router = useRouter();
 
   useEffect(() => {
     checkAuth();
@@ -33,11 +31,11 @@ export default function StreetForm({ navigation }) {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        router.replace('Login');
+        router.replace('/Login');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('Login');
+      router.replace('/Login');
     }
   };
 
@@ -85,7 +83,7 @@ export default function StreetForm({ navigation }) {
           },
           {
             text: 'Done',
-            onPress: () => navigation.goBack(),
+            onPress: () => router.back(),
             style: 'cancel',
           },
         ]
@@ -112,11 +110,11 @@ export default function StreetForm({ navigation }) {
         'You have unsaved changes. Are you sure you want to go back?',
         [
           { text: 'Stay', style: 'cancel' },
-          { text: 'Discard', onPress: () => navigation.goBack(), style: 'destructive' },
+          { text: 'Discard', onPress: () => router.back(), style: 'destructive' },
         ]
       );
     } else {
-      navigation.goBack();
+      router.back();
     }
   };
 

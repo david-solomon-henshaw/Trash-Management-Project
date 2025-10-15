@@ -7,7 +7,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import { API_BASE_URL } from '../../App/config';
+import { API_BASE_URL } from '../config';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RouteAndTruckSelection from './RouteAndTruckSelection';
