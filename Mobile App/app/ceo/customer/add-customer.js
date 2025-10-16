@@ -6,18 +6,25 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  SafeAreaView,
   Modal,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../../config';
+import { API_BASE_URL } from '../../../config';
+import { useRouter } from 'expo-router';
 
-export default function CustomerForm() {
-  const [streets, setStreets] = useState([])
-
+export default function AddCustomerForm() {
+  const router = useRouter();
+  const [streets, setStreets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [apartmentTypes, setApartmentTypes] = useState([]);
+const [commercialSubtypes, setCommercialSubtypes] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -38,46 +45,53 @@ export default function CustomerForm() {
     commercial_subtype: false,
     status: false
   });
-  const fetchData = async () => {
-
-      const token = await AsyncStorage.getItem('token')
-        const headers = {Authorization: `Bearer ${token}`}
-    try {
-
-      
-        const streetData = await axios.get(`${API_BASE_URL}/api/street` ,{headers})
-        setStreets(streetData.data.streets || [])
-        console.log(streets, streetData)
-
-    } catch (error) {
-        console.log(error)
-    }
-  }
 
   useEffect(() => {
-    fetchData()
-  }, [])
-  
+    checkAuth();
+    fetchData();
+  }, []);
 
-  const apartmentTypes = [
-    { id: '1', name: 'Studio' },
-    { id: '2', name: '1 Bedroom' },
-    { id: '3', name: '2 Bedroom' },
-    { id: '4', name: '3 Bedroom' },
-    { id: '5', name: 'Penthouse' }
-  ];
+  const checkAuth = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        router.replace('/Login');
+      }
+    } catch (error) {
+      console.error('Auth check error:', error);
+      router.replace('/Login');
+    }
+  };
 
-  const commercialSubtypes = [
-    { id: '1', name: 'Restaurant' },
-    { id: '2', name: 'Retail Store' },
-    { id: '3', name: 'Office' },
-    { id: '4', name: 'Hotel' },
-    { id: '5', name: 'Warehouse' }
-  ];
+const fetchData = async () => {
+  try {
+    const token = await AsyncStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
 
-  const customerTypes = [
+    // Fetch streets
+    const streetData = await axios.get(`${API_BASE_URL}/api/street/all`, { headers });
+    setStreets(streetData.data.streets || []);
+
+    // Fetch apartment types
+    const apartmentTypeData = await axios.get(`${API_BASE_URL}/api/apartment-types`, { headers });
+    setApartmentTypes(apartmentTypeData.data.apartmentTypes || []);
+
+    // Fetch commercial subtypes
+    const commercialSubtypeData = await axios.get(`${API_BASE_URL}/api/commercial-subtypes`, { headers });
+    setCommercialSubtypes(commercialSubtypeData.data.commercialSubtypes || []);
+
+  } catch (error) {
+    console.error('Fetch error:', error);
+    Alert.alert('Error', 'Failed to fetch data');
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+    const customerTypes = [
     { value: 'residential', label: 'Residential' },
-    { value: 'commercial', label: 'Commercial' }
+    { value: 'commercial', label: 'Commercial' },
   ];
 
   const statusOptions = [
@@ -90,6 +104,8 @@ export default function CustomerForm() {
       ...prev,
       [field]: value
     }));
+
+    console.log(formData)
   };
 
   const toggleDropdown = (field) => {
@@ -106,11 +122,101 @@ export default function CustomerForm() {
       [`${field}_label`]: label
     }));
     setShowDropdown(prev => ({ ...prev, [field]: false }));
+    console.log(formData)
   };
 
-  const handleSubmit = () => {
-    console.log('Form submitted:', formData);
-    // Add your submission logic here
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      Alert.alert('Validation Error', 'Name is required');
+      return false;
+    }
+    if (!formData.phone.trim()) {
+      Alert.alert('Validation Error', 'Phone number is required');
+      return false;
+    }
+    if (!formData.street) {
+      Alert.alert('Validation Error', 'Street is required');
+      return false;
+    }
+    if (!formData.house_number.trim()) {
+      Alert.alert('Validation Error', 'House number is required');
+      return false;
+    }
+    if (!formData.address.trim()) {
+      Alert.alert('Validation Error', 'Full address is required');
+      return false;
+    }
+    if (!formData.customer_type) {
+      Alert.alert('Validation Error', 'Customer type is required');
+      return false;
+    }
+    if (formData.customer_type === 'residential' && !formData.apartment_type) {
+      Alert.alert('Validation Error', 'Apartment type is required for residential customers');
+      return false;
+    }
+    if (formData.customer_type === 'commercial' && !formData.commercial_subtype) {
+      Alert.alert('Validation Error', 'Business type is required for commercial customers');
+      return false;
+    }
+    return true;
+  };
+
+ const handleSubmit = async () => {
+  if (!validateForm()) return;
+  setSubmitting(true);
+
+  try {
+    const token = await AsyncStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+
+    const payload = {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      address: formData.address,
+      house_number: formData.house_number,
+      street: formData.street,
+      customer_type: formData.customer_type,
+      apartment_type: formData.apartment_type,
+      commercial_subtype: formData.commercial_subtype,
+      status: formData.status,
+    };
+
+    const response = await axios.post(
+      `${API_BASE_URL}/api/customers`,
+      payload,
+      { headers }
+    );
+
+    Alert.alert('Success', 'Customer created successfully!');
+    router.back();
+
+  } catch (error) {
+    console.error('Submit error:', error);
+    Alert.alert('Error', 'Failed to create customer');
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+
+  const handleCancel = () => {
+    const hasData = Object.values(formData).some(value => 
+      value !== '' && value !== 'active'
+    );
+
+    if (hasData) {
+      Alert.alert(
+        'Discard Changes?',
+        'You have unsaved changes. Are you sure you want to go back?',
+        [
+          { text: 'Stay', style: 'cancel' },
+          { text: 'Discard', onPress: () => router.back(), style: 'destructive' },
+        ]
+      );
+    } else {
+      router.back();
+    }
   };
 
   const DropdownModal = ({ visible, onClose, options, field, title }) => (
@@ -135,12 +241,18 @@ export default function CustomerForm() {
           <ScrollView style={styles.modalList}>
             {options.map(option => (
               <TouchableOpacity
-                key={option.id || option.value}
+                key={option.id || option._id || option.value}
                 style={styles.modalItem}
-                onPress={() => handleSelect(field, option.id || option.value, option.name || option.label)}
+                onPress={() => handleSelect(
+                  field, 
+                  option.id || option._id || option.value, 
+                  option.name || option.streetName || option.label
+                )}
               >
-                <Text style={styles.modalItemText}>{option.name || option.label}</Text>
-                {formData[field] === (option.id || option.value) && (
+                <Text style={styles.modalItemText}>
+                  {option.name || option.streetName || option.label}
+                </Text>
+                {formData[field] === (option.id || option._id || option.value) && (
                   <Ionicons name="checkmark" size={20} color="#2E8B57" />
                 )}
               </TouchableOpacity>
@@ -151,14 +263,26 @@ export default function CustomerForm() {
     </Modal>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2E8B57" />
+          <Text style={styles.loadingText}>Loading form data...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
       
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity style={styles.backButton}>
+          <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerText}>
@@ -279,12 +403,13 @@ export default function CustomerForm() {
               <TextInput
                 style={[styles.input, styles.textarea]}
                 placeholder="Enter full address"
-                value={formData.address}
+                value={formData.house_number + ' '+ formData.street_label}
                 onChangeText={(value) => handleInputChange('address', value)}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
                 placeholderTextColor="#999"
+                editable={false}
               />
             </View>
           </View>
@@ -370,11 +495,21 @@ export default function CustomerForm() {
 
       {/* Fixed Bottom Buttons */}
       <View style={styles.bottomButtons}>
-        <TouchableOpacity style={styles.cancelButton}>
+        <TouchableOpacity 
+          style={styles.cancelButton}
+          onPress={handleCancel}
+          disabled={submitting}
+        >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Create Customer</Text>
+        <TouchableOpacity 
+          style={[styles.submitButton, submitting && styles.disabledButton]} 
+          onPress={handleSubmit}
+          disabled={submitting}
+        >
+          <Text style={styles.submitButtonText}>
+            {submitting ? 'Creating...' : 'Create Customer'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -393,20 +528,21 @@ export default function CustomerForm() {
         field="customer_type"
         title="Select Customer Type"
       />
-      <DropdownModal
-        visible={showDropdown.apartment_type}
-        onClose={() => toggleDropdown('apartment_type')}
-        options={apartmentTypes}
-        field="apartment_type"
-        title="Select Apartment Type"
-      />
-      <DropdownModal
-        visible={showDropdown.commercial_subtype}
-        onClose={() => toggleDropdown('commercial_subtype')}
-        options={commercialSubtypes}
-        field="commercial_subtype"
-        title="Select Business Type"
-      />
+<DropdownModal
+  visible={showDropdown.apartment_type}
+  onClose={() => toggleDropdown('apartment_type')}
+  options={apartmentTypes}
+  field="apartment_type"
+  title="Select Apartment Type"
+/>
+<DropdownModal
+  visible={showDropdown.commercial_subtype}
+  onClose={() => toggleDropdown('commercial_subtype')}
+  options={commercialSubtypes}
+  field="commercial_subtype"
+  title="Select Business Type"
+/>
+
       <DropdownModal
         visible={showDropdown.status}
         onClose={() => toggleDropdown('status')}
@@ -422,6 +558,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f0f0f0',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748B',
   },
   header: {
     backgroundColor: '#2E8B57',
@@ -574,6 +720,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
+    opacity: 0.6,
   },
   modalOverlay: {
     flex: 1,

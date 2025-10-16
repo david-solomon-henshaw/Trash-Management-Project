@@ -3,6 +3,9 @@ const express = require('express');
 const staffRoute = require('./routes/staffRoute')
 const truckRoute = require('./routes/truckRoute')
 const streetRoute = require('./routes/streetRoute')
+const customerRoute = require('./routes/customerRoutes')
+const commercialSubtypeRoute = require('./routes/commercialSubTypeRoutes')
+const apartmentTypeRoute = require('./routes/apartmentRoute')
 
 const mongoose = require('mongoose')
 require('dotenv').config()
@@ -17,6 +20,10 @@ app.use(express.json())
 app.use('/api/staff',staffRoute)
 app.use('/api/trucks', truckRoute)
 app.use('/api/street',streetRoute)
+app.use('/api/customer',customerRoute)
+app.use('/api/apartment-types',apartmentTypeRoute)
+app.use('/api/commercial-subtypes',commercialSubtypeRoute)
+
 
 // Handle 404 for unmatched routes
 app.use((req, res, next) => {
