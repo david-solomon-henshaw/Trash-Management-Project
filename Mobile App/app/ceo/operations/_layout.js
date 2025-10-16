@@ -26,6 +26,18 @@ export default function OperationsLayout() {
           title: 'Fleet Management',
         }}
       />
+      <Stack.Screen
+        name="apartment-types"
+        options={{
+          title: 'Apartment Types',
+        }}
+      />
+      <Stack.Screen
+        name="commercial-subtypes"
+        options={{
+          title: 'Commercial Subtypes',
+        }}
+      />
     </Stack>
   );
 }

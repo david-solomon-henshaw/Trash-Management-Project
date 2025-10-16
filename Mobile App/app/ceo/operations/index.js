@@ -16,12 +16,12 @@ export default function OperationsIndex() {
 
   const operationsActions = [
     {
-      id: 'staff',
+      id: 'staffs',
       title: 'Staff Management',
       description: 'Manage staff accounts and roles',
       icon: 'people-outline',
       color: '#2E8B57',
-      route: '/ceo/operations/staffs',
+      route: '/ceo/operations/staff',
     },
     {
       id: 'fleet',
@@ -30,6 +30,22 @@ export default function OperationsIndex() {
       icon: 'car-outline',
       color: '#F59E0B',
       route: '/ceo/operations/fleet',
+    },
+    {
+      id: 'apartment-types',
+      title: 'Apartment Types',
+      description: 'Manage apartment types and base fees',
+      icon: 'home-outline',
+      color: '#3B82F6',
+      route: '/ceo/operations/apartment-types',
+    },
+    {
+      id: 'commercial-subtypes',
+      title: 'Commercial Subtypes',
+      description: 'Manage commercial subtypes and base fees',
+      icon: 'business-outline',
+      color: '#8B5CF6',
+      route: '/ceo/operations/commercial-subtypes',
     },
   ];
 
@@ -46,7 +62,7 @@ export default function OperationsIndex() {
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Operations Management</Text>
           <Text style={styles.headerSubtitle}>
-            Manage staff, trucks, and routes
+            Manage staff, trucks, apartment types, and commercial subtypes
           </Text>
         </View>
       </View>
@@ -93,7 +109,6 @@ export default function OperationsIndex() {
   );
 }
 
-// Use the same styles as in your Streets example
 const styles = StyleSheet.create({
   container: {
     flex: 1,
