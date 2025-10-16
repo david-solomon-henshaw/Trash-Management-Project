@@ -28,22 +28,15 @@ export default function CeoTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="fleet"
+        name="operations"
         options={{
-          title: 'Fleet',
+          title: 'Operations',
           tabBarIcon: ({ color, size }) => <Ionicons name="car" size={size} color={color} />,
           headerShown: false
         
         }}
       />
-      <Tabs.Screen
-        name="staffs"
-        options={{
-          title: 'Staff',
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" size={size} color={color} />,
-          headerShown: false
-        }}
-      />
+    
       <Tabs.Screen
         name="reports"
         options={{

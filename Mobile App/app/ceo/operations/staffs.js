@@ -10,7 +10,7 @@ import {
     StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { API_BASE_URL } from '../../config'
+import { API_BASE_URL } from '../../../config'
 import axios from 'axios'
 
 

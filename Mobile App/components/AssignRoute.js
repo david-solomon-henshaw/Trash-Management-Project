@@ -48,7 +48,7 @@ const AssignRoute = () => {
         Alert.alert('Error', 'Failed to load staff data');
       }
       try {
-        const streetsRes = await axios.get(`${API_BASE_URL}/api/street`, { headers });
+        const streetsRes = await axios.get(`${API_BASE_URL}/api/street/all`, { headers });
         setStreets(streetsRes.data.streets || []);
       } catch (streetsError) {
         Alert.alert('Error', 'Failed to load streets data');

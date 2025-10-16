@@ -9,9 +9,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Import components
-import CreateTruck from '../../components/CreateTruck';
-import AssignRoute from '../../components/AssignRoute';
-import ViewTrucks from '../../components/ViewTrucks';
+import CreateTruck from '../../../components/CreateTruck';
+import AssignRoute from '../../../components/AssignRoute';
+import ViewTrucks from '../../../components/ViewTrucks';
 
 const Fleet = () => {
   const [activeTab, setActiveTab] = useState('create');
