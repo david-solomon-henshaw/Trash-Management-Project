@@ -20,7 +20,7 @@ app.use(express.json())
 app.use('/api/staff',staffRoute)
 app.use('/api/trucks', truckRoute)
 app.use('/api/street',streetRoute)
-app.use('/api/customer',customerRoute)
+app.use('/api/customers',customerRoute)
 app.use('/api/apartment-types',apartmentTypeRoute)
 app.use('/api/commercial-subtypes',commercialSubtypeRoute)
 

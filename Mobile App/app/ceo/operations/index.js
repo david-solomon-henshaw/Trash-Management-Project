@@ -21,7 +21,7 @@ export default function OperationsIndex() {
       description: 'Manage staff accounts and roles',
       icon: 'people-outline',
       color: '#2E8B57',
-      route: '/ceo/operations/staff',
+      route: '/ceo/operations/staffs',
     },
     {
       id: 'fleet',

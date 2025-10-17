@@ -1,15 +1,16 @@
 const Customer = require('../models/customer');
+const ApartmentType = require('../models/apartment');
+const CommercialSubtype = require('../models/commercial');
 
 // Get all customers (with populated references)
 const getAllCustomers = async (req, res) => {
   try {
     const customers = await Customer.find()
       .populate('street', 'name')
-      .populate('apartment_type', 'name')
-      .populate('commercial_subtype', 'name')
-      .sort({ created_at: -1 }); // Sort by newest first
-    
-    // Transform data to match frontend expectations
+      .populate('apartment_type', 'name base_fee')
+      .populate('commercial_subtype', 'name base_fee')
+      .sort({ created_at: -1 });
+
     const transformedCustomers = customers.map(customer => ({
       _id: customer._id,
       name: customer.name,
@@ -19,19 +20,22 @@ const getAllCustomers = async (req, res) => {
       house_number: customer.house_number,
       street: {
         _id: customer.street._id,
-        streetName: customer.street.name
+        streetName: customer.street.name,
       },
       customer_type: customer.customer_type,
       apartment_type: customer.apartment_type,
       commercial_subtype: customer.commercial_subtype,
+      base_fee: customer.customer_type === 'residential'
+        ? customer.apartment_type?.base_fee
+        : customer.commercial_subtype?.base_fee,
       status: customer.status,
       createdAt: customer.created_at,
-      updatedAt: customer.updated_at
+      updatedAt: customer.updated_at,
     }));
-    
-    return res.status(200).json({ 
-      message: transformedCustomers.length === 0 ? 'No customers found' : 'Customers found', 
-      customers: transformedCustomers 
+
+    return res.status(200).json({
+      message: transformedCustomers.length === 0 ? 'No customers found' : 'Customers found',
+      customers: transformedCustomers,
     });
   } catch (error) {
     console.error('Get all customers error:', error);
@@ -43,17 +47,15 @@ const getAllCustomers = async (req, res) => {
 const getCustomerById = async (req, res) => {
   try {
     const { id } = req.params;
-    
     const customer = await Customer.findById(id)
       .populate('street', 'name')
-      .populate('apartment_type', 'name')
-      .populate('commercial_subtype', 'name');
-    
+      .populate('apartment_type', 'name base_fee')
+      .populate('commercial_subtype', 'name base_fee');
+
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
-    
-    // Transform data
+
     const transformedCustomer = {
       _id: customer._id,
       name: customer.name,
@@ -63,27 +65,28 @@ const getCustomerById = async (req, res) => {
       house_number: customer.house_number,
       street: {
         _id: customer.street._id,
-        streetName: customer.street.name
+        streetName: customer.street.name,
       },
       customer_type: customer.customer_type,
       apartment_type: customer.apartment_type,
       commercial_subtype: customer.commercial_subtype,
+      base_fee: customer.customer_type === 'residential'
+        ? customer.apartment_type?.base_fee
+        : customer.commercial_subtype?.base_fee,
       status: customer.status,
       createdAt: customer.created_at,
-      updatedAt: customer.updated_at
+      updatedAt: customer.updated_at,
     };
-    
-    return res.status(200).json({ 
-      message: 'Customer found', 
-      customer: transformedCustomer 
+
+    return res.status(200).json({
+      message: 'Customer found',
+      customer: transformedCustomer,
     });
   } catch (error) {
     console.error('Get customer by ID error:', error);
-    
     if (error.kind === 'ObjectId') {
       return res.status(400).json({ message: 'Invalid customer ID' });
     }
-    
     return res.status(500).json({ message: 'Server error' });
   }
 };
@@ -93,7 +96,6 @@ const createCustomer = async (req, res) => {
   if (req.user && req.user.role !== 'ceo') {
     return res.status(403).json({ message: 'Only CEO can create customers' });
   }
-  
   try {
     const {
       name,
@@ -105,43 +107,51 @@ const createCustomer = async (req, res) => {
       customer_type,
       apartment_type,
       commercial_subtype,
-      status
+      status,
     } = req.body;
-    
+
     // Validation
-    if (!name?.trim() || !phone?.trim() || !address?.trim() || 
+    if (!name?.trim() || !phone?.trim() || !address?.trim() ||
         !house_number?.trim() || !street || !customer_type) {
-      return res.status(400).json({ 
-        message: 'Name, phone, address, house number, street, and customer type are required' 
+      return res.status(400).json({
+        message: 'Name, phone, address, house number, street, and customer type are required',
       });
     }
-    
+
     // Validate customer type specific requirements
     if (customer_type === 'residential' && !apartment_type) {
-      return res.status(400).json({ 
-        message: 'Apartment type is required for residential customers' 
+      return res.status(400).json({
+        message: 'Apartment type is required for residential customers',
       });
     }
-    
     if (customer_type === 'commercial' && !commercial_subtype) {
-      return res.status(400).json({ 
-        message: 'Business type is required for commercial customers' 
+      return res.status(400).json({
+        message: 'Business type is required for commercial customers',
       });
     }
-    
+
     // Check for duplicate (same street and house number)
-    const existingCustomer = await Customer.findOne({ 
-      street, 
-      house_number: house_number.trim() 
+    const existingCustomer = await Customer.findOne({
+      street,
+      house_number: house_number.trim(),
     });
-    
     if (existingCustomer) {
-      return res.status(400).json({ 
-        message: 'A customer already exists at this address' 
+      return res.status(400).json({
+        message: 'A customer already exists at this address',
       });
     }
-    
-    // Create customer
+
+    // Fetch base_fee based on customer_type
+    let base_fee = 0;
+    if (customer_type === 'residential') {
+      const aptType = await ApartmentType.findById(apartment_type);
+      base_fee = aptType.base_fee;
+    } else if (customer_type === 'commercial') {
+      const commSubtype = await CommercialSubtype.findById(commercial_subtype);
+      base_fee = commSubtype.base_fee;
+    }
+
+    // Create customer data
     const customerData = {
       name: name.trim(),
       email: email?.trim() || '',
@@ -150,29 +160,36 @@ const createCustomer = async (req, res) => {
       house_number: house_number.trim(),
       street,
       customer_type,
-      status: status || 'active'
+      base_fee,
+      status: status || 'active',
+      // Initialize monthly_fees with the current month
+      monthly_fees: [{
+        month: new Date(), // Current month
+        total_fee: base_fee,
+        remaining_balance: base_fee,
+        payments: []
+      }]
     };
-    
+
     if (customer_type === 'residential') {
       customerData.apartment_type = apartment_type;
     }
-    
     if (customer_type === 'commercial') {
       customerData.commercial_subtype = commercial_subtype;
     }
-    
+
     const customer = new Customer(customerData);
     await customer.save();
-    
+
     // Populate and return
     await customer.populate('street', 'name');
     if (customer_type === 'residential') {
-      await customer.populate('apartment_type', 'name');
+      await customer.populate('apartment_type', 'name base_fee');
     }
     if (customer_type === 'commercial') {
-      await customer.populate('commercial_subtype', 'name');
+      await customer.populate('commercial_subtype', 'name base_fee');
     }
-    
+
     return res.status(201).json({
       message: `Customer ${name} added successfully`,
       customer: {
@@ -184,14 +201,15 @@ const createCustomer = async (req, res) => {
         house_number: customer.house_number,
         street: {
           _id: customer.street._id,
-          streetName: customer.street.name
+          streetName: customer.street.name,
         },
         customer_type: customer.customer_type,
         apartment_type: customer.apartment_type,
         commercial_subtype: customer.commercial_subtype,
+        base_fee: customer.base_fee,
         status: customer.status,
-        createdAt: customer.created_at
-      }
+        createdAt: customer.created_at,
+      },
     });
   } catch (error) {
     console.error('Create customer error:', error);
@@ -199,47 +217,48 @@ const createCustomer = async (req, res) => {
   }
 };
 
+
 // Update customer
 const updateCustomer = async (req, res) => {
   if (req.user && req.user.role !== 'ceo') {
     return res.status(403).json({ message: 'Only CEO can update customers' });
   }
-  
+
   try {
     const { id } = req.params;
     const { name, phone, status } = req.body;
-    
+
     // Basic validation
     if (!name?.trim() || !phone?.trim()) {
-      return res.status(400).json({ 
-        message: 'Name and phone are required' 
+      return res.status(400).json({
+        message: 'Name and phone are required',
       });
     }
-    
+
     const customer = await Customer.findById(id);
-    
+
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
-    
+
     // Update fields
     customer.name = name.trim();
     customer.phone = phone.trim();
     customer.status = status || customer.status;
     customer.updated_at = Date.now();
-    
+
     await customer.save();
-    
+
     // Populate and return
     await customer.populate('street', 'name');
     if (customer.customer_type === 'residential') {
-      await customer.populate('apartment_type', 'name');
+      await customer.populate('apartment_type', 'name base_fee');
     }
     if (customer.customer_type === 'commercial') {
-      await customer.populate('commercial_subtype', 'name');
+      await customer.populate('commercial_subtype', 'name base_fee');
     }
-    
-    return res.status(200).json({ 
+
+    return res.status(200).json({
       message: 'Customer updated successfully',
       customer: {
         _id: customer._id,
@@ -250,22 +269,21 @@ const updateCustomer = async (req, res) => {
         house_number: customer.house_number,
         street: {
           _id: customer.street._id,
-          streetName: customer.street.name
+          streetName: customer.street.name,
         },
         customer_type: customer.customer_type,
         apartment_type: customer.apartment_type,
         commercial_subtype: customer.commercial_subtype,
+        base_fee: customer.base_fee,
         status: customer.status,
-        updatedAt: customer.updated_at
-      }
+        updatedAt: customer.updated_at,
+      },
     });
   } catch (error) {
     console.error('Update customer error:', error);
-    
     if (error.kind === 'ObjectId') {
       return res.status(400).json({ message: 'Invalid customer ID' });
     }
-    
     return res.status(500).json({ message: 'Server error' });
   }
 };
@@ -275,40 +293,30 @@ const deleteCustomer = async (req, res) => {
   if (req.user && req.user.role !== 'ceo') {
     return res.status(403).json({ message: 'Only CEO can delete customers' });
   }
-  
+
   try {
     const { id } = req.params;
-    
+
     const customer = await Customer.findById(id);
-    
+
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
-    
-    // Optional: Check if customer has any payments/orders
-    // const hasPayments = await Payment.countDocuments({ customer: id });
-    // if (hasPayments > 0) {
-    //   return res.status(400).json({ 
-    //     message: 'Cannot delete customer with existing payment records' 
-    //   });
-    // }
-    
+
     await Customer.findByIdAndDelete(id);
-    
-    return res.status(200).json({ 
+
+    return res.status(200).json({
       message: 'Customer deleted successfully',
       deletedCustomer: {
         _id: customer._id,
-        name: customer.name
-      }
+        name: customer.name,
+      },
     });
   } catch (error) {
     console.error('Delete customer error:', error);
-    
     if (error.kind === 'ObjectId') {
       return res.status(400).json({ message: 'Invalid customer ID' });
     }
-    
     return res.status(500).json({ message: 'Server error' });
   }
 };
@@ -318,5 +326,5 @@ module.exports = {
   getCustomerById,
   createCustomer,
   updateCustomer,
-  deleteCustomer
+  deleteCustomer,
 };

@@ -102,7 +102,7 @@ export default function ViewCustomers() {
       
       // Fetch customers and streets
       const [customersRes, streetsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/customer/all`, { headers }),
+        axios.get(`${API_BASE_URL}/api/customers/all`, { headers }),
         axios.get(`${API_BASE_URL}/api/street/all`, { headers })
       ]);
       

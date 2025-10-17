@@ -24,7 +24,7 @@ export default function AddCustomerForm() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [apartmentTypes, setApartmentTypes] = useState([]);
-const [commercialSubtypes, setCommercialSubtypes] = useState([]);
+  const [commercialSubtypes, setCommercialSubtypes] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -63,33 +63,33 @@ const [commercialSubtypes, setCommercialSubtypes] = useState([]);
     }
   };
 
-const fetchData = async () => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    const headers = { Authorization: `Bearer ${token}` };
+  const fetchData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
 
-    // Fetch streets
-    const streetData = await axios.get(`${API_BASE_URL}/api/street/all`, { headers });
-    setStreets(streetData.data.streets || []);
+      // Fetch streets
+      const streetData = await axios.get(`${API_BASE_URL}/api/street/all`, { headers });
+      setStreets(streetData.data.streets || []);
 
-    // Fetch apartment types
-    const apartmentTypeData = await axios.get(`${API_BASE_URL}/api/apartment-types`, { headers });
-    setApartmentTypes(apartmentTypeData.data.apartmentTypes || []);
+      // Fetch apartment types
+      const apartmentTypeData = await axios.get(`${API_BASE_URL}/api/apartment-types`, { headers });
+      setApartmentTypes(apartmentTypeData.data.apartmentTypes || []);
 
-    // Fetch commercial subtypes
-    const commercialSubtypeData = await axios.get(`${API_BASE_URL}/api/commercial-subtypes`, { headers });
-    setCommercialSubtypes(commercialSubtypeData.data.commercialSubtypes || []);
+      // Fetch commercial subtypes
+      const commercialSubtypeData = await axios.get(`${API_BASE_URL}/api/commercial-subtypes`, { headers });
+      setCommercialSubtypes(commercialSubtypeData.data.commercialSubtypes || []);
 
-  } catch (error) {
-    console.error('Fetch error:', error);
-    Alert.alert('Error', 'Failed to fetch data');
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (error) {
+      console.error('Fetch error:', error);
+      Alert.alert('Error', 'Failed to fetch data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
-    const customerTypes = [
+  const customerTypes = [
     { value: 'residential', label: 'Residential' },
     { value: 'commercial', label: 'Commercial' },
   ];
@@ -100,13 +100,19 @@ const fetchData = async () => {
   ];
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    console.log(formData)
+    setFormData(prev => {
+      const newFormData = {
+        ...prev,
+        [field]: value,
+      };
+      // Update address if house_number or street_label changes
+      if (field === 'house_number') {
+        newFormData.address = `${value} ${prev.street_label || ''}`.trim();
+      }
+      return newFormData;
+    });
   };
+
 
   const toggleDropdown = (field) => {
     setShowDropdown(prev => ({
@@ -116,14 +122,21 @@ const fetchData = async () => {
   };
 
   const handleSelect = (field, value, label) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-      [`${field}_label`]: label
-    }));
+    setFormData(prev => {
+      const newFormData = {
+        ...prev,
+        [field]: value,
+        [`${field}_label`]: label,
+      };
+      // Update address if street is selected
+      if (field === 'street') {
+        newFormData.address = `${prev.house_number} ${label || ''}`.trim();
+      }
+      return newFormData;
+    });
     setShowDropdown(prev => ({ ...prev, [field]: false }));
-    console.log(formData)
   };
+
 
   const validateForm = () => {
     if (!formData.name.trim()) {
@@ -161,47 +174,47 @@ const fetchData = async () => {
     return true;
   };
 
- const handleSubmit = async () => {
-  if (!validateForm()) return;
-  setSubmitting(true);
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    setSubmitting(true);
 
-  try {
-    const token = await AsyncStorage.getItem('token');
-    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
 
-    const payload = {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      address: formData.address,
-      house_number: formData.house_number,
-      street: formData.street,
-      customer_type: formData.customer_type,
-      apartment_type: formData.apartment_type,
-      commercial_subtype: formData.commercial_subtype,
-      status: formData.status,
-    };
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        house_number: formData.house_number,
+        street: formData.street,
+        customer_type: formData.customer_type,
+        apartment_type: formData.apartment_type,
+        commercial_subtype: formData.commercial_subtype,
+        status: formData.status,
+      };
 
-    const response = await axios.post(
-      `${API_BASE_URL}/api/customers`,
-      payload,
-      { headers }
-    );
+      const response = await axios.post(
+        `${API_BASE_URL}/api/customers/create`,
+        payload,
+        { headers }
+      );
 
-    Alert.alert('Success', 'Customer created successfully!');
-    router.back();
+      Alert.alert('Success', 'Customer created successfully!');
+      router.back();
 
-  } catch (error) {
-    console.error('Submit error:', error);
-    Alert.alert('Error', 'Failed to create customer');
-  } finally {
-    setSubmitting(false);
-  }
-};
+    } catch (error) {
+      console.error('Submit error:', error);
+      Alert.alert('Error', 'Failed to create customer');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
 
   const handleCancel = () => {
-    const hasData = Object.values(formData).some(value => 
+    const hasData = Object.values(formData).some(value =>
       value !== '' && value !== 'active'
     );
 
@@ -226,9 +239,9 @@ const fetchData = async () => {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <TouchableOpacity 
-        style={styles.modalOverlay} 
-        activeOpacity={1} 
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
         onPress={onClose}
       >
         <View style={styles.modalContent}>
@@ -244,8 +257,8 @@ const fetchData = async () => {
                 key={option.id || option._id || option.value}
                 style={styles.modalItem}
                 onPress={() => handleSelect(
-                  field, 
-                  option.id || option._id || option.value, 
+                  field,
+                  option.id || option._id || option.value,
                   option.name || option.streetName || option.label
                 )}
               >
@@ -278,7 +291,7 @@ const fetchData = async () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -299,7 +312,7 @@ const fetchData = async () => {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>PERSONAL INFORMATION</Text>
           </View>
-          
+
           {/* Name */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
@@ -403,8 +416,7 @@ const fetchData = async () => {
               <TextInput
                 style={[styles.input, styles.textarea]}
                 placeholder="Enter full address"
-                value={formData.house_number + ' '+ formData.street_label}
-                onChangeText={(value) => handleInputChange('address', value)}
+                value={formData.address}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -495,15 +507,15 @@ const fetchData = async () => {
 
       {/* Fixed Bottom Buttons */}
       <View style={styles.bottomButtons}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.cancelButton}
           onPress={handleCancel}
           disabled={submitting}
         >
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.submitButton, submitting && styles.disabledButton]} 
+        <TouchableOpacity
+          style={[styles.submitButton, submitting && styles.disabledButton]}
           onPress={handleSubmit}
           disabled={submitting}
         >
@@ -528,20 +540,20 @@ const fetchData = async () => {
         field="customer_type"
         title="Select Customer Type"
       />
-<DropdownModal
-  visible={showDropdown.apartment_type}
-  onClose={() => toggleDropdown('apartment_type')}
-  options={apartmentTypes}
-  field="apartment_type"
-  title="Select Apartment Type"
-/>
-<DropdownModal
-  visible={showDropdown.commercial_subtype}
-  onClose={() => toggleDropdown('commercial_subtype')}
-  options={commercialSubtypes}
-  field="commercial_subtype"
-  title="Select Business Type"
-/>
+      <DropdownModal
+        visible={showDropdown.apartment_type}
+        onClose={() => toggleDropdown('apartment_type')}
+        options={apartmentTypes}
+        field="apartment_type"
+        title="Select Apartment Type"
+      />
+      <DropdownModal
+        visible={showDropdown.commercial_subtype}
+        onClose={() => toggleDropdown('commercial_subtype')}
+        options={commercialSubtypes}
+        field="commercial_subtype"
+        title="Select Business Type"
+      />
 
       <DropdownModal
         visible={showDropdown.status}
