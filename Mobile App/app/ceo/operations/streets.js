@@ -38,7 +38,7 @@ export default function StreetsIndex() {
       description: 'Register a new street location',
       icon: 'add-circle',
       color: '#2E8B57',
-      route: '/ceo/streets/add-street',
+      route: '/ceo/operations/add-street',
     },
     // Future actions can be added here
     {
@@ -47,7 +47,7 @@ export default function StreetsIndex() {
       description: 'Browse all registered streets',
       icon: 'list',
       color: '#3B82F6',
-      route: '/ceo/streets/view-streets',
+      route: '/ceo/operations/view-streets',
     },
      
     

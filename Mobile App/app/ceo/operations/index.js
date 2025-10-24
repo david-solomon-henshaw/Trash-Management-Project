@@ -13,7 +13,6 @@ import { useRouter } from 'expo-router';
 
 export default function OperationsIndex() {
   const router = useRouter();
-
   const operationsActions = [
     {
       id: 'staffs',
@@ -47,6 +46,14 @@ export default function OperationsIndex() {
       color: '#8B5CF6',
       route: '/ceo/operations/commercial-subtypes',
     },
+    {
+      id: 'streets',
+      title: 'Street Management',
+      description: 'Manage streets and locations',
+      icon: 'pin-outline',
+      color: '#EF4444',
+      route: '/ceo/operations/streets',
+    },
   ];
 
   const handleCardPress = (route) => {
@@ -56,22 +63,19 @@ export default function OperationsIndex() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
-
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Operations Management</Text>
           <Text style={styles.headerSubtitle}>
-            Manage staff, trucks, apartment types, and commercial subtypes
+            Manage staff, trucks, apartment types, commercial subtypes, and streets
           </Text>
         </View>
       </View>
-
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.cardsContainer}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-
           {operationsActions.map((action) => (
             <TouchableOpacity
               key={action.id}
@@ -83,18 +87,15 @@ export default function OperationsIndex() {
                 <View style={[styles.iconContainer, { backgroundColor: `${action.color}15` }]}>
                   <Ionicons name={action.icon} size={32} color={action.color} />
                 </View>
-
                 <View style={styles.cardTextContainer}>
                   <Text style={styles.cardTitle}>{action.title}</Text>
                   <Text style={styles.cardDescription}>{action.description}</Text>
                 </View>
-
                 <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
               </View>
             </TouchableOpacity>
           ))}
         </View>
-
         {/* Info Section */}
         <View style={styles.infoSection}>
           <View style={styles.infoCard}>

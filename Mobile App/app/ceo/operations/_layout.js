@@ -38,6 +38,14 @@ export default function OperationsLayout() {
           title: 'Commercial Subtypes',
         }}
       />
+
+       <Stack.Screen
+        name="streets"
+        options={{
+          title: 'Streets',
+        }}
+      />
+
     </Stack>
   );
 }
