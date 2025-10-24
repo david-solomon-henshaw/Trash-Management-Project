@@ -54,6 +54,14 @@ export default function OperationsIndex() {
       color: '#EF4444',
       route: '/ceo/operations/streets',
     },
+      {
+    id: 'customer',
+    title: 'Customer Management',
+    description: 'Manage and organize customer accounts',
+    icon: 'people',
+    color: '#EC4899',
+    route: '/ceo/operations/customer',
+  },
   ];
 
   const handleCardPress = (route) => {

@@ -48,7 +48,6 @@ export default function CeoTabLayout() {
       />
 
 
-
       <Tabs.Screen
         name="map"
         options={{
@@ -59,14 +58,6 @@ export default function CeoTabLayout() {
         }}
       />
 
-      <Tabs.Screen
-      name="customer"
-      options ={{
-        headerShown: false,
-        title: 'Customer',
-        tabBarIcon: ({color,size}) => <Ionicons name="person" size={size} color={color}/>
-      }}
-      />
     </Tabs>
 
     

@@ -108,6 +108,7 @@ export default function HomeScreen() {
       color: '#8B5CF6',
       route: '/map',
     },
+   
   ];
 
   const handleQuickActionPress = (route) => {

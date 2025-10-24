@@ -46,6 +46,14 @@ export default function OperationsLayout() {
         }}
       />
 
+       <Stack.Screen
+        name="customer"
+        options={{
+          title: 'Customer',
+          headerShown: false,
+        }}
+      />
+
     </Stack>
   );
 }
