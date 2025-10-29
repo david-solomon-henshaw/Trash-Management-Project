@@ -38,7 +38,7 @@ export default function CustomerIndex() {
       description: 'Register a new customer account',
       icon: 'person-add',
       color: '#2E8B57',
-      route: '/ceo/customer/add-customer',
+      route: '/ceo/operations/add-customer',
     },
     {
       id: 'view-customers',
@@ -46,7 +46,7 @@ export default function CustomerIndex() {
       description: 'Browse all registered customers',
       icon: 'people',
       color: '#3B82F6',
-      route: '/ceo/customer/view-customers',
+      route: '/ceo/operations/view-customers',
     },
   ];
 
