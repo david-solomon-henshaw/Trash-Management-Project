@@ -1,3 +1,4 @@
+
 const PDFDocument = require('pdfkit');
 
 /**
@@ -8,193 +9,220 @@ const PDFDocument = require('pdfkit');
 const generatePaymentReceipt = async (data) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+      const doc = new PDFDocument({ 
+        size: 'A4', 
+        margin: 40,
+        bufferPages: true 
+      });
       const chunks = [];
 
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      // Header
-      doc.fillColor('#2E8B57')
+      // Add background for header
+      doc.rect(0, 0, doc.page.width, 150)
+         .fillColor('#2E8B57')
+         .fill();
+
+      // Header section
+      doc.fillColor('#FFFFFF')
          .fontSize(28)
-         .text(data.companyName || 'WASTE MANAGEMENT SERVICES', { align: 'center' })
-         .moveDown(0.5);
+         .font('Helvetica-Bold')
+         .text(data.companyName || 'WASTE MANAGEMENT SERVICES', { 
+           align: 'center',
+           y: 60
+         })
+         .moveDown(0.3);
 
-      doc.fillColor('#666')
+      doc.fontSize(12)
+         .font('Helvetica')
+         .text('PAYMENT RECEIPT', { align: 'center' })
+         .moveDown(1.5);
+
+      // Receipt container
+      const receiptBoxY = 180;
+      doc.roundedRect(40, receiptBoxY, doc.page.width - 80, doc.page.height - 300, 10)
+         .fillColor('#FFFFFF')
+         .fill()
+         .strokeColor('#E2E8F0')
+         .stroke();
+
+      // Receipt header
+      doc.fillColor('#2E8B57')
+         .fontSize(18)
+         .font('Helvetica-Bold')
+         .text('Payment Confirmation', 60, receiptBoxY + 30, { align: 'center', width: doc.page.width - 120 });
+
+      // Receipt details in two columns
+      const leftColX = 60;
+      const rightColX = doc.page.width / 2 + 20;
+      let currentY = receiptBoxY + 80;
+
+      // Left column
+      doc.fillColor('#666666')
          .fontSize(10)
-         .text(data.companyAddress || 'Lagos, Nigeria', { align: 'center' })
-         .text(data.companyPhone || 'Phone: +234 XXX XXX XXXX', { align: 'center' })
-         .text(data.companyEmail || 'info@wastemanagement.com', { align: 'center' })
-         .moveDown(1);
+         .font('Helvetica-Bold')
+         .text('RECEIPT NUMBER', leftColX, currentY)
+         .text('PAYMENT DATE', leftColX, currentY + 40)
+         .text('PAYMENT MONTH', leftColX, currentY + 80);
 
-      // Title
-      doc.fillColor('#000')
-         .fontSize(20)
-         .text('PAYMENT RECEIPT', { align: 'center', underline: true })
-         .moveDown(1);
-
-      // Receipt details
-      const receiptY = doc.y;
-      doc.fontSize(10)
-         .fillColor('#666')
-         .text('Receipt #:', 50, receiptY)
-         .fillColor('#000')
-         .text(data.receiptNumber, 150, receiptY);
-
-      doc.fillColor('#666')
-         .text('Date:', 50, receiptY + 20)
-         .fillColor('#000')
+      doc.fillColor('#333333')
+         .fontSize(11)
+         .font('Helvetica')
+         .text(data.receiptNumber, leftColX, currentY + 15)
          .text(new Date(data.paymentDate).toLocaleDateString('en-US', {
            year: 'numeric',
            month: 'long',
            day: 'numeric'
-         }), 150, receiptY + 20);
+         }), leftColX, currentY + 55)
+         .text(data.month, leftColX, currentY + 95);
 
-      doc.fillColor('#666')
-         .text('Payment Month:', 50, receiptY + 40)
-         .fillColor('#000')
-         .text(data.month, 150, receiptY + 40);
+      // Right column
+      doc.fillColor('#666666')
+         .font('Helvetica-Bold')
+         .text('PAYMENT METHOD', rightColX, currentY)
+         .text('CUSTOMER', rightColX, currentY + 40);
 
-      doc.moveDown(3);
+      doc.fillColor('#333333')
+         .font('Helvetica')
+         .text(data.paymentMethod.toUpperCase(), rightColX, currentY + 15)
+         .text(data.customerName, rightColX, currentY + 55, { width: 200 });
 
-      // Customer details section
+      // Divider line
+      currentY += 130;
+      doc.moveTo(60, currentY)
+         .lineTo(doc.page.width - 60, currentY)
+         .strokeColor('#E2E8F0')
+         .lineWidth(1)
+         .stroke();
+
+      // Payment summary section
+      currentY += 30;
       doc.fillColor('#2E8B57')
          .fontSize(14)
-         .text('CUSTOMER DETAILS', 50, doc.y, { underline: true })
-         .moveDown(0.5);
+         .font('Helvetica-Bold')
+         .text('PAYMENT SUMMARY', 60, currentY);
 
-      const customerY = doc.y;
-      doc.fontSize(10)
-         .fillColor('#666')
-         .text('Name:', 50, customerY)
-         .fillColor('#000')
-         .text(data.customerName, 150, customerY);
-
-      doc.fillColor('#666')
-         .text('Address:', 50, customerY + 20)
-         .fillColor('#000')
-         .text(data.customerAddress, 150, customerY + 20);
-
-      doc.fillColor('#666')
-         .text('Phone:', 50, customerY + 40)
-         .fillColor('#000')
-         .text(data.customerPhone, 150, customerY + 40);
-
-      if (data.customerEmail) {
-        doc.fillColor('#666')
-           .text('Email:', 50, customerY + 60)
-           .fillColor('#000')
-           .text(data.customerEmail, 150, customerY + 60);
-        doc.moveDown(4);
-      } else {
-        doc.moveDown(3);
-      }
+      currentY += 40;
 
       // Payment details table
-      doc.fillColor('#2E8B57')
-         .fontSize(14)
-         .text('PAYMENT DETAILS', 50, doc.y, { underline: true })
-         .moveDown(1);
-
-      const tableTop = doc.y;
-      const col1X = 50;
-      const col2X = 400;
-
-      // Table header
-      doc.rect(col1X, tableTop, 495, 25).fillAndStroke('#2E8B57', '#2E8B57');
-      doc.fillColor('#FFF')
-         .fontSize(11)
-         .text('Description', col1X + 10, tableTop + 8)
-         .text('Amount (₦)', col2X, tableTop + 8);
-
-      let currentY = tableTop + 35;
-
-      // Table rows
-      const rows = [
-        { label: 'Payment Method', value: data.paymentMethod.toUpperCase() },
-        { label: 'Monthly Fee', value: data.totalFee.toLocaleString() },
-        { label: 'Amount Paid (This Payment)', value: data.amountPaid.toLocaleString(), highlight: true },
-        { label: 'Total Paid This Month', value: data.totalPaid.toLocaleString() },
-        { label: 'Remaining Balance', value: data.remainingBalance.toLocaleString(), highlight: true },
+      const tableHeaders = ['Description', 'Amount (₦)'];
+      const tableData = [
+        { description: 'Monthly Fee', amount: data.totalFee.toLocaleString() },
+        { description: 'Amount Paid', amount: data.amountPaid.toLocaleString(), highlight: true },
+        { description: 'Total Paid This Month', amount: data.totalPaid.toLocaleString() },
+        { description: 'Remaining Balance', amount: data.remainingBalance.toLocaleString(), highlight: true }
       ];
 
-      rows.forEach((row, index) => {
-        if (row.highlight) {
-          doc.rect(col1X, currentY - 5, 495, 25).fillAndStroke('#F0FDF4', '#E2E8F0');
-        } else if (index % 2 === 0) {
-          doc.rect(col1X, currentY - 5, 495, 25).fillAndStroke('#FAFAFA', '#E2E8F0');
-        } else {
-          doc.rect(col1X, currentY - 5, 495, 25).stroke('#E2E8F0');
+      // Table header - using solid color instead of gradient
+      doc.roundedRect(60, currentY, doc.page.width - 120, 30, 5)
+         .fillColor('#2E8B57')
+         .fill();
+
+      doc.fillColor('#FFFFFF')
+         .fontSize(10)
+         .font('Helvetica-Bold')
+         .text(tableHeaders[0], 80, currentY + 10)
+         .text(tableHeaders[1], doc.page.width - 140, currentY + 10, { align: 'right' });
+
+      currentY += 35;
+
+      // Table rows
+      tableData.forEach((row, index) => {
+        const rowY = currentY + (index * 35);
+        
+        // Alternate row background
+        if (index % 2 === 0) {
+          doc.rect(60, rowY, doc.page.width - 120, 35)
+             .fillColor('#F8F9FA')
+             .fill();
         }
 
-        doc.fillColor('#000')
+        if (row.highlight) {
+          doc.rect(60, rowY, doc.page.width - 120, 35)
+             .fillColor('#F0FDF4')
+             .fill()
+             .strokeColor('#2E8B57')
+             .lineWidth(1)
+             .stroke();
+        }
+
+        doc.fillColor(row.highlight ? '#2E8B57' : '#333333')
            .fontSize(10)
-           .text(row.label, col1X + 10, currentY);
-
-        doc.text(row.value, col2X, currentY, { align: 'left' });
-
-        currentY += 25;
+           .font(row.highlight ? 'Helvetica-Bold' : 'Helvetica')
+           .text(row.description, 80, rowY + 12)
+           .text(row.amount, doc.page.width - 140, rowY + 12, { align: 'right' });
       });
 
-      // Payment status
-      doc.moveDown(2);
-      const statusY = doc.y;
-      doc.fontSize(12)
-         .fillColor('#666')
-         .text('Payment Status:', 50, statusY);
-
+      // Status badge
+      const tableBottom = currentY + (tableData.length * 35) + 20;
       const statusText = data.remainingBalance === 0 ? 'FULLY PAID' : 'PARTIALLY PAID';
       const statusColor = data.remainingBalance === 0 ? '#10B981' : '#F59E0B';
 
-      doc.roundedRect(180, statusY - 5, 120, 25, 5)
-         .fillAndStroke(statusColor, statusColor);
+      doc.roundedRect(60, tableBottom, 150, 35, 20)
+         .fillColor(statusColor)
+         .fill();
 
-      doc.fillColor('#FFF')
+      doc.fillColor('#FFFFFF')
          .fontSize(11)
-         .text(statusText, 180, statusY, { width: 120, align: 'center' });
+         .font('Helvetica-Bold')
+         .text(statusText, 60, tableBottom + 12, { width: 150, align: 'center' });
 
-      // Agent notes
+      // Add checkmark for fully paid
+      if (data.remainingBalance === 0) {
+        doc.fillColor('#FFFFFF')
+           .fontSize(14)
+           .text('✓', 75, tableBottom + 10);
+      }
+
+      // Agent notes if available
       if (data.agentNotes) {
-        doc.moveDown(2);
-        doc.fillColor('#2E8B57')
-           .fontSize(12)
-           .text('Notes:', 50, doc.y);
-        doc.fillColor('#666')
+        const notesY = tableBottom + 60;
+        doc.roundedRect(60, notesY, doc.page.width - 120, 60, 8)
+           .fillColor('#FFF9E6')
+           .fill()
+           .strokeColor('#FFE58F')
+           .stroke();
+
+        doc.fillColor('#D4A017')
            .fontSize(10)
-           .text(data.agentNotes, 50, doc.y + 5, { width: 495, align: 'justify' });
+           .font('Helvetica-Bold')
+           .text('AGENT NOTES', 80, notesY + 15);
+
+        doc.fillColor('#666666')
+           .fontSize(9)
+           .font('Helvetica')
+           .text(data.agentNotes, 80, notesY + 35, { width: doc.page.width - 160 });
       }
 
       // Footer
-      doc.fontSize(8)
-         .fillColor('#999')
-         .text(
-           `This is a computer-generated receipt and does not require a signature.`,
-           50,
-           doc.page.height - 100,
-           { align: 'center', width: 495 }
-         );
+      const footerY = doc.page.height - 80;
+      doc.fillColor('#999999')
+         .fontSize(8)
+         .font('Helvetica')
+         .text('This is a computer-generated receipt and does not require a signature.', 
+               60, footerY, { align: 'center', width: doc.page.width - 120 });
 
-      doc.text(
-        `Generated on ${new Date().toLocaleString('en-US', { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}`,
-        50,
-        doc.page.height - 80,
-        { align: 'center', width: 495 }
-      );
+      doc.text(`Generated on ${new Date().toLocaleString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}`, 
+               60, footerY + 15, { align: 'center', width: doc.page.width - 120 });
 
       doc.fillColor('#2E8B57')
-         .text(
-           `Thank you for your payment!`,
-           50,
-           doc.page.height - 60,
-           { align: 'center', width: 495 }
-         );
+         .fontSize(9)
+         .font('Helvetica-Bold')
+         .text('Thank you for your payment!', 
+               60, footerY + 35, { align: 'center', width: doc.page.width - 120 });
+
+      // Page numbers
+      doc.fillColor('#666666')
+         .fontSize(8)
+         .text(`Page 1 of 1`, doc.page.width - 100, doc.page.height - 30);
 
       doc.end();
     } catch (error) {

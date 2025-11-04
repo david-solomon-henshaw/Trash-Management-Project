@@ -1,4 +1,3 @@
-// billing-history.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,6 +11,7 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,7 @@ import { API_BASE_URL } from '../../../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
+const { width } = Dimensions.get('window');
 
 export default function CustomerBillingHistory() {
   const router = useRouter();
@@ -31,27 +32,25 @@ export default function CustomerBillingHistory() {
   const [paymentDetailModalVisible, setPaymentDetailModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   
-  // Real data from API
   const [customers, setCustomers] = useState([]);
   const [billingHistory, setBillingHistory] = useState({});
   const [paymentDetails, setPaymentDetails] = useState({});
 
-const getAuthToken = async () => {
-  try {
-    const token = await AsyncStorage.getItem('token');
-    return token;
-  } catch (error) {
-    console.error('Error getting auth token:', error);
-    return null;
-  }
-};
-  // Search customers API call
+  const getAuthToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      return token;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  };
+
   const searchCustomers = async (query) => {
     try {
       setLoading(true);
       const token = await getAuthToken();
       const url = `${API_BASE_URL}/api/billing/search?query=${encodeURIComponent(query)}`;
-      console.log('searchCustomers API call:', { url, token, query });
       const response = await axios.get(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -59,10 +58,8 @@ const getAuthToken = async () => {
         }
       });
       const data = response.data;
-      console.log('searchCustomers response data:', data);
       if (data.success) {
         setCustomers(data.customers || []);
-        // Prefetch billing history and payment details in background
         prefetchBillingForCustomers(data.customers || []);
       } else {
         Alert.alert('Error', data.message || 'Failed to search customers');
@@ -75,67 +72,9 @@ const getAuthToken = async () => {
     }
   };
 
-  // Get customer billing history API call
-  const getCustomerBillingHistory = async (customerId) => {
-    try {
-      // This function remains axios-based but should not be called on card click anymore.
-      setLoading(true);
-      const token = await getAuthToken();
-      const response = await axios.get(`${API_BASE_URL}/api/billing/customer/${customerId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const data = response.data;
-
-      if (data.success) {
-        return data.data;
-      } else {
-        Alert.alert('Error', data.message || 'Failed to load billing history');
-        return null;
-      }
-    } catch (error) {
-      console.error('Get billing history error:', error);
-      Alert.alert('Error', 'Failed to load billing history. Please try again.');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Get payment details API call
-  const getPaymentDetails = async (paymentId) => {
-    try {
-      const token = await getAuthToken();
-      const response = await axios.get(`${API_BASE_URL}/api/billing/payment/${paymentId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const data = response.data;
-
-      if (data.success) {
-        return data.payment;
-      } else {
-        Alert.alert('Error', data.message || 'Failed to load payment details');
-        return null;
-      }
-    } catch (error) {
-      console.error('Get payment details error:', error);
-      Alert.alert('Error', 'Failed to load payment details. Please try again.');
-      return null;
-    }
-  };
-
-  // Prefetch helpers (run in background; do NOT trigger on click)
   const prefetchBillingForCustomers = async (customerList) => {
     if (!Array.isArray(customerList) || customerList.length === 0) return;
     for (const c of customerList) {
-      // fire-and-forget each customer's billing history
       prefetchCustomerBillingHistory(c._id);
     }
   };
@@ -154,8 +93,6 @@ const getAuthToken = async () => {
       if (data.success) {
         const payments = data.data.payments || [];
         setBillingHistory(prev => ({ ...prev, [customerId]: payments }));
-
-        // Prefetch payment details for each payment (fire-and-forget)
         payments.forEach(p => prefetchPaymentDetails(p._id));
       }
     } catch (err) {
@@ -165,7 +102,6 @@ const getAuthToken = async () => {
 
   const prefetchPaymentDetails = async (paymentId) => {
     try {
-      // Skip if already cached
       if (paymentDetails[paymentId]) return;
       const token = await getAuthToken();
       const response = await axios.get(`${API_BASE_URL}/api/billing/payment/${paymentId}`, {
@@ -184,7 +120,6 @@ const getAuthToken = async () => {
     }
   };
 
-  // Load initial customers
   useEffect(() => {
     loadInitialCustomers();
   }, []);
@@ -195,8 +130,6 @@ const getAuthToken = async () => {
 
   const handleSearch = (query) => {
     setSearchQuery(query);
-    
-    // Debounce search to avoid too many API calls
     const timeoutId = setTimeout(() => {
       if (query.trim() === '') {
         searchCustomers('');
@@ -204,7 +137,6 @@ const getAuthToken = async () => {
         searchCustomers(query);
       }
     }, 500);
-
     return () => clearTimeout(timeoutId);
   };
 
@@ -215,30 +147,18 @@ const getAuthToken = async () => {
   };
 
   const handleViewCustomer = async (customer) => {
-    try {
-      // When user taps a customer card we must NOT fetch data here.
-      // Use whatever was prefetched in the background. If not ready, we'll show a loading hint.
-      setSelectedCustomer(customer);
-      setCustomerModalVisible(true);
-    } catch (error) {
-      console.error('Error loading customer history:', error);
-    }
+    setSelectedCustomer(customer);
+    setCustomerModalVisible(true);
   };
 
   const handleViewPaymentDetails = async (payment) => {
-    try {
-      // Use cached payment details only — do NOT fetch on click.
-      const cached = paymentDetails[payment._id];
-      if (cached) {
-        setSelectedPayment(cached);
-      } else {
-        // Fall back to the shallow payment object and let the UI show that details are still loading.
-        setSelectedPayment(payment);
-      }
-      setPaymentDetailModalVisible(true);
-    } catch (error) {
-      console.error('Error loading payment details:', error);
+    const cached = paymentDetails[payment._id];
+    if (cached) {
+      setSelectedPayment(cached);
+    } else {
+      setSelectedPayment(payment);
     }
+    setPaymentDetailModalVisible(true);
   };
 
   const calculateCustomerStats = (customerId) => {
@@ -247,7 +167,7 @@ const getAuthToken = async () => {
       .filter(p => p.payment_status === 'paid')
       .reduce((sum, p) => sum + p.amount, 0);
     const totalPayments = payments.length;
-    const lastPayment = payments[0]; // Assuming sorted by date
+    const lastPayment = payments[0];
     
     return {
       totalPaid,
@@ -274,10 +194,10 @@ const getAuthToken = async () => {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'paid': return '#10B981';
-      case 'pending': return '#F59E0B';
-      case 'unpaid': return '#EF4444';
-      default: return '#6B7280';
+      case 'paid': return '#10b981';
+      case 'pending': return '#f59e0b';
+      case 'unpaid': return '#ef4444';
+      default: return '#6b7280';
     }
   };
 
@@ -290,10 +210,7 @@ const getAuthToken = async () => {
     }
   };
 
-  // Payments for currently selected customer (undefined = still loading/prefetching)
   const paymentsForSelectedCustomer = selectedCustomer ? billingHistory[selectedCustomer._id] : undefined;
-
-  // Filter customers based on search (now handled by API, but keeping for client-side fallback)
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     customer.phone.includes(searchQuery) ||
@@ -302,7 +219,7 @@ const getAuthToken = async () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -311,31 +228,36 @@ const getAuthToken = async () => {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Customer Billing</Text>
-            <Text style={styles.headerSubtitle}>Search and view payment history</Text>
+            <Text style={styles.headerTitle}>Billing History</Text>
+            <Text style={styles.headerSubtitle}>Track customer payments and billing</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Ionicons name="receipt" size={24} color="white" />
           </View>
         </View>
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search" size={20} color="#999" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by customer name, phone, or address..."
-            value={searchQuery}
-            onChangeText={handleSearch}
-            placeholderTextColor="#999"
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#999" />
-            </TouchableOpacity>
-          ) : null}
+      <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#64748b" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search customers by name, phone, or address..."
+              value={searchQuery}
+              onChangeText={handleSearch}
+              placeholderTextColor="#94a3b8"
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
       </View>
 
@@ -343,31 +265,35 @@ const getAuthToken = async () => {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E8B57']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10b981']} />
         }
       >
-        {/* Loading Indicator */}
         {loading && !refreshing && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2E8B57" />
+            <ActivityIndicator size="large" color="#10b981" />
             <Text style={styles.loadingText}>Loading customers...</Text>
           </View>
         )}
 
-        {/* Customers List */}
+        {/* Customers Grid */}
         <View style={styles.customersSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {searchQuery ? 'Search Results' : 'All Customers'}
-            </Text>
-            <Text style={styles.sectionCount}>
-              {filteredCustomers.length} {filteredCustomers.length === 1 ? 'customer' : 'customers'}
-            </Text>
+            <View style={styles.sectionTitleContainer}>
+              <Ionicons name="people" size={20} color="#10b981" />
+              <Text style={styles.sectionTitle}>
+                {searchQuery ? 'Search Results' : 'All Customers'}
+              </Text>
+            </View>
+            <View style={styles.countBadge}>
+              <Text style={styles.countText}>{filteredCustomers.length}</Text>
+            </View>
           </View>
 
           {!loading && filteredCustomers.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={64} color="#D1D5DB" />
+              <View style={styles.emptyIcon}>
+                <Ionicons name="people-outline" size={64} color="#cbd5e1" />
+              </View>
               <Text style={styles.emptyTitle}>
                 {searchQuery ? 'No customers found' : 'No customers available'}
               </Text>
@@ -385,32 +311,45 @@ const getAuthToken = async () => {
                   key={customer._id}
                   style={styles.customerCard}
                   onPress={() => handleViewCustomer(customer)}
+                  activeOpacity={0.8}
                 >
-                  <View style={styles.customerHeader}>
-                    <View style={styles.customerIcon}>
+                  <View style={styles.customerMain}>
+                    <View style={styles.customerAvatar}>
                       <Ionicons 
                         name={customer.customer_type === 'residential' ? 'home' : 'business'} 
                         size={24} 
-                        color="#2E8B57" 
+                        color="white" 
                       />
                     </View>
                     <View style={styles.customerInfo}>
                       <Text style={styles.customerName}>{customer.name}</Text>
-                      <View style={styles.customerDetails}>
-                        <Ionicons name="call-outline" size={14} color="#64748B" />
-                        <Text style={styles.customerPhone}>{customer.phone}</Text>
+                      <View style={styles.customerMeta}>
+                        <View style={styles.metaItem}>
+                          <Ionicons name="call-outline" size={14} color="#64748B" />
+                          <Text style={styles.metaText}>{customer.phone}</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                          <Ionicons name="location-outline" size={14} color="#64748B" />
+                          <Text style={styles.metaText}>
+                            {customer.house_number}, {customer.street?.streetName}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.customerDetails}>
-                        <Ionicons name="location-outline" size={14} color="#64748B" />
-                        <Text style={styles.customerAddress}>
-                          {customer.house_number}, {customer.street?.streetName}
-                        </Text>
-                      </View>
+                    </View>
+                    <View style={[
+                      styles.statusIndicator,
+                      customer.status === 'active' ? styles.statusActive : styles.statusInactive
+                    ]}>
+                      <Ionicons 
+                        name={customer.status === 'active' ? 'checkmark' : 'close'} 
+                        size={16} 
+                        color="white" 
+                      />
                     </View>
                   </View>
 
                   {/* Quick Stats */}
-                  <View style={styles.statsRow}>
+                  <View style={styles.statsGrid}>
                     <View style={styles.statItem}>
                       <Text style={styles.statValue}>₦{stats.totalPaid.toLocaleString()}</Text>
                       <Text style={styles.statLabel}>Total Paid</Text>
@@ -427,7 +366,7 @@ const getAuthToken = async () => {
 
                   <View style={styles.viewHistoryButton}>
                     <Text style={styles.viewHistoryText}>View Payment History</Text>
-                    <Ionicons name="chevron-forward" size={16} color="#2E8B57" />
+                    <Ionicons name="chevron-forward" size={16} color="#10b981" />
                   </View>
                 </TouchableOpacity>
               );
@@ -450,7 +389,7 @@ const getAuthToken = async () => {
             {selectedCustomer && (
               <>
                 <View style={styles.modalHeader}>
-                  <View>
+                  <View style={styles.modalTitleContainer}>
                     <Text style={styles.modalTitle}>Payment History</Text>
                     <Text style={styles.modalSubtitle}>{selectedCustomer.name}</Text>
                   </View>
@@ -458,14 +397,14 @@ const getAuthToken = async () => {
                     onPress={() => setCustomerModalVisible(false)}
                     style={styles.modalCloseButton}
                   >
-                    <Ionicons name="close" size={24} color="#64748B" />
+                    <Ionicons name="close" size={24} color="#64748b" />
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView style={styles.modalContent}>
+                <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
                   {/* Customer Summary */}
                   <View style={styles.customerSummary}>
-                    <View style={styles.summaryRow}>
+                    <View style={styles.summaryGrid}>
                       <View style={styles.summaryItem}>
                         <Text style={styles.summaryLabel}>Monthly Fee</Text>
                         <Text style={styles.summaryValue}>₦{selectedCustomer.base_fee?.toLocaleString()}</Text>
@@ -479,7 +418,7 @@ const getAuthToken = async () => {
                         </Text>
                       </View>
                     </View>
-                    <View style={styles.summaryRow}>
+                    <View style={styles.summaryGrid}>
                       <View style={styles.summaryItem}>
                         <Text style={styles.summaryLabel}>Phone</Text>
                         <Text style={styles.summaryValue}>{selectedCustomer.phone}</Text>
@@ -493,16 +432,19 @@ const getAuthToken = async () => {
 
                   {/* Payment History */}
                   <View style={styles.paymentHistorySection}>
-                    <Text style={styles.sectionTitle}>Payment Records</Text>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons name="receipt" size={20} color="#10b981" />
+                      <Text style={styles.sectionTitle}>Payment Records</Text>
+                    </View>
                     
                     {paymentsForSelectedCustomer === undefined ? (
                       <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="small" color="#2E8B57" />
+                        <ActivityIndicator size="small" color="#10b981" />
                         <Text style={styles.loadingText}>Loading payment records...</Text>
                       </View>
                     ) : paymentsForSelectedCustomer.length === 0 ? (
                       <View style={styles.noPayments}>
-                        <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
+                        <Ionicons name="receipt-outline" size={48} color="#cbd5e1" />
                         <Text style={styles.noPaymentsText}>No payment records found</Text>
                         <Text style={styles.noPaymentsSubtext}>
                           This customer hasn't made any payments yet
@@ -512,11 +454,12 @@ const getAuthToken = async () => {
                       paymentsForSelectedCustomer.map((payment) => (
                         <TouchableOpacity
                           key={payment._id}
-                          style={styles.paymentItem}
+                          style={styles.paymentCard}
                           onPress={() => handleViewPaymentDetails(payment)}
+                          activeOpacity={0.7}
                         >
-                          <View style={styles.paymentItemHeader}>
-                            <View>
+                          <View style={styles.paymentHeader}>
+                            <View style={styles.paymentInfo}>
                               <Text style={styles.paymentMonth}>
                                 {formatMonth(payment.month)}
                               </Text>
@@ -541,12 +484,12 @@ const getAuthToken = async () => {
                             </View>
                           </View>
                           
-                          <View style={styles.paymentItemFooter}>
+                          <View style={styles.paymentFooter}>
                             <View style={styles.methodBadge}>
                               <Ionicons 
                                 name={payment.payment_method === 'cash' ? 'cash' : 'card'} 
                                 size={12} 
-                                color="#64748B" 
+                                color="#64748b" 
                               />
                               <Text style={styles.methodText}>
                                 {payment.payment_method.charAt(0).toUpperCase() + payment.payment_method.slice(1)}
@@ -586,7 +529,7 @@ const getAuthToken = async () => {
             {selectedPayment && (
               <>
                 <View style={styles.modalHeader}>
-                  <View>
+                  <View style={styles.modalTitleContainer}>
                     <Text style={styles.modalTitle}>Payment Details</Text>
                     <Text style={styles.modalSubtitle}>{selectedPayment.receipt_number}</Text>
                   </View>
@@ -594,73 +537,86 @@ const getAuthToken = async () => {
                     onPress={() => setPaymentDetailModalVisible(false)}
                     style={styles.modalCloseButton}
                   >
-                    <Ionicons name="close" size={24} color="#64748B" />
+                    <Ionicons name="close" size={24} color="#64748b" />
                   </TouchableOpacity>
                 </View>
 
-                <ScrollView style={styles.modalContent}>
+                <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
                   <View style={styles.detailSection}>
-                    <Text style={styles.detailSectionTitle}>Payment Information</Text>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Amount:</Text>
-                      <Text style={[styles.detailValue, styles.amountHighlight]}>
-                        ₦{selectedPayment.amount.toLocaleString()}
-                      </Text>
+                    <View style={styles.detailSectionHeader}>
+                      <Ionicons name="information-circle" size={20} color="#10b981" />
+                      <Text style={styles.detailSectionTitle}>Payment Information</Text>
                     </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Status:</Text>
-                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedPayment.payment_status) + '20' }]}>
-                        <Ionicons name={getStatusIcon(selectedPayment.payment_status)} size={14} color={getStatusColor(selectedPayment.payment_status)} />
-                        <Text style={[styles.statusText, { color: getStatusColor(selectedPayment.payment_status) }]}>
-                          {selectedPayment.payment_status.toUpperCase()}
+                    <View style={styles.detailGrid}>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Amount</Text>
+                        <Text style={[styles.detailValue, styles.amountHighlight]}>
+                          ₦{selectedPayment.amount.toLocaleString()}
                         </Text>
                       </View>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Method:</Text>
-                      <Text style={styles.detailValue}>
-                        {selectedPayment.payment_method.charAt(0).toUpperCase() + selectedPayment.payment_method.slice(1)}
-                      </Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Billing Month:</Text>
-                      <Text style={styles.detailValue}>{formatMonth(selectedPayment.month)}</Text>
-                    </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Payment Date:</Text>
-                      <Text style={styles.detailValue}>{formatDate(selectedPayment.payment_date)}</Text>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Status</Text>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedPayment.payment_status) + '20' }]}>
+                          <Ionicons name={getStatusIcon(selectedPayment.payment_status)} size={14} color={getStatusColor(selectedPayment.payment_status)} />
+                          <Text style={[styles.statusText, { color: getStatusColor(selectedPayment.payment_status) }]}>
+                            {selectedPayment.payment_status.toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Method</Text>
+                        <Text style={styles.detailValue}>
+                          {selectedPayment.payment_method.charAt(0).toUpperCase() + selectedPayment.payment_method.slice(1)}
+                        </Text>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Billing Month</Text>
+                        <Text style={styles.detailValue}>{formatMonth(selectedPayment.month)}</Text>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Payment Date</Text>
+                        <Text style={styles.detailValue}>{formatDate(selectedPayment.payment_date)}</Text>
+                      </View>
                     </View>
                   </View>
 
                   <View style={styles.detailSection}>
-                    <Text style={styles.detailSectionTitle}>Collection Details</Text>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Collected By:</Text>
-                      <Text style={styles.detailValue}>
-                        {selectedPayment.agent_id?.full_name} ({selectedPayment.agent_id?.role})
-                      </Text>
+                    <View style={styles.detailSectionHeader}>
+                      <Ionicons name="person" size={20} color="#10b981" />
+                      <Text style={styles.detailSectionTitle}>Collection Details</Text>
                     </View>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Verification:</Text>
-                      {selectedPayment.verified ? (
-                        <View style={styles.verifiedBadge}>
-                          <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                          <Text style={styles.verifiedText}>
-                            Verified by {selectedPayment.verified_by?.full_name}
-                          </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.pendingBadge}>
-                          <Ionicons name="time" size={14} color="#F59E0B" />
-                          <Text style={styles.pendingText}>Pending Verification</Text>
-                        </View>
-                      )}
+                    <View style={styles.detailGrid}>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Collected By</Text>
+                        <Text style={styles.detailValue}>
+                          {selectedPayment.agent_id?.full_name} ({selectedPayment.agent_id?.role})
+                        </Text>
+                      </View>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Verification</Text>
+                        {selectedPayment.verified ? (
+                          <View style={styles.verifiedBadge}>
+                            <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+                            <Text style={styles.verifiedText}>
+                              Verified by {selectedPayment.verified_by?.full_name}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={styles.pendingBadge}>
+                            <Ionicons name="time" size={14} color="#f59e0b" />
+                            <Text style={styles.pendingText}>Pending Verification</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </View>
 
                   {selectedPayment.agent_notes && (
                     <View style={styles.detailSection}>
-                      <Text style={styles.detailSectionTitle}>Agent Notes</Text>
+                      <View style={styles.detailSectionHeader}>
+                        <Ionicons name="document-text" size={20} color="#10b981" />
+                        <Text style={styles.detailSectionTitle}>Agent Notes</Text>
+                      </View>
                       <Text style={styles.notesText}>{selectedPayment.agent_notes}</Text>
                     </View>
                   )}
@@ -686,178 +642,246 @@ const getAuthToken = async () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8fafc',
   },
   header: {
-    backgroundColor: '#2E8B57',
-    paddingBottom: 20,
+    backgroundColor: '#10b981',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    justifyContent: 'space-between',
   },
   backButton: {
-    marginRight: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerText: {
     flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: 'white',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
   },
-  searchContainer: {
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchSection: {
+    backgroundColor: 'white',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#e2e8f0',
+  },
+  searchContainer: {
+    // Additional container styles if needed
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#e2e8f0',
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 12,
     fontSize: 16,
-    color: '#1E293B',
+    color: '#1e293b',
   },
   content: {
     flex: 1,
   },
   customersSection: {
-    padding: 16,
+    padding: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginLeft: 8,
   },
-  sectionCount: {
+  countBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  countText: {
     fontSize: 14,
-    color: '#64748B',
+    fontWeight: 'bold',
+    color: 'white',
   },
   customerCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
   },
-  customerHeader: {
+  customerMain: {
     flexDirection: 'row',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  customerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F0FDF4',
+  customerAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#10b981',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   customerInfo: {
     flex: 1,
   },
   customerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 6,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
   },
-  customerDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  customerMeta: {
     gap: 6,
   },
-  customerPhone: {
-    fontSize: 13,
-    color: '#64748B',
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  customerAddress: {
-    fontSize: 13,
-    color: '#64748B',
-    flex: 1,
+  metaText: {
+    fontSize: 14,
+    color: '#64748b',
   },
-  statsRow: {
+  statusIndicator: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusActive: {
+    backgroundColor: '#10b981',
+  },
+  statusInactive: {
+    backgroundColor: '#ef4444',
+  },
+  statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingTop: 12,
+    marginBottom: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: '#f1f5f9',
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: 11,
-    color: '#64748B',
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
   },
   viewHistoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    backgroundColor: '#F0FDF4',
-    borderRadius: 8,
-    gap: 4,
+    paddingVertical: 12,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 12,
+    gap: 8,
   },
   viewHistoryText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2E8B57',
+    color: '#10b981',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+  },
+  emptyIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginTop: 16,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#64748b',
     textAlign: 'center',
+    lineHeight: 20,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
   },
   // Modal Styles
   modalOverlay: {
@@ -875,99 +899,110 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: 20,
+    padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#e2e8f0',
+  },
+  modalTitleContainer: {
+    flex: 1,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 2,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#64748b',
   },
   modalCloseButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    padding: 20,
-    maxHeight: '70%',
+    padding: 24,
   },
   modalFooter: {
-    padding: 20,
+    padding: 24,
     paddingBottom: 34,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#e2e8f0',
   },
   customerSummary: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
   },
-  summaryRow: {
+  summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   summaryItem: {
     flex: 1,
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#64748b',
     marginBottom: 4,
+    fontWeight: '500',
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#1e293b',
   },
   paymentHistorySection: {
     marginBottom: 20,
   },
-  paymentItem: {
+  paymentCard: {
     backgroundColor: 'white',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  paymentItemHeader: {
+  paymentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  paymentInfo: {
+    flex: 1,
   },
   paymentMonth: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
+    color: '#1e293b',
+    marginBottom: 4,
   },
   paymentDate: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#64748b',
   },
   paymentAmountContainer: {
     alignItems: 'flex-end',
   },
   paymentAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2E8B57',
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#10b981',
+    marginBottom: 8,
   },
-  paymentItemFooter: {
+  paymentFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -975,16 +1010,16 @@ const styles = StyleSheet.create({
   methodBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   methodText: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#64748b',
     fontWeight: '500',
   },
   receiptText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#6b7280',
     fontWeight: '500',
   },
   statusBadge: {
@@ -1002,59 +1037,67 @@ const styles = StyleSheet.create({
   noPayments: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
   },
   noPaymentsText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
-    marginTop: 12,
-    marginBottom: 4,
+    color: '#1e293b',
+    marginTop: 16,
+    marginBottom: 8,
   },
   noPaymentsSubtext: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#64748b',
     textAlign: 'center',
   },
   detailSection: {
     marginBottom: 24,
   },
+  detailSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   detailSectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 12,
+    color: '#1e293b',
+    marginLeft: 8,
   },
-  detailRow: {
+  detailGrid: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+  },
+  detailItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
   },
   detailLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#64748b',
     fontWeight: '500',
   },
   detailValue: {
     fontSize: 14,
-    color: '#1E293B',
+    color: '#1e293b',
     fontWeight: '400',
     textAlign: 'right',
     flex: 1,
     marginLeft: 8,
   },
   amountHighlight: {
-    fontWeight: '700',
-    color: '#2E8B57',
+    fontWeight: 'bold',
+    color: '#10b981',
     fontSize: 16,
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#D1FAE5',
+    backgroundColor: '#d1fae5',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1062,13 +1105,13 @@ const styles = StyleSheet.create({
   },
   verifiedText: {
     fontSize: 12,
-    color: '#065F46',
+    color: '#065f46',
     fontWeight: '600',
   },
   pendingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#fef3c7',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1076,36 +1119,31 @@ const styles = StyleSheet.create({
   },
   pendingText: {
     fontSize: 12,
-    color: '#92400E',
+    color: '#92400e',
     fontWeight: '600',
   },
   notesText: {
     fontSize: 14,
     color: '#374151',
     lineHeight: 20,
-    backgroundColor: '#F8FAFC',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 12,
   },
   closeButton: {
-    backgroundColor: '#2E8B57',
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: '#10b981',
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   closeButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
-  },
-    loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#64748B',
   },
 });
