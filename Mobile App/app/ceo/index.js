@@ -9,82 +9,74 @@ import {
   ActivityIndicator,
   FlatList,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { API_BASE_URL } from '../../config';
 
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [metrics, setMetrics] = useState({
-    monthlyRevenue: '₦2.4M',
-    activeCustomers: 847,
-    routeCompletion: '94.7%',
-    unpaidBalance: '₦180k',
-    revenueChange: '+12.5%',
-    customerChange: '+8.2%',
-    completionChange: '-2.1%',
-    balanceChange: '-15.3%',
-  });
+  const [metrics, setMetrics] = useState(null);
+  const [liveOperations, setLiveOperations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [liveOperations, setLiveOperations] = useState([
-    {
-      id: '1',
-      title: 'Truck A - NGR 123XY',
-      status: 'Active',
-      statusColor: '#10b981',
-      supervisor: 'John Doe',
-      location: 'Victoria Island',
-      progress: '15/20 houses completed',
-      time: 'On duty 3h 25m',
-      collection: '₦45,000 collected',
-      icon: 'car-sport',
-    },
-    {
-      id: '2',
-      title: 'Truck B - NGR 456AB',
-      status: 'Maintenance',
-      statusColor: '#f59e0b',
-      supervisor: 'Sarah Wilson',
-      issue: 'Engine repair needed',
-      expected: 'Expected: Feb 20',
-      cost: 'Cost: ₦85,000',
-      icon: 'build',
-    },
-    {
-      id: '3',
-      title: 'Truck C - NGR 789CD',
-      status: 'Active',
-      statusColor: '#10b981',
-      supervisor: 'Mike Johnson',
-      location: 'Ikoyi Area',
-      progress: '8/12 streets done',
-      time: 'On duty 2h 10m',
-      icon: 'car-sport',
-    },
-    {
-      id: '4',
-      title: 'Truck D - NGR 321EF',
-      status: 'Idle',
-      statusColor: '#64748b',
-      location: 'Depot',
-      note: 'No assignment',
-      icon: 'time',
-    },
-  ]);
-
-  const [loading, setLoading] = useState(false);
+  // Default metrics structure
+  const defaultMetrics = {
+    monthlyRevenue: '₦0',
+    activeCustomers: 0,
+    routeCompletion: '0%',
+    unpaidBalance: '₦0',
+    revenueChange: '+0%',
+    customerChange: '+0%',
+    completionChange: '+0%',
+    balanceChange: '+0%'
+  };
 
   useEffect(() => {
-    // Simulate loading
-    setLoading(true);
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    fetchDashboardData();
   }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching dashboard data...');
+      
+      // Replace with your actual API endpoint - adjust the URL as needed
+      const response = await fetch(`${API_BASE_URL}/api/dashboard`);
+      const result = await response.json();
+      
+      console.log('Response:', response);
+      console.log('Result:', result);
+      
+      if (result.success) {
+        setMetrics(result.data.metrics);
+        setLiveOperations(result.data.liveOperations);
+      } else {
+        // Fallback to default data if API returns error
+        setMetrics(defaultMetrics);
+        setLiveOperations([]);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      console.log('Error:', error);
+      // Fallback to default data if API fails
+      setMetrics(defaultMetrics);
+      setLiveOperations([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
+  };
 
   const quickActions = [
     {
@@ -259,6 +251,9 @@ export default function HomeScreen() {
     </View>
   );
 
+  // Use actual metrics or default if still loading
+  const displayMetrics = metrics || defaultMetrics;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
@@ -286,6 +281,14 @@ export default function HomeScreen() {
       <ScrollView 
         style={styles.content} 
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#6366f1']}
+            tintColor="#6366f1"
+          />
+        }
       >
         {/* Quick Actions Section */}
         <View style={styles.section}>
@@ -317,10 +320,10 @@ export default function HomeScreen() {
             <Text style={styles.sectionSubtitle}>This month's performance</Text>
           </View>
           <View style={styles.metricsGrid}>
-            {renderMetricCard('Monthly Revenue', metrics.monthlyRevenue, metrics.revenueChange, true)}
-            {renderMetricCard('Active Customers', metrics.activeCustomers, metrics.customerChange, true)}
-            {renderMetricCard('Route Completion', metrics.routeCompletion, metrics.completionChange, false)}
-            {renderMetricCard('Unpaid Balance', metrics.unpaidBalance, metrics.balanceChange, false)}
+            {renderMetricCard('Monthly Revenue', displayMetrics.monthlyRevenue, displayMetrics.revenueChange, true)}
+            {renderMetricCard('Active Customers', displayMetrics.activeCustomers, displayMetrics.customerChange, true)}
+            {renderMetricCard('Route Completion', displayMetrics.routeCompletion, displayMetrics.completionChange, false)}
+            {renderMetricCard('Unpaid Balance', displayMetrics.unpaidBalance, displayMetrics.balanceChange, false)}
           </View>
         </View>
 
@@ -369,6 +372,7 @@ export default function HomeScreen() {
   );
 }
 
+// ... (keep your existing styles the same)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
