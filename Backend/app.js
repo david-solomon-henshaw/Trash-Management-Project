@@ -7,6 +7,7 @@ const customerRoute = require('./routes/customerRoutes')
 const commercialSubtypeRoute = require('./routes/commercialSubTypeRoutes')
 const apartmentTypeRoute = require('./routes/apartmentRoute')
 const paymentRoute = require('./routes/paymentRoute')
+const analyticsRoute = require('./routes/analyticsRoute')
 
 const mongoose = require('mongoose')
 require('dotenv').config()
@@ -25,7 +26,7 @@ app.use('/api/customers',customerRoute)
 app.use('/api/apartment-types',apartmentTypeRoute)
 app.use('/api/commercial-subtypes',commercialSubtypeRoute)
 app.use('/api/payments', paymentRoute)
-
+app.use('/api/analytics', analyticsRoute)
 // Handle 404 for unmatched routes
 app.use((req, res, next) => {
   res.status(404).json({ message: `Route ${req.originalUrl} not found` });
