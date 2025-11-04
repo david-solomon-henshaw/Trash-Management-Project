@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
-import { API_BASE_URL } from '../../config'
+import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -18,10 +19,27 @@ const Reports = () => {
   const [agentPerformance, setAgentPerformance] = useState([]);
   const [outstandingBalances, setOutstandingBalances] = useState(null);
 
-
   const fetchData = async () => {
     try {
       console.log('Starting to fetch financial reports data...');
+      
+      const endpoints = [
+        '/api/analytics/reports/revenue-overview',
+        '/api/analytics/reports/revenue-trend',
+        '/api/analytics/reports/revenue-by-street',
+        '/api/analytics/reports/revenue-by-customer-type',
+        '/api/analytics/reports/payment-status',
+        '/api/analytics/reports/collection-rate',
+        '/api/analytics/reports/agent-performance',
+        '/api/analytics/reports/outstanding-balances'
+      ];
+
+      const requests = endpoints.map(endpoint => 
+        axios.get(`${API_BASE_URL}${endpoint}`)
+      );
+
+      const responses = await Promise.all(requests);
+      
       const [
         overviewRes,
         trendRes,
@@ -31,108 +49,17 @@ const Reports = () => {
         collectionRes,
         agentRes,
         outstandingRes
-      ] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/analytics/reports/revenue-overview`).then(res => {
-          console.log('Revenue Overview API response status:', res.status);
-          return res;
-        }),
-        fetch(`${API_BASE_URL}/api/analytics/reports/revenue-trend`).then(res => {
-          console.log('Revenue Trend API response status:', res.status);
-          return res;
-        }),
-        fetch(`${API_BASE_URL}/api/analytics/reports/revenue-by-street`).then(res => {
-          console.log('Revenue by Street API response status:', res.status);
-          return res;
-        }),
-        fetch(`${API_BASE_URL}/api/analytics/reports/revenue-by-customer-type`).then(res => {
-          console.log('Revenue by Customer Type API response status:', res.status);
-          return res;
-        }),
-        fetch(`${API_BASE_URL}/api/analytics/reports/payment-status`).then(res => {
-          console.log('Payment Status API response status:', res.status);
-          return res;
-        }),
-        fetch(`${API_BASE_URL}/api/analytics/reports/collection-rate`).then(res => {
-          console.log('Collection Rate API response status:', res.status);
-          return res;
-        }),
-        fetch(`${API_BASE_URL}/api/analytics/reports/agent-performance`).then(res => {
-          console.log('Agent Performance API response status:', res.status);
-          return res;
-        }),
-        fetch(`${API_BASE_URL}/api/analytics/reports/outstanding-balances`).then(res => {
-          console.log('Outstanding Balances API response status:', res.status);
-          return res;
-        })
-      ]);
+      ] = responses;
 
-      const [
-        overviewData,
-        trendData,
-        streetData,
-        typeData,
-        statusData,
-        collectionData,
-        agentData,
-        outstandingData
-      ] = await Promise.all([
-        overviewRes.json().then(data => {
-          console.log('Revenue Overview data:', data);
-          return data;
-        }),
-        trendRes.json().then(data => {
-          console.log('Revenue Trend data:', data);
-          return data;
-        }),
-        streetRes.json().then(data => {
-          console.log('Revenue by Street data:', data);
-          return data;
-        }),
-        typeRes.json().then(data => {
-          console.log('Revenue by Customer Type data:', data);
-          return data;
-        }),
-        statusRes.json().then(data => {
-          console.log('Payment Status data:', data);
-          return data;
-        }),
-        collectionRes.json().then(data => {
-          console.log('Collection Rate data:', data);
-          return data;
-        }),
-        agentRes.json().then(data => {
-          console.log('Agent Performance data:', data);
-          return data;
-        }),
-        outstandingRes.json().then(data => {
-          console.log('Outstanding Balances data:', data);
-          return data;
-        })
-      ]);
+      setRevenueOverview(overviewRes.data.data);
+      setRevenueTrend(trendRes.data.data || []);
+      setRevenueByStreet(streetRes.data.data || []);
+      setRevenueByType(typeRes.data.data || []);
+      setPaymentStatus(statusRes.data.data || []);
+      setCollectionRate(collectionRes.data.data);
+      setAgentPerformance(agentRes.data.data || []);
+      setOutstandingBalances(outstandingRes.data.data);
 
-      console.log('Setting Revenue Overview state:', overviewData.data);
-      setRevenueOverview(overviewData.data);
-      
-      console.log('Setting Revenue Trend state:', trendData.data || []);
-      setRevenueTrend(trendData.data || []);
-      
-      console.log('Setting Revenue by Street state:', streetData.data || []);
-      setRevenueByStreet(streetData.data || []);
-      
-      console.log('Setting Revenue by Type state:', typeData.data || []);
-      setRevenueByType(typeData.data || []);
-      
-      console.log('Setting Payment Status state:', statusData.data || []);
-      setPaymentStatus(statusData.data || []);
-      
-      console.log('Setting Collection Rate state:', collectionData.data);
-      setCollectionRate(collectionData.data);
-      
-      console.log('Setting Agent Performance state:', agentData.data || []);
-      setAgentPerformance(agentData.data || []);
-      
-      console.log('Setting Outstanding Balances state:', outstandingData.data);
-      setOutstandingBalances(outstandingData.data);
     } catch (error) {
       console.error('Error fetching reports:', error);
     } finally {
@@ -156,8 +83,11 @@ const Reports = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' }}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
+        <View style={{ alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#6366f1" />
+          <Text style={{ marginTop: 12, color: '#64748b', fontSize: 16 }}>Loading reports...</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -166,7 +96,7 @@ const Reports = () => {
     ? paymentStatus.map((item, index) => ({
         name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
         population: item.count,
-        color: ['#10b981', '#f59e0b', '#ef4444'][index] || '#6b7280',
+        color: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index] || '#6b7280',
         legendFontColor: '#374151',
       }))
     : [];
@@ -175,270 +105,418 @@ const Reports = () => {
     ? revenueByType.map((item, index) => ({
         name: item.customer_type.charAt(0).toUpperCase() + item.customer_type.slice(1),
         population: item.total_revenue,
-        color: ['#3b82f6', '#10b981'][index] || '#6b7280',
+        color: ['#6366f1', '#10b981', '#f59e0b'][index] || '#6b7280',
         legendFontColor: '#374151',
       }))
     : [];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
       <ScrollView
         style={{ flex: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={{ padding: 16 }}>
-        {/* Header */}
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1f2937', marginBottom: 16 }}>
-          Financial Reports
-        </Text>
-
-        {/* Revenue Overview Cards */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 }}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Revenue</Text>
-            <Text style={[styles.statValue, { color: '#3b82f6' }]}>
-              {formatCurrency(revenueOverview?.total_revenue)}
+        <View style={{ padding: 20 }}>
+          {/* Header */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 }}>
+              Financial Dashboard
+            </Text>
+            <Text style={{ fontSize: 16, color: '#64748b' }}>
+              Comprehensive overview of your financial performance
             </Text>
           </View>
 
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>This Month</Text>
-            <Text style={[styles.statValue, { color: '#10b981' }]}>
-              {formatCurrency(revenueOverview?.monthly_revenue)}
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Cash Payments</Text>
-            <Text style={[styles.statValue, { color: '#1f2937', fontSize: 20 }]}>
-              {formatCurrency(revenueOverview?.cash_revenue)}
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Transfers</Text>
-            <Text style={[styles.statValue, { color: '#1f2937', fontSize: 20 }]}>
-              {formatCurrency(revenueOverview?.transfer_revenue)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Collection Rate Card */}
-        {collectionRate && (
-          <View style={[styles.chartCard, { backgroundColor: '#3b82f6' }]}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: 'white', marginBottom: 8 }}>
-              Collection Rate
-            </Text>
-            <Text style={{ fontSize: 48, fontWeight: 'bold', color: 'white' }}>
-              {collectionRate.collection_rate.toFixed(1)}%
-            </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-              <View>
-                <Text style={{ color: '#dbeafe', fontSize: 12 }}>Expected</Text>
-                <Text style={{ color: 'white', fontWeight: '600' }}>
-                  {formatCurrency(collectionRate.expected_revenue)}
+          {/* Revenue Overview Cards - Redesigned */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={styles.sectionTitle}>Revenue Overview</Text>
+            <View style={styles.cardGrid}>
+              <View style={[styles.statCard, { backgroundColor: '#6366f1' }]}>
+                <View style={styles.statIcon}>
+                  <Text style={{ color: 'white', fontSize: 20 }}>💰</Text>
+                </View>
+                <Text style={styles.statLabel}>Total Revenue</Text>
+                <Text style={[styles.statValue, { color: 'white' }]}>
+                  {formatCurrency(revenueOverview?.total_revenue)}
                 </Text>
               </View>
-              <View>
-                <Text style={{ color: '#dbeafe', fontSize: 12 }}>Collected</Text>
-                <Text style={{ color: 'white', fontWeight: '600' }}>
-                  {formatCurrency(collectionRate.collected_revenue)}
+
+              <View style={[styles.statCard, { backgroundColor: '#10b981' }]}>
+                <View style={styles.statIcon}>
+                  <Text style={{ color: 'white', fontSize: 20 }}>📈</Text>
+                </View>
+                <Text style={styles.statLabel}>This Month</Text>
+                <Text style={[styles.statValue, { color: 'white' }]}>
+                  {formatCurrency(revenueOverview?.monthly_revenue)}
                 </Text>
               </View>
-              <View>
-                <Text style={{ color: '#dbeafe', fontSize: 12 }}>Outstanding</Text>
-                <Text style={{ color: 'white', fontWeight: '600' }}>
-                  {formatCurrency(collectionRate.outstanding)}
+
+              <View style={[styles.statCard, { backgroundColor: '#f59e0b' }]}>
+                <View style={styles.statIcon}>
+                  <Text style={{ color: 'white', fontSize: 20 }}>💵</Text>
+                </View>
+                <Text style={styles.statLabel}>Cash Payments</Text>
+                <Text style={[styles.statValue, { color: 'white' }]}>
+                  {formatCurrency(revenueOverview?.cash_revenue)}
+                </Text>
+              </View>
+
+              <View style={[styles.statCard, { backgroundColor: '#8b5cf6' }]}>
+                <View style={styles.statIcon}>
+                  <Text style={{ color: 'white', fontSize: 20 }}>💳</Text>
+                </View>
+                <Text style={styles.statLabel}>Transfers</Text>
+                <Text style={[styles.statValue, { color: 'white' }]}>
+                  {formatCurrency(revenueOverview?.transfer_revenue)}
                 </Text>
               </View>
             </View>
           </View>
-        )}
 
-        {/* Revenue Trend */}
-        {revenueTrend && revenueTrend.length > 0 && (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Revenue Trend (6 Months)</Text>
-            <LineChart
-              data={{
-                labels: revenueTrend.map(item => item.month.slice(-2)),
-                datasets: [{
-                  data: revenueTrend.map(item => item.revenue)
-                }]
-              }}
-              width={screenWidth - 60}
-              height={220}
-              chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
-                propsForDots: {
-                  r: '6',
-                  strokeWidth: '2',
-                  stroke: '#10b981'
-                }
-              }}
-              bezier
-              style={{ borderRadius: 8 }}
-            />
-          </View>
-        )}
-
-        {/* Payment Status Distribution */}
-        {paymentStatusChartData && paymentStatusChartData.length > 0 && (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Payment Status Distribution</Text>
-            <PieChart
-              data={paymentStatusChartData}
-              width={screenWidth - 60}
-              height={200}
-              chartConfig={{
-                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              }}
-              accessor="population"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              absolute
-            />
-          </View>
-        )}
-
-        {/* Revenue by Customer Type */}
-        {revenueByTypeChartData && revenueByTypeChartData.length > 0 && (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Revenue by Customer Type</Text>
-            <PieChart
-              data={revenueByTypeChartData}
-              width={screenWidth - 60}
-              height={200}
-              chartConfig={{
-                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              }}
-              accessor="population"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              absolute
-            />
-          </View>
-        )}
-
-        {/* Top Revenue Streets */}
-        {revenueByStreet && revenueByStreet.length > 0 && (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Top Revenue by Street</Text>
-            {revenueByStreet.slice(0, 5).map((item, index) => (
-              <View key={index} style={styles.listItem}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#374151', fontWeight: '600' }}>{item.street_name}</Text>
-                  <Text style={{ color: '#6b7280', fontSize: 12 }}>{item.payment_count} payments</Text>
+          {/* Collection Rate & Outstanding Balances Side by Side */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
+            {/* Collection Rate */}
+            {collectionRate && (
+              <View style={[styles.highlightCard, { backgroundColor: '#6366f1', flex: 0.48 }]}>
+                <View style={styles.cardHeader}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: 'white' }}>
+                    Collection Rate
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#c7d2fe' }}>Efficiency</Text>
                 </View>
-                <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 16 }}>
-                  {formatCurrency(item.total_revenue)}
+                <Text style={{ fontSize: 36, fontWeight: 'bold', color: 'white', marginVertical: 8 }}>
+                  {collectionRate.collection_rate.toFixed(1)}%
                 </Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Agent Performance */}
-        {agentPerformance && agentPerformance.length > 0 && (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Agent Performance</Text>
-            {agentPerformance.slice(0, 5).map((item, index) => (
-              <View key={index} style={styles.listItem}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#374151', fontWeight: '600' }}>{item.agent_name}</Text>
-                  <View style={{ flexDirection: 'row', marginTop: 4 }}>
-                    <Text style={{ color: '#6b7280', fontSize: 12, marginRight: 12 }}>
-                      💵 {item.cash_payments}
+                <View style={styles.metricRow}>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Expected</Text>
+                    <Text style={styles.metricValue}>
+                      {formatCurrency(collectionRate.expected_revenue)}
                     </Text>
-                    <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                      💳 {item.transfer_payments}
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Collected</Text>
+                    <Text style={styles.metricValue}>
+                      {formatCurrency(collectionRate.collected_revenue)}
                     </Text>
                   </View>
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 16 }}>
-                    {formatCurrency(item.total_collections)}
-                  </Text>
-                  <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                    {item.payment_count} payments
-                  </Text>
-                </View>
               </View>
-            ))}
-          </View>
-        )}
+            )}
 
-        {/* Outstanding Balances */}
-        {outstandingBalances && (
-          <View style={[styles.chartCard, { backgroundColor: '#fef3c7' }]}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#92400e', marginBottom: 16 }}>
-              Outstanding Balances
-            </Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <View>
-                <Text style={{ color: '#78350f', fontSize: 12 }}>Total Outstanding</Text>
-                <Text style={{ color: '#92400e', fontWeight: 'bold', fontSize: 24, marginTop: 4 }}>
+            {/* Outstanding Balances */}
+            {outstandingBalances && (
+              <View style={[styles.highlightCard, { backgroundColor: '#f59e0b', flex: 0.48 }]}>
+                <View style={styles.cardHeader}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: 'white' }}>
+                    Outstanding
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#fef3c7' }}>Pending</Text>
+                </View>
+                <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', marginVertical: 8 }}>
                   {formatCurrency(outstandingBalances.total_outstanding)}
                 </Text>
+                <View style={styles.metricRow}>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Customers</Text>
+                    <Text style={styles.metricValue}>
+                      {outstandingBalances.customers_with_balance}
+                    </Text>
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Balance</Text>
+                    <Text style={styles.metricValue}>
+                      {formatCurrency(outstandingBalances.total_outstanding)}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ color: '#78350f', fontSize: 12 }}>Customers with Balance</Text>
-                <Text style={{ color: '#92400e', fontWeight: 'bold', fontSize: 24, marginTop: 4 }}>
-                  {outstandingBalances.customers_with_balance}
-                </Text>
+            )}
+          </View>
+
+          {/* Charts Section */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={styles.sectionTitle}>Analytics & Trends</Text>
+            
+            {/* Revenue Trend */}
+            {revenueTrend && revenueTrend.length > 0 && (
+              <View style={styles.chartCard}>
+                <View style={styles.chartHeader}>
+                  <Text style={styles.chartTitle}>Revenue Trend</Text>
+                  <Text style={styles.chartSubtitle}>Last 6 months performance</Text>
+                </View>
+                <LineChart
+                  data={{
+                    labels: revenueTrend.map(item => item.month.slice(-2)),
+                    datasets: [{
+                      data: revenueTrend.map(item => item.revenue)
+                    }]
+                  }}
+                  width={screenWidth - 60}
+                  height={220}
+                  chartConfig={{
+                    backgroundColor: '#ffffff',
+                    backgroundGradientFrom: '#f8fafc',
+                    backgroundGradientTo: '#ffffff',
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
+                    style: { borderRadius: 16 },
+                    propsForDots: {
+                      r: '6',
+                      strokeWidth: '2',
+                      stroke: '#6366f1'
+                    },
+                    propsForBackgroundLines: {
+                      strokeDasharray: '',
+                    }
+                  }}
+                  bezier
+                  style={styles.chartStyle}
+                />
               </View>
+            )}
+
+            {/* Payment Distribution Charts Side by Side */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              {/* Payment Status */}
+              {paymentStatusChartData && paymentStatusChartData.length > 0 && (
+                <View style={[styles.chartCard, { flex: 0.48 }]}>
+                  <Text style={styles.chartTitle}>Payment Status</Text>
+                  <PieChart
+                    data={paymentStatusChartData}
+                    width={(screenWidth - 80) / 2}
+                    height={140}
+                    chartConfig={{
+                      color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    }}
+                    accessor="population"
+                    backgroundColor="transparent"
+                    paddingLeft="10"
+                    absolute
+                  />
+                </View>
+              )}
+
+              {/* Revenue by Type */}
+              {revenueByTypeChartData && revenueByTypeChartData.length > 0 && (
+                <View style={[styles.chartCard, { flex: 0.48 }]}>
+                  <Text style={styles.chartTitle}>By Customer Type</Text>
+                  <PieChart
+                    data={revenueByTypeChartData}
+                    width={(screenWidth - 80) / 2}
+                    height={140}
+                    chartConfig={{
+                      color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                    }}
+                    accessor="population"
+                    backgroundColor="transparent"
+                    paddingLeft="10"
+                    absolute
+                  />
+                </View>
+              )}
             </View>
           </View>
-        )}
-      </View>
-    </ScrollView>
-  </SafeAreaView>
+
+          {/* Top Performers Section */}
+          <View style={{ marginBottom: 24 }}>
+            <Text style={styles.sectionTitle}>Top Performers</Text>
+            
+            {/* Top Revenue Streets */}
+            {revenueByStreet && revenueByStreet.length > 0 && (
+              <View style={styles.listCard}>
+                <View style={styles.listHeader}>
+                  <Text style={styles.listTitle}>Top Revenue Streets</Text>
+                  <Text style={styles.listSubtitle}>Highest earning locations</Text>
+                </View>
+                {revenueByStreet.slice(0, 5).map((item, index) => (
+                  <View key={index} style={styles.listItem}>
+                    <View style={styles.listItemLeft}>
+                      <View style={[styles.rankBadge, index < 3 && styles.topRankBadge]}>
+                        <Text style={[styles.rankText, index < 3 && styles.topRankText]}>
+                          #{index + 1}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.listItemTitle}>{item.street_name}</Text>
+                        <Text style={styles.listItemSubtitle}>{item.payment_count} payments</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.revenueText}>
+                      {formatCurrency(item.total_revenue)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Agent Performance */}
+            {agentPerformance && agentPerformance.length > 0 && (
+              <View style={styles.listCard}>
+                <View style={styles.listHeader}>
+                  <Text style={styles.listTitle}>Agent Performance</Text>
+                  <Text style={styles.listSubtitle}>Top collectors this period</Text>
+                </View>
+                {agentPerformance.slice(0, 5).map((item, index) => (
+                  <View key={index} style={styles.listItem}>
+                    <View style={styles.listItemLeft}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>
+                          {item.agent_name.split(' ').map(n => n[0]).join('')}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.listItemTitle}>{item.agent_name}</Text>
+                        <View style={styles.paymentTypes}>
+                          <Text style={styles.paymentType}>💵 {item.cash_payments}</Text>
+                          <Text style={styles.paymentType}>💳 {item.transfer_payments}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.revenueText}>
+                        {formatCurrency(item.total_collections)}
+                      </Text>
+                      <Text style={styles.paymentCount}>{item.payment_count} payments</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = {
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 16,
+  },
+  cardGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
   statCard: {
     width: '48%',
-    backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  statIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   statLabel: {
-    color: '#6b7280',
-    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 4,
+  },
+  highlightCard: {
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  metricRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  metricItem: {
+    alignItems: 'flex-start',
+  },
+  metricLabel: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  metricValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   chartCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
   },
-  chartTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1f2937',
+  chartHeader: {
     marginBottom: 12,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  chartStyle: {
+    borderRadius: 12,
+    marginVertical: 8,
+  },
+  listCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  listHeader: {
+    marginBottom: 12,
+  },
+  listTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  listSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
   },
   listItem: {
     flexDirection: 'row',
@@ -446,7 +524,75 @@ const styles = {
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: '#f1f5f9',
+  },
+  listItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  rankBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  topRankBadge: {
+    backgroundColor: '#6366f1',
+  },
+  rankText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#64748b',
+  },
+  topRankText: {
+    color: 'white',
+  },
+  listItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  listItemSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  revenueText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#10b981',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  paymentTypes: {
+    flexDirection: 'row',
+    marginTop: 2,
+  },
+  paymentType: {
+    fontSize: 11,
+    color: '#64748b',
+    marginRight: 8,
+  },
+  paymentCount: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
   },
 };
 

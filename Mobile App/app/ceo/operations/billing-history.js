@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../../config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 
 
 export default function CustomerBillingHistory() {
@@ -33,6 +34,7 @@ export default function CustomerBillingHistory() {
   // Real data from API
   const [customers, setCustomers] = useState([]);
   const [billingHistory, setBillingHistory] = useState({});
+  const [paymentDetails, setPaymentDetails] = useState({});
 
 const getAuthToken = async () => {
   try {
@@ -50,23 +52,18 @@ const getAuthToken = async () => {
       const token = await getAuthToken();
       const url = `${API_BASE_URL}/api/billing/search?query=${encodeURIComponent(query)}`;
       console.log('searchCustomers API call:', { url, token, query });
-      const response = await fetch(url, {
-        method: 'GET',
+      const response = await axios.get(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        },
+        }
       });
-      console.log('searchCustomers response status:', response.status);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('searchCustomers error response body:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      const data = response.data;
       console.log('searchCustomers response data:', data);
       if (data.success) {
         setCustomers(data.customers || []);
+        // Prefetch billing history and payment details in background
+        prefetchBillingForCustomers(data.customers || []);
       } else {
         Alert.alert('Error', data.message || 'Failed to search customers');
       }
@@ -81,23 +78,18 @@ const getAuthToken = async () => {
   // Get customer billing history API call
   const getCustomerBillingHistory = async (customerId) => {
     try {
+      // This function remains axios-based but should not be called on card click anymore.
       setLoading(true);
       const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/api/billing/customer/${customerId}`, {
-        method: 'GET',
+      const response = await axios.get(`${API_BASE_URL}/api/billing/customer/${customerId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        },
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const data = response.data;
 
-      const data = await response.json();
-      
       if (data.success) {
         return data.data;
       } else {
@@ -117,21 +109,15 @@ const getAuthToken = async () => {
   const getPaymentDetails = async (paymentId) => {
     try {
       const token = await getAuthToken();
-      
-      const response = await fetch(`${API_BASE_URL}/api/billing/payment/${paymentId}`, {
-        method: 'GET',
+      const response = await axios.get(`${API_BASE_URL}/api/billing/payment/${paymentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        },
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      const data = response.data;
 
-      const data = await response.json();
-      
       if (data.success) {
         return data.payment;
       } else {
@@ -142,6 +128,59 @@ const getAuthToken = async () => {
       console.error('Get payment details error:', error);
       Alert.alert('Error', 'Failed to load payment details. Please try again.');
       return null;
+    }
+  };
+
+  // Prefetch helpers (run in background; do NOT trigger on click)
+  const prefetchBillingForCustomers = async (customerList) => {
+    if (!Array.isArray(customerList) || customerList.length === 0) return;
+    for (const c of customerList) {
+      // fire-and-forget each customer's billing history
+      prefetchCustomerBillingHistory(c._id);
+    }
+  };
+
+  const prefetchCustomerBillingHistory = async (customerId) => {
+    try {
+      const token = await getAuthToken();
+      const response = await axios.get(`${API_BASE_URL}/api/billing/customer/${customerId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = response.data;
+      if (data.success) {
+        const payments = data.data.payments || [];
+        setBillingHistory(prev => ({ ...prev, [customerId]: payments }));
+
+        // Prefetch payment details for each payment (fire-and-forget)
+        payments.forEach(p => prefetchPaymentDetails(p._id));
+      }
+    } catch (err) {
+      console.error('Prefetch customer billing error:', err);
+    }
+  };
+
+  const prefetchPaymentDetails = async (paymentId) => {
+    try {
+      // Skip if already cached
+      if (paymentDetails[paymentId]) return;
+      const token = await getAuthToken();
+      const response = await axios.get(`${API_BASE_URL}/api/billing/payment/${paymentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = response.data;
+      if (data.success) {
+        setPaymentDetails(prev => ({ ...prev, [paymentId]: data.payment }));
+      }
+    } catch (err) {
+      console.error('Prefetch payment details error:', err);
     }
   };
 
@@ -177,19 +216,10 @@ const getAuthToken = async () => {
 
   const handleViewCustomer = async (customer) => {
     try {
+      // When user taps a customer card we must NOT fetch data here.
+      // Use whatever was prefetched in the background. If not ready, we'll show a loading hint.
       setSelectedCustomer(customer);
       setCustomerModalVisible(true);
-      
-      // Load billing history for this customer
-      const history = await getCustomerBillingHistory(customer._id);
-      
-      if (history) {
-        setSelectedCustomer(history.customer);
-        setBillingHistory(prev => ({
-          ...prev,
-          [customer._id]: history.payments || []
-        }));
-      }
     } catch (error) {
       console.error('Error loading customer history:', error);
     }
@@ -197,15 +227,15 @@ const getAuthToken = async () => {
 
   const handleViewPaymentDetails = async (payment) => {
     try {
-      setSelectedPayment(payment);
-      setPaymentDetailModalVisible(true);
-      
-      // Load full payment details
-      const paymentDetails = await getPaymentDetails(payment._id);
-      
-      if (paymentDetails) {
-        setSelectedPayment(paymentDetails);
+      // Use cached payment details only — do NOT fetch on click.
+      const cached = paymentDetails[payment._id];
+      if (cached) {
+        setSelectedPayment(cached);
+      } else {
+        // Fall back to the shallow payment object and let the UI show that details are still loading.
+        setSelectedPayment(payment);
       }
+      setPaymentDetailModalVisible(true);
     } catch (error) {
       console.error('Error loading payment details:', error);
     }
@@ -259,6 +289,9 @@ const getAuthToken = async () => {
       default: return 'help-circle';
     }
   };
+
+  // Payments for currently selected customer (undefined = still loading/prefetching)
+  const paymentsForSelectedCustomer = selectedCustomer ? billingHistory[selectedCustomer._id] : undefined;
 
   // Filter customers based on search (now handled by API, but keeping for client-side fallback)
   const filteredCustomers = customers.filter(customer =>
@@ -462,7 +495,12 @@ const getAuthToken = async () => {
                   <View style={styles.paymentHistorySection}>
                     <Text style={styles.sectionTitle}>Payment Records</Text>
                     
-                    {(billingHistory[selectedCustomer._id] || []).length === 0 ? (
+                    {paymentsForSelectedCustomer === undefined ? (
+                      <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="small" color="#2E8B57" />
+                        <Text style={styles.loadingText}>Loading payment records...</Text>
+                      </View>
+                    ) : paymentsForSelectedCustomer.length === 0 ? (
                       <View style={styles.noPayments}>
                         <Ionicons name="receipt-outline" size={48} color="#D1D5DB" />
                         <Text style={styles.noPaymentsText}>No payment records found</Text>
@@ -471,7 +509,7 @@ const getAuthToken = async () => {
                         </Text>
                       </View>
                     ) : (
-                      billingHistory[selectedCustomer._id].map((payment) => (
+                      paymentsForSelectedCustomer.map((payment) => (
                         <TouchableOpacity
                           key={payment._id}
                           style={styles.paymentItem}
