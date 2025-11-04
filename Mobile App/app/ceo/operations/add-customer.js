@@ -10,6 +10,9 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +20,8 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../../config';
 import { useRouter } from 'expo-router';
+
+const { width } = Dimensions.get('window');
 
 export default function AddCustomerForm() {
   const router = useRouter();
@@ -88,7 +93,6 @@ export default function AddCustomerForm() {
     }
   };
 
-
   const customerTypes = [
     { value: 'residential', label: 'Residential' },
     { value: 'commercial', label: 'Commercial' },
@@ -113,7 +117,6 @@ export default function AddCustomerForm() {
     });
   };
 
-
   const toggleDropdown = (field) => {
     setShowDropdown(prev => ({
       ...Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: false }), {}),
@@ -136,7 +139,6 @@ export default function AddCustomerForm() {
     });
     setShowDropdown(prev => ({ ...prev, [field]: false }));
   };
-
 
   const validateForm = () => {
     if (!formData.name.trim()) {
@@ -212,7 +214,6 @@ export default function AddCustomerForm() {
     }
   };
 
-
   const handleCancel = () => {
     const hasData = Object.values(formData).some(value =>
       value !== '' && value !== 'active'
@@ -247,29 +248,36 @@ export default function AddCustomerForm() {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#666" />
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#64748b" />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalList}>
-            {options.map(option => (
-              <TouchableOpacity
-                key={option.id || option._id || option.value}
-                style={styles.modalItem}
-                onPress={() => handleSelect(
-                  field,
-                  option.id || option._id || option.value,
-                  option.name || option.streetName || option.label
-                )}
-              >
-                <Text style={styles.modalItemText}>
-                  {option.name || option.streetName || option.label}
-                </Text>
-                {formData[field] === (option.id || option._id || option.value) && (
-                  <Ionicons name="checkmark" size={20} color="#2E8B57" />
-                )}
-              </TouchableOpacity>
-            ))}
+            {options.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="alert-circle-outline" size={48} color="#cbd5e1" />
+                <Text style={styles.emptyStateText}>No options available</Text>
+              </View>
+            ) : (
+              options.map(option => (
+                <TouchableOpacity
+                  key={option.id || option._id || option.value}
+                  style={styles.modalItem}
+                  onPress={() => handleSelect(
+                    field,
+                    option.id || option._id || option.value,
+                    option.name || option.streetName || option.label
+                  )}
+                >
+                  <Text style={styles.modalItemText}>
+                    {option.name || option.streetName || option.label}
+                  </Text>
+                  {formData[field] === (option.id || option._id || option.value) && (
+                    <Ionicons name="checkmark" size={20} color="#10b981" />
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
         </View>
       </TouchableOpacity>
@@ -279,9 +287,9 @@ export default function AddCustomerForm() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2E8B57" />
+          <ActivityIndicator size="large" color="#10b981" />
           <Text style={styles.loadingText}>Loading form data...</Text>
         </View>
       </SafeAreaView>
@@ -290,51 +298,60 @@ export default function AddCustomerForm() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
 
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>New Customer</Text>
+            <Text style={styles.headerTitle}>Add New Customer</Text>
             <Text style={styles.headerSubtitle}>Register a new customer account</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Ionicons name="person-add" size={24} color="white" />
           </View>
         </View>
       </View>
 
       {/* Form */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Personal Information Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>PERSONAL INFORMATION</Text>
-          </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Personal Information Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="person-circle" size={20} color="#10b981" />
+              <Text style={styles.sectionTitle}>Personal Information</Text>
+            </View>
 
-          {/* Name */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Full Name <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="person-outline" size={20} color="#999" style={styles.inputIcon} />
+            {/* Name */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="person-outline" size={16} color="#64748b" />
+                <Text style={styles.label}>
+                  Full Name <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="Enter full name"
                 value={formData.name}
                 onChangeText={(value) => handleInputChange('name', value)}
-                placeholderTextColor="#999"
+                placeholderTextColor="#94a3b8"
               />
             </View>
-          </View>
 
-          {/* Email */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email Address</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#999" style={styles.inputIcon} />
+            {/* Email */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="mail-outline" size={16} color="#64748b" />
+                <Text style={styles.label}>Email Address</Text>
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="Enter email address"
@@ -342,176 +359,193 @@ export default function AddCustomerForm() {
                 onChangeText={(value) => handleInputChange('email', value)}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                placeholderTextColor="#999"
+                placeholderTextColor="#94a3b8"
               />
             </View>
-          </View>
 
-          {/* Phone */}
-          <View style={[styles.inputGroup, styles.lastInput]}>
-            <Text style={styles.label}>
-              Phone Number <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="call-outline" size={20} color="#999" style={styles.inputIcon} />
+            {/* Phone */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="call-outline" size={16} color="#64748b" />
+                <Text style={styles.label}>
+                  Phone Number <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="Enter phone number"
                 value={formData.phone}
                 onChangeText={(value) => handleInputChange('phone', value)}
                 keyboardType="phone-pad"
-                placeholderTextColor="#999"
+                placeholderTextColor="#94a3b8"
               />
             </View>
           </View>
-        </View>
 
-        {/* Address Information Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>ADDRESS INFORMATION</Text>
-          </View>
+          {/* Address Information Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="location" size={20} color="#10b981" />
+              <Text style={styles.sectionTitle}>Address Information</Text>
+            </View>
 
-          {/* Street Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Street <Text style={styles.required}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => toggleDropdown('street')}
-            >
-              <Ionicons name="location-outline" size={20} color="#999" style={styles.inputIcon} />
-              <Text style={[styles.dropdownText, formData.street_label && styles.dropdownTextSelected]}>
-                {formData.street_label || 'Select street'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#999" />
-            </TouchableOpacity>
-          </View>
+            {/* Street Dropdown */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="road-map" size={16} color="#64748b" />
+                <Text style={styles.label}>
+                  Street <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => toggleDropdown('street')}
+              >
+                <Text style={[styles.dropdownText, formData.street_label && styles.dropdownTextSelected]}>
+                  {formData.street_label || 'Select street'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
 
-          {/* House Number */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              House Number <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="home-outline" size={20} color="#999" style={styles.inputIcon} />
+            {/* House Number */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="home-outline" size={16} color="#64748b" />
+                <Text style={styles.label}>
+                  House Number <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
               <TextInput
                 style={styles.input}
                 placeholder="Enter house number"
                 value={formData.house_number}
                 onChangeText={(value) => handleInputChange('house_number', value)}
-                placeholderTextColor="#999"
+                placeholderTextColor="#94a3b8"
               />
             </View>
-          </View>
 
-          {/* Full Address */}
-          <View style={[styles.inputGroup, styles.lastInput]}>
-            <Text style={styles.label}>
-              Full Address <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={[styles.inputContainer, styles.textareaContainer]}>
-              <Ionicons name="business-outline" size={20} color="#999" style={[styles.inputIcon, styles.textareaIcon]} />
+            {/* Full Address */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="business-outline" size={16} color="#64748b" />
+                <Text style={styles.label}>
+                  Full Address <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
               <TextInput
                 style={[styles.input, styles.textarea]}
-                placeholder="Enter full address"
+                placeholder="Full address will be generated automatically"
                 value={formData.address}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
-                placeholderTextColor="#999"
+                placeholderTextColor="#94a3b8"
                 editable={false}
               />
             </View>
           </View>
-        </View>
 
-        {/* Customer Type Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>CUSTOMER TYPE</Text>
-          </View>
+          {/* Customer Type Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="business" size={20} color="#10b981" />
+              <Text style={styles.sectionTitle}>Customer Type</Text>
+            </View>
 
-          {/* Customer Type Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Type <Text style={styles.required}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => toggleDropdown('customer_type')}
-            >
-              <Text style={[styles.dropdownText, formData.customer_type_label && styles.dropdownTextSelected]}>
-                {formData.customer_type_label || 'Select customer type'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#999" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Apartment Type - Only for Residential */}
-          {formData.customer_type === 'residential' && (
+            {/* Customer Type Dropdown */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Apartment Type <Text style={styles.required}>*</Text>
-              </Text>
+              <View style={styles.labelContainer}>
+                <Ionicons name="layers-outline" size={16} color="#64748b" />
+                <Text style={styles.label}>
+                  Type <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
               <TouchableOpacity
                 style={styles.dropdownButton}
-                onPress={() => toggleDropdown('apartment_type')}
+                onPress={() => toggleDropdown('customer_type')}
               >
-                <Text style={[styles.dropdownText, formData.apartment_type_label && styles.dropdownTextSelected]}>
-                  {formData.apartment_type_label || 'Select apartment type'}
+                <Text style={[styles.dropdownText, formData.customer_type_label && styles.dropdownTextSelected]}>
+                  {formData.customer_type_label || 'Select customer type'}
                 </Text>
-                <Ionicons name="chevron-down" size={20} color="#999" />
+                <Ionicons name="chevron-down" size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-          )}
 
-          {/* Commercial Subtype - Only for Commercial */}
-          {formData.customer_type === 'commercial' && (
+            {/* Apartment Type - Only for Residential */}
+            {formData.customer_type === 'residential' && (
+              <View style={styles.inputGroup}>
+                <View style={styles.labelContainer}>
+                  <Ionicons name="bed-outline" size={16} color="#64748b" />
+                  <Text style={styles.label}>
+                    Apartment Type <Text style={styles.required}>*</Text>
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => toggleDropdown('apartment_type')}
+                >
+                  <Text style={[styles.dropdownText, formData.apartment_type_label && styles.dropdownTextSelected]}>
+                    {formData.apartment_type_label || 'Select apartment type'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Commercial Subtype - Only for Commercial */}
+            {formData.customer_type === 'commercial' && (
+              <View style={styles.inputGroup}>
+                <View style={styles.labelContainer}>
+                  <Ionicons name="storefront-outline" size={16} color="#64748b" />
+                  <Text style={styles.label}>
+                    Business Type <Text style={styles.required}>*</Text>
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => toggleDropdown('commercial_subtype')}
+                >
+                  <Text style={[styles.dropdownText, formData.commercial_subtype_label && styles.dropdownTextSelected]}>
+                    {formData.commercial_subtype_label || 'Select business type'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Status Dropdown */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Business Type <Text style={styles.required}>*</Text>
-              </Text>
+              <View style={styles.labelContainer}>
+                <Ionicons name="flag-outline" size={16} color="#64748b" />
+                <Text style={styles.label}>
+                  Status <Text style={styles.required}>*</Text>
+                </Text>
+              </View>
               <TouchableOpacity
                 style={styles.dropdownButton}
-                onPress={() => toggleDropdown('commercial_subtype')}
+                onPress={() => toggleDropdown('status')}
               >
-                <Text style={[styles.dropdownText, formData.commercial_subtype_label && styles.dropdownTextSelected]}>
-                  {formData.commercial_subtype_label || 'Select business type'}
+                <Text style={[styles.dropdownText, styles.dropdownTextSelected]}>
+                  {formData.status_label || 'Active'}
                 </Text>
-                <Ionicons name="chevron-down" size={20} color="#999" />
+                <Ionicons name="chevron-down" size={20} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-          )}
-
-          {/* Status Dropdown */}
-          <View style={[styles.inputGroup, styles.lastInput]}>
-            <Text style={styles.label}>
-              Status <Text style={styles.required}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => toggleDropdown('status')}
-            >
-              <Text style={[styles.dropdownText, styles.dropdownTextSelected]}>
-                {formData.status_label || 'Active'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#999" />
-            </TouchableOpacity>
           </View>
-        </View>
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Fixed Bottom Buttons */}
-      <View style={styles.bottomButtons}>
+      <View style={styles.bottomActions}>
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={handleCancel}
           disabled={submitting}
         >
+          <Ionicons name="close" size={20} color="#64748b" />
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -519,9 +553,14 @@ export default function AddCustomerForm() {
           onPress={handleSubmit}
           disabled={submitting}
         >
-          <Text style={styles.submitButtonText}>
-            {submitting ? 'Creating...' : 'Create Customer'}
-          </Text>
+          {submitting ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <>
+              <Ionicons name="checkmark" size={20} color="white" />
+              <Text style={styles.submitButtonText}>Create Customer</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -554,7 +593,6 @@ export default function AddCustomerForm() {
         field="commercial_subtype"
         title="Select Business Type"
       />
-
       <DropdownModal
         visible={showDropdown.status}
         onClose={() => toggleDropdown('status')}
@@ -569,114 +607,128 @@ export default function AddCustomerForm() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f8fafc',
+  },
+  keyboardView: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8fafc',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#64748B',
+    color: '#64748b',
+    fontWeight: '500',
   },
   header: {
-    backgroundColor: '#2E8B57',
-    paddingTop: 10,
-    paddingBottom: 20,
+    backgroundColor: '#10b981',
     paddingHorizontal: 20,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   backButton: {
-    marginRight: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerText: {
     flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
+    color: 'white',
+    marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
+    padding: 20,
   },
   section: {
-    backgroundColor: '#fff',
-    marginTop: 16,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 20,
+    padding: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
   },
   sectionHeader: {
-    backgroundColor: '#f8f9fa',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#e2e8f0',
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#666',
-    letterSpacing: 0.5,
+    color: '#1e293b',
+    marginLeft: 8,
   },
   inputGroup: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f1f5f9',
   },
-  lastInput: {
-    borderBottomWidth: 0,
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
+    fontWeight: '600',
+    color: '#374151',
+    marginLeft: 6,
   },
   required: {
-    color: '#dc3545',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  inputIcon: {
-    marginRight: 12,
+    color: '#ef4444',
   },
   input: {
-    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    color: '#333',
-  },
-  textareaContainer: {
-    alignItems: 'flex-start',
-  },
-  textareaIcon: {
-    marginTop: 2,
+    color: '#1e293b',
   },
   textarea: {
     minHeight: 80,
@@ -685,58 +737,79 @@ const styles = StyleSheet.create({
   dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e9ecef',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   dropdownText: {
-    flex: 1,
     fontSize: 16,
-    color: '#999',
+    color: '#94a3b8',
   },
   dropdownTextSelected: {
-    color: '#333',
+    color: '#1e293b',
+    fontWeight: '500',
   },
-  bottomButtons: {
+  bottomActions: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderTopColor: '#e2e8f0',
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 14,
-    borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: '#6b7280',
   },
   submitButton: {
-    flex: 1,
-    backgroundColor: '#2E8B57',
-    paddingVertical: 14,
-    borderRadius: 8,
+    flex: 2,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   submitButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: 'white',
   },
   disabledButton: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#9ca3af',
     opacity: 0.6,
   },
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -744,23 +817,26 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#e2e8f0',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: '#1e293b',
+  },
+  closeButton: {
+    padding: 4,
   },
   modalList: {
     maxHeight: 400,
@@ -769,13 +845,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f1f5f9',
   },
   modalItemText: {
     fontSize: 16,
-    color: '#333',
+    color: '#1e293b',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#64748b',
+    marginTop: 12,
   },
 });

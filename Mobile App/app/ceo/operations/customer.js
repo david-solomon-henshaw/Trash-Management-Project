@@ -6,11 +6,14 @@ import {
   ScrollView,
   StyleSheet,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 export default function CustomerIndex() {
   const router = useRouter();
@@ -37,7 +40,7 @@ export default function CustomerIndex() {
       title: 'Add Customer',
       description: 'Register a new customer account',
       icon: 'person-add',
-      color: '#2E8B57',
+      color: '#10b981',
       route: '/ceo/operations/add-customer',
     },
     {
@@ -45,32 +48,31 @@ export default function CustomerIndex() {
       title: 'View Customers',
       description: 'Browse all registered customers',
       icon: 'people',
-      color: '#3B82F6',
+      color: '#3b82f6',
       route: '/ceo/operations/view-customers',
     },
-     {
+    {
       id: 'record-payment',
       title: 'Record Payment',
-      description: 'Record a new payment',
-      icon: 'cash',
-      color: '#F59E0B',
+      description: 'Record customer payments',
+      icon: 'card',
+      color: '#f59e0b',
       route: '/ceo/operations/record-payment',
     },
-    
-     {
+    {
       id: 'customer-analytics',
       title: 'Customer Analytics',
-      description: 'Record a new payment',
+      description: 'View customer insights and reports',
       icon: 'stats-chart',
-      color: '#8B5CF6',
+      color: '#8b5cf6',
       route: '/ceo/operations/customer-analytics',
     },
-     {
+    {
       id: 'billing-history',
       title: 'Billing History',
-      description: 'View payment record',
+      description: 'View payment records and history',
       icon: 'receipt',
-      color: '#F59E0B',
+      color: '#ef4444',
       route: '/ceo/operations/billing-history',
     },
   ];
@@ -81,55 +83,139 @@ export default function CustomerIndex() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
 
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Customer Management</Text>
-          <Text style={styles.headerSubtitle}>
-            Manage and organize customer accounts
-          </Text>
+          <View style={styles.headerMain}>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Customer Hub</Text>
+              <Text style={styles.headerSubtitle}>
+                Manage all customer operations in one place
+              </Text>
+            </View>
+            <View style={styles.headerIcon}>
+              <Ionicons name="people-circle" size={32} color="white" />
+            </View>
+          </View>
+          
+          {/* Quick Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>5</Text>
+              <Text style={styles.statLabel}>Actions</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>All</Text>
+              <Text style={styles.statLabel}>Access</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>24/7</Text>
+              <Text style={styles.statLabel}>Available</Text>
+            </View>
+          </View>
         </View>
       </View>
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.cardsContainer}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+        {/* Main Actions Grid */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="flash" size={24} color="#10b981" />
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+          </View>
           
-          {customerActions.map((action) => (
-            <TouchableOpacity
-              key={action.id}
-              style={styles.actionCard}
-              onPress={() => handleCardPress(action.route)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.cardContent}>
-                <View style={[styles.iconContainer, { backgroundColor: `${action.color}15` }]}>
-                  <Ionicons name={action.icon} size={32} color={action.color} />
+          <View style={styles.cardsGrid}>
+            {customerActions.map((action) => (
+              <TouchableOpacity
+                key={action.id}
+                style={styles.actionCard}
+                onPress={() => handleCardPress(action.route)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.cardIconContainer, { backgroundColor: `${action.color}15` }]}>
+                  <Ionicons name={action.icon} size={28} color={action.color} />
                 </View>
                 
-                <View style={styles.cardTextContainer}>
+                <View style={styles.cardContent}>
                   <Text style={styles.cardTitle}>{action.title}</Text>
                   <Text style={styles.cardDescription}>{action.description}</Text>
                 </View>
 
-                <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
-              </View>
-            </TouchableOpacity>
-          ))}
-
-         
+                <View style={[styles.cardArrow, { backgroundColor: `${action.color}15` }]}>
+                  <Ionicons name="chevron-forward" size={20} color={action.color} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        {/* Info Section */}
-        <View style={styles.infoSection}>
-          <View style={styles.infoCard}>
-            <Ionicons name="information-circle" size={20} color="#2E8B57" />
-            <Text style={styles.infoText}>
-              Use this section to manage all customer-related operations. More features are coming soon!
-            </Text>
+        {/* Features Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="star" size={24} color="#10b981" />
+            <Text style={styles.sectionTitle}>Key Features</Text>
+          </View>
+          
+          <View style={styles.featuresGrid}>
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="shield-checkmark" size={20} color="#10b981" />
+              </View>
+              <Text style={styles.featureTitle}>Secure</Text>
+              <Text style={styles.featureDescription}>
+                All customer data is securely stored and protected
+              </Text>
+            </View>
+
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="speedometer" size={20} color="#10b981" />
+              </View>
+              <Text style={styles.featureTitle}>Fast</Text>
+              <Text style={styles.featureDescription}>
+                Quick access to all customer management tools
+              </Text>
+            </View>
+
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="analytics" size={20} color="#10b981" />
+              </View>
+              <Text style={styles.featureTitle}>Insights</Text>
+              <Text style={styles.featureDescription}>
+                Comprehensive analytics and reporting
+              </Text>
+            </View>
+
+            <View style={styles.featureCard}>
+              <View style={styles.featureIcon}>
+                <Ionicons name="sync" size={20} color="#10b981" />
+              </View>
+              <Text style={styles.featureTitle}>Real-time</Text>
+              <Text style={styles.featureDescription}>
+                Live updates and real-time data sync
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Info Banner */}
+        <View style={styles.infoBanner}>
+          <View style={styles.infoContent}>
+            <View style={styles.infoIcon}>
+              <Ionicons name="information-circle" size={24} color="#10b981" />
+            </View>
+            <View style={styles.infoTextContainer}>
+              <Text style={styles.infoTitle}>Everything You Need</Text>
+              <Text style={styles.infoDescription}>
+                Complete customer management suite with payment tracking, analytics, and billing history all in one place.
+              </Text>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -140,123 +226,218 @@ export default function CustomerIndex() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8fafc',
   },
   header: {
-    backgroundColor: '#2E8B57',
+    backgroundColor: '#10b981',
     paddingBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   headerContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
   },
+  headerMain: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 22,
+  },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: 'white',
     marginBottom: 4,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '400',
+  statLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   content: {
     flex: 1,
   },
-  cardsContainer: {
+  section: {
     padding: 20,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 16,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginLeft: 8,
+  },
+  cardsGrid: {
+    gap: 16,
   },
   actionCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardContent: {
+    borderRadius: 16,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderLeftWidth: 4,
+    borderLeftColor: '#10b981',
   },
-  iconContainer: {
+  cardIconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 12,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
-  cardTextContainer: {
+  cardContent: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
     marginBottom: 4,
   },
   cardDescription: {
     fontSize: 14,
-    color: '#64748B',
-    lineHeight: 18,
+    color: '#64748b',
+    lineHeight: 20,
   },
-  comingSoonSection: {
-    marginTop: 24,
+  cardArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  comingSoonTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 16,
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  comingSoonCard: {
+  featureCard: {
+    width: (width - 52) / 2,
     backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 16,
-    opacity: 0.6,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  comingSoonBadge: {
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+  featureIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  comingSoonBadgeText: {
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  featureDescription: {
     fontSize: 12,
-    fontWeight: '600',
-    color: 'white',
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 16,
   },
-  infoSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
+  infoBanner: {
+    margin: 20,
+    marginTop: 0,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#f0fdf4',
   },
-  infoCard: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 16,
+  infoContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
   },
-  infoText: {
+  infoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  infoTextContainer: {
     flex: 1,
+  },
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  infoDescription: {
     fontSize: 14,
-    color: '#166534',
+    color: '#64748b',
     lineHeight: 20,
-    marginLeft: 12,
   },
 });
