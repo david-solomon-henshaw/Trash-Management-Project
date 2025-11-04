@@ -10,11 +10,14 @@ import {
     StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { API_BASE_URL } from '../../../config'
 import axios from 'axios'
 
-
 const Staffs = () => {
+    const navigation = useNavigation();
+    
     // State variables to store form data
     const [formData, setFormData] = useState({
         role: '',
@@ -114,32 +117,22 @@ const Staffs = () => {
             return;
         }
 
-
-
-        // Here you would typically send the data to your backend
-        console.log('Creating staff with data:', formData);
-
-
         try {
             const response = await axios.post(`${API_BASE_URL}/api/staff/signup`,
                 formData
             )
             if (response.status === 201) {
-
                 console.log(response)
                 Alert.alert('Success', response.data.message || 'Staff account created successfully!', [
                     { text: 'OK', onPress: () => resetForm() }
                 ]);
             }
-
         } 
         catch (error) {
             console.log(error)
             const errorMessage = error.response?.data?.message || error.message || 'Network error';
             Alert.alert('Error', errorMessage);
         }
-
-
     };
 
     // Function to reset the form
@@ -156,14 +149,33 @@ const Staffs = () => {
         setShowRoleOptions(false);
     };
 
+    // Function to handle back navigation
+    const handleBackPress = () => {
+        navigation.goBack();
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
 
-            {/* Header */}
+            {/* Header with Back Button */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Create Staff Account</Text>
-                <Text style={styles.headerSubtitle}>Add new team members to the system</Text>
+                <View style={styles.headerTopRow}>
+                    <TouchableOpacity 
+                        style={styles.backButton}
+                        onPress={handleBackPress}
+                        accessible={true}
+                        accessibilityLabel="Go back"
+                        accessibilityRole="button"
+                    >
+                        <Ionicons name="arrow-back" size={24} color="white" />
+                    </TouchableOpacity>
+                    
+                    <View style={styles.headerContent}>
+                        <Text style={styles.headerTitle}>Create Staff Account</Text>
+                        <Text style={styles.headerSubtitle}>Add new team members to the system</Text>
+                    </View>
+                </View>
             </View>
 
             {/* Form Content */}
@@ -258,7 +270,7 @@ const Staffs = () => {
                                         style={styles.textInput}
                                         placeholder="Enter full name"
                                         placeholderTextColor="#9CA3AF"
-                                        value={formData.full_ame}
+                                        value={formData.full_name}
                                         onChangeText={(text) => handleInputChange('full_name', text)}
                                     />
                                 </View>
@@ -378,6 +390,23 @@ const styles = StyleSheet.create({
         backgroundColor: '#2E8B57',
         paddingHorizontal: 24,
         paddingVertical: 24,
+    },
+    headerTopRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+        marginTop: 4,
+    },
+    headerContent: {
+        flex: 1,
     },
     headerTitle: {
         fontSize: 28,

@@ -14,11 +14,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../../config';
 
 export default function CommercialSubtypesScreen() {
+  const navigation = useNavigation();
   const [showCommercialModal, setShowCommercialModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [commercialSubtypes, setCommercialSubtypes] = useState([]);
@@ -83,6 +85,10 @@ export default function CommercialSubtypesScreen() {
     }
   };
 
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
   const renderCommercialSubtype = ({ item }) => (
     <View style={styles.listItem}>
       <View style={styles.itemInfo}>
@@ -96,8 +102,24 @@ export default function CommercialSubtypesScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
 
+      {/* Header with Back Button */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Commercial Subtypes</Text>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackPress}
+            accessible={true}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Commercial Subtypes</Text>
+            <Text style={styles.headerSubtitle}>Manage commercial categories and pricing</Text>
+          </View>
+        </View>
       </View>
 
       <ScrollView style={styles.content}>
@@ -159,7 +181,7 @@ export default function CommercialSubtypesScreen() {
                   setCommercialForm({ name: '', base_fee: '' });
                 }}
               >
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -188,12 +210,36 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#2E8B57',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 4,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '400',
   },
   content: {
     padding: 20,
@@ -288,6 +334,10 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     width: '48%',
     alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: '#64748B',
+    fontWeight: '600',
   },
   submitButton: {
     backgroundColor: '#2E8B57',

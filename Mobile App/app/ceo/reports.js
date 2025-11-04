@@ -1,13 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Dimensions } from 'react-native';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  ActivityIndicator, 
+  RefreshControl, 
+  Dimensions,
+  TouchableOpacity 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const screenWidth = Dimensions.get('window').width;
 
 const Reports = () => {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [revenueOverview, setRevenueOverview] = useState(null);
@@ -85,7 +96,7 @@ const Reports = () => {
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}>
         <View style={{ alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#6366f1" />
+          <ActivityIndicator size="large" color="#10b981" />
           <Text style={{ marginTop: 12, color: '#64748b', fontSize: 16 }}>Loading reports...</Text>
         </View>
       </SafeAreaView>
@@ -96,7 +107,7 @@ const Reports = () => {
     ? paymentStatus.map((item, index) => ({
         name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
         population: item.count,
-        color: ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'][index] || '#6b7280',
+        color: ['#10b981', '#f59e0b', '#ef4444', '#059669'][index] || '#6b7280',
         legendFontColor: '#374151',
       }))
     : [];
@@ -105,36 +116,48 @@ const Reports = () => {
     ? revenueByType.map((item, index) => ({
         name: item.customer_type.charAt(0).toUpperCase() + item.customer_type.slice(1),
         population: item.total_revenue,
-        color: ['#6366f1', '#10b981', '#f59e0b'][index] || '#6b7280',
+        color: ['#10b981', '#059669', '#f59e0b'][index] || '#6b7280',
         legendFontColor: '#374151',
       }))
     : [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Financial Dashboard</Text>
+            <Text style={styles.headerSubtitle}>Comprehensive overview of your financial performance</Text>
+          </View>
+          <View style={styles.headerIcon}>
+            <Ionicons name="analytics" size={24} color="white" />
+          </View>
+        </View>
+      </View>
+
       <ScrollView
         style={{ flex: 1 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         <View style={{ padding: 20 }}>
-          {/* Header */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 }}>
-              Financial Dashboard
-            </Text>
-            <Text style={{ fontSize: 16, color: '#64748b' }}>
-              Comprehensive overview of your financial performance
-            </Text>
-          </View>
-
           {/* Revenue Overview Cards - Redesigned */}
           <View style={{ marginBottom: 24 }}>
-            <Text style={styles.sectionTitle}>Revenue Overview</Text>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="trending-up" size={20} color="#10b981" />
+              <Text style={styles.sectionTitle}>Revenue Overview</Text>
+            </View>
             <View style={styles.cardGrid}>
-              <View style={[styles.statCard, { backgroundColor: '#6366f1' }]}>
+              <View style={[styles.statCard, { backgroundColor: '#10b981' }]}>
                 <View style={styles.statIcon}>
-                  <Text style={{ color: 'white', fontSize: 20 }}>💰</Text>
+                  <Ionicons name="cash" size={20} color="white" />
                 </View>
                 <Text style={styles.statLabel}>Total Revenue</Text>
                 <Text style={[styles.statValue, { color: 'white' }]}>
@@ -142,9 +165,9 @@ const Reports = () => {
                 </Text>
               </View>
 
-              <View style={[styles.statCard, { backgroundColor: '#10b981' }]}>
+              <View style={[styles.statCard, { backgroundColor: '#059669' }]}>
                 <View style={styles.statIcon}>
-                  <Text style={{ color: 'white', fontSize: 20 }}>📈</Text>
+                  <Ionicons name="calendar" size={20} color="white" />
                 </View>
                 <Text style={styles.statLabel}>This Month</Text>
                 <Text style={[styles.statValue, { color: 'white' }]}>
@@ -152,9 +175,9 @@ const Reports = () => {
                 </Text>
               </View>
 
-              <View style={[styles.statCard, { backgroundColor: '#f59e0b' }]}>
+              <View style={[styles.statCard, { backgroundColor: '#047857' }]}>
                 <View style={styles.statIcon}>
-                  <Text style={{ color: 'white', fontSize: 20 }}>💵</Text>
+                  <Ionicons name="wallet" size={20} color="white" />
                 </View>
                 <Text style={styles.statLabel}>Cash Payments</Text>
                 <Text style={[styles.statValue, { color: 'white' }]}>
@@ -162,9 +185,9 @@ const Reports = () => {
                 </Text>
               </View>
 
-              <View style={[styles.statCard, { backgroundColor: '#8b5cf6' }]}>
+              <View style={[styles.statCard, { backgroundColor: '#065f46' }]}>
                 <View style={styles.statIcon}>
-                  <Text style={{ color: 'white', fontSize: 20 }}>💳</Text>
+                  <Ionicons name="card" size={20} color="white" />
                 </View>
                 <Text style={styles.statLabel}>Transfers</Text>
                 <Text style={[styles.statValue, { color: 'white' }]}>
@@ -178,12 +201,12 @@ const Reports = () => {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
             {/* Collection Rate */}
             {collectionRate && (
-              <View style={[styles.highlightCard, { backgroundColor: '#6366f1', flex: 0.48 }]}>
+              <View style={[styles.highlightCard, { backgroundColor: '#10b981', flex: 0.48 }]}>
                 <View style={styles.cardHeader}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: 'white' }}>
                     Collection Rate
                   </Text>
-                  <Text style={{ fontSize: 12, color: '#c7d2fe' }}>Efficiency</Text>
+                  <Ionicons name="trophy" size={20} color="white" />
                 </View>
                 <Text style={{ fontSize: 36, fontWeight: 'bold', color: 'white', marginVertical: 8 }}>
                   {collectionRate.collection_rate.toFixed(1)}%
@@ -207,12 +230,12 @@ const Reports = () => {
 
             {/* Outstanding Balances */}
             {outstandingBalances && (
-              <View style={[styles.highlightCard, { backgroundColor: '#f59e0b', flex: 0.48 }]}>
+              <View style={[styles.highlightCard, { backgroundColor: '#dc2626', flex: 0.48 }]}>
                 <View style={styles.cardHeader}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: 'white' }}>
                     Outstanding
                   </Text>
-                  <Text style={{ fontSize: 12, color: '#fef3c7' }}>Pending</Text>
+                  <Ionicons name="alert-circle" size={20} color="white" />
                 </View>
                 <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', marginVertical: 8 }}>
                   {formatCurrency(outstandingBalances.total_outstanding)}
@@ -237,14 +260,20 @@ const Reports = () => {
 
           {/* Charts Section */}
           <View style={{ marginBottom: 24 }}>
-            <Text style={styles.sectionTitle}>Analytics & Trends</Text>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="bar-chart" size={20} color="#10b981" />
+              <Text style={styles.sectionTitle}>Analytics & Trends</Text>
+            </View>
             
             {/* Revenue Trend */}
             {revenueTrend && revenueTrend.length > 0 && (
               <View style={styles.chartCard}>
                 <View style={styles.chartHeader}>
-                  <Text style={styles.chartTitle}>Revenue Trend</Text>
-                  <Text style={styles.chartSubtitle}>Last 6 months performance</Text>
+                  <Ionicons name="trending-up" size={20} color="#10b981" />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={styles.chartTitle}>Revenue Trend</Text>
+                    <Text style={styles.chartSubtitle}>Last 6 months performance</Text>
+                  </View>
                 </View>
                 <LineChart
                   data={{
@@ -257,16 +286,16 @@ const Reports = () => {
                   height={220}
                   chartConfig={{
                     backgroundColor: '#ffffff',
-                    backgroundGradientFrom: '#f8fafc',
+                    backgroundGradientFrom: '#f0fdf4',
                     backgroundGradientTo: '#ffffff',
                     decimalPlaces: 0,
-                    color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+                    color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
                     labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
                     style: { borderRadius: 16 },
                     propsForDots: {
                       r: '6',
                       strokeWidth: '2',
-                      stroke: '#6366f1'
+                      stroke: '#10b981'
                     },
                     propsForBackgroundLines: {
                       strokeDasharray: '',
@@ -283,7 +312,10 @@ const Reports = () => {
               {/* Payment Status */}
               {paymentStatusChartData && paymentStatusChartData.length > 0 && (
                 <View style={[styles.chartCard, { flex: 0.48 }]}>
-                  <Text style={styles.chartTitle}>Payment Status</Text>
+                  <View style={styles.chartHeader}>
+                    <Ionicons name="pie-chart" size={20} color="#10b981" />
+                    <Text style={styles.chartTitle}>Payment Status</Text>
+                  </View>
                   <PieChart
                     data={paymentStatusChartData}
                     width={(screenWidth - 80) / 2}
@@ -302,7 +334,10 @@ const Reports = () => {
               {/* Revenue by Type */}
               {revenueByTypeChartData && revenueByTypeChartData.length > 0 && (
                 <View style={[styles.chartCard, { flex: 0.48 }]}>
-                  <Text style={styles.chartTitle}>By Customer Type</Text>
+                  <View style={styles.chartHeader}>
+                    <Ionicons name="business" size={20} color="#10b981" />
+                    <Text style={styles.chartTitle}>By Customer Type</Text>
+                  </View>
                   <PieChart
                     data={revenueByTypeChartData}
                     width={(screenWidth - 80) / 2}
@@ -322,14 +357,20 @@ const Reports = () => {
 
           {/* Top Performers Section */}
           <View style={{ marginBottom: 24 }}>
-            <Text style={styles.sectionTitle}>Top Performers</Text>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="trophy" size={20} color="#10b981" />
+              <Text style={styles.sectionTitle}>Top Performers</Text>
+            </View>
             
             {/* Top Revenue Streets */}
             {revenueByStreet && revenueByStreet.length > 0 && (
               <View style={styles.listCard}>
                 <View style={styles.listHeader}>
-                  <Text style={styles.listTitle}>Top Revenue Streets</Text>
-                  <Text style={styles.listSubtitle}>Highest earning locations</Text>
+                  <Ionicons name="location" size={20} color="#10b981" />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={styles.listTitle}>Top Revenue Streets</Text>
+                    <Text style={styles.listSubtitle}>Highest earning locations</Text>
+                  </View>
                 </View>
                 {revenueByStreet.slice(0, 5).map((item, index) => (
                   <View key={index} style={styles.listItem}>
@@ -356,8 +397,11 @@ const Reports = () => {
             {agentPerformance && agentPerformance.length > 0 && (
               <View style={styles.listCard}>
                 <View style={styles.listHeader}>
-                  <Text style={styles.listTitle}>Agent Performance</Text>
-                  <Text style={styles.listSubtitle}>Top collectors this period</Text>
+                  <Ionicons name="people" size={20} color="#10b981" />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
+                    <Text style={styles.listTitle}>Agent Performance</Text>
+                    <Text style={styles.listSubtitle}>Top collectors this period</Text>
+                  </View>
                 </View>
                 {agentPerformance.slice(0, 5).map((item, index) => (
                   <View key={index} style={styles.listItem}>
@@ -370,8 +414,14 @@ const Reports = () => {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.listItemTitle}>{item.agent_name}</Text>
                         <View style={styles.paymentTypes}>
-                          <Text style={styles.paymentType}>💵 {item.cash_payments}</Text>
-                          <Text style={styles.paymentType}>💳 {item.transfer_payments}</Text>
+                          <View style={styles.paymentType}>
+                            <Ionicons name="cash" size={12} color="#059669" />
+                            <Text style={styles.paymentTypeText}>{item.cash_payments}</Text>
+                          </View>
+                          <View style={styles.paymentType}>
+                            <Ionicons name="card" size={12} color="#10b981" />
+                            <Text style={styles.paymentTypeText}>{item.transfer_payments}</Text>
+                          </View>
                         </View>
                       </View>
                     </View>
@@ -393,11 +443,61 @@ const Reports = () => {
 };
 
 const styles = {
+  header: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerText: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#1e293b',
-    marginBottom: 16,
+    marginLeft: 8,
   },
   cardGrid: {
     flexDirection: 'row',
@@ -478,13 +578,15 @@ const styles = {
     elevation: 3,
   },
   chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
   },
   chartTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   chartSubtitle: {
     fontSize: 12,
@@ -506,6 +608,8 @@ const styles = {
     elevation: 3,
   },
   listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
   },
   listTitle: {
@@ -541,7 +645,7 @@ const styles = {
     marginRight: 12,
   },
   topRankBadge: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#10b981',
   },
   rankText: {
     fontSize: 12,
@@ -570,7 +674,7 @@ const styles = {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#6366f1',
+    backgroundColor: '#10b981',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -583,11 +687,16 @@ const styles = {
   paymentTypes: {
     flexDirection: 'row',
     marginTop: 2,
+    gap: 8,
   },
   paymentType: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  paymentTypeText: {
     fontSize: 11,
     color: '#64748b',
-    marginRight: 8,
   },
   paymentCount: {
     fontSize: 11,

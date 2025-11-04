@@ -7,7 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   StatusBar,
-  RefreshControl as RNRefreshControl,
+  RefreshControl,
   Modal,
   ActivityIndicator,
   Alert,

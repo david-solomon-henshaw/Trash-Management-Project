@@ -34,6 +34,10 @@ export default function CustomerIndex() {
     }
   };
 
+  const handleBackPress = () => {
+    router.back();
+  };
+
   const customerActions = [
     {
       id: 'add-customer',
@@ -85,36 +89,48 @@ export default function CustomerIndex() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#10b981" />
 
-      {/* Header */}
+      {/* Header with Back Button */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerMain}>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Customer Hub</Text>
-              <Text style={styles.headerSubtitle}>
-                Manage all customer operations in one place
-              </Text>
-            </View>
-            <View style={styles.headerIcon}>
-              <Ionicons name="people-circle" size={32} color="white" />
-            </View>
-          </View>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackPress}
+            accessible={true}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
           
-          {/* Quick Stats Row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>5</Text>
-              <Text style={styles.statLabel}>Actions</Text>
+          <View style={styles.headerContent}>
+            <View style={styles.headerMain}>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>Customer Hub</Text>
+                <Text style={styles.headerSubtitle}>
+                  Manage all customer operations in one place
+                </Text>
+              </View>
+              <View style={styles.headerIcon}>
+                <Ionicons name="people-circle" size={32} color="white" />
+              </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>All</Text>
-              <Text style={styles.statLabel}>Access</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statNumber}>24/7</Text>
-              <Text style={styles.statLabel}>Available</Text>
+            
+            {/* Quick Stats Row */}
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>5</Text>
+                <Text style={styles.statLabel}>Actions</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>All</Text>
+                <Text style={styles.statLabel}>Access</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statItem}>
+                <Text style={styles.statNumber}>24/7</Text>
+                <Text style={styles.statLabel}>Available</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -237,9 +253,24 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
   },
-  headerContent: {
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 4,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerMain: {
     flexDirection: 'row',

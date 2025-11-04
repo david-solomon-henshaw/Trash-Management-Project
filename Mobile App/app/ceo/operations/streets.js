@@ -31,6 +31,10 @@ export default function StreetsIndex() {
     }
   };
 
+  const handleBackPress = () => {
+    router.back();
+  };
+
   const streetActions = [
     {
       id: 'add-street',
@@ -49,9 +53,6 @@ export default function StreetsIndex() {
       color: '#3B82F6',
       route: '/ceo/operations/view-streets',
     },
-     
-    
-    
   ];
 
   const handleCardPress = (route) => {
@@ -62,13 +63,25 @@ export default function StreetsIndex() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
 
-      {/* Header */}
+      {/* Header with Back Button */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Street Management</Text>
-          <Text style={styles.headerSubtitle}>
-            Manage and organize street locations
-          </Text>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackPress}
+            accessible={true}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Street Management</Text>
+            <Text style={styles.headerSubtitle}>
+              Manage and organize street locations
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -122,11 +135,25 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#2E8B57',
-    paddingBottom: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 4,
   },
   headerContent: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    flex: 1,
   },
   headerTitle: {
     fontSize: 28,
@@ -197,8 +224,6 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 16,
   },
-
-
   infoSection: {
     paddingHorizontal: 20,
     paddingBottom: 32,

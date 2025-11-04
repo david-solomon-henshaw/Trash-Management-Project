@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 // Import components
 import CreateTruck from '../../../components/CreateTruck';
@@ -19,6 +20,7 @@ const { width } = Dimensions.get('window');
 
 const Fleet = () => {
   const [activeTab, setActiveTab] = useState('create');
+  const navigation = useNavigation();
 
   const tabs = [
     { 
@@ -54,21 +56,39 @@ const Fleet = () => {
     }
   };
 
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
 
       {/* Enhanced Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerIcon}>
-            <Ionicons name="car-sport-outline" size={32} color="white" />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>Fleet Management</Text>
-            <Text style={styles.headerSubtitle}>Manage trucks, teams, and routes</Text>
+        {/* Back Button and Title Row */}
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleBackPress}
+            accessible={true}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
+            <View style={styles.headerIcon}>
+              <Ionicons name="car-sport-outline" size={32} color="white" />
+            </View>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Fleet Management</Text>
+              <Text style={styles.headerSubtitle}>Manage trucks, teams, and routes</Text>
+            </View>
           </View>
         </View>
+
         <View style={styles.headerStats}>
           <View style={styles.statPill}>
             <Text style={styles.statPillText}>🚛 Active Fleet</Text>
@@ -127,10 +147,25 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    marginTop: 4,
+  },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    flex: 1,
   },
   headerIcon: {
     width: 48,
@@ -140,6 +175,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
     fontSize: 24,
