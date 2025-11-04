@@ -8,10 +8,13 @@ import {
   StatusBar,
   ActivityIndicator,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -31,40 +34,44 @@ export default function HomeScreen() {
       id: '1',
       title: 'Truck A - NGR 123XY',
       status: 'Active',
-      statusColor: '#28a745',
+      statusColor: '#10b981',
       supervisor: 'John Doe',
       location: 'Victoria Island',
       progress: '15/20 houses completed',
       time: 'On duty 3h 25m',
       collection: '₦45,000 collected',
+      icon: 'car-sport',
     },
     {
       id: '2',
       title: 'Truck B - NGR 456AB',
       status: 'Maintenance',
-      statusColor: '#ffc107',
+      statusColor: '#f59e0b',
       supervisor: 'Sarah Wilson',
       issue: 'Engine repair needed',
       expected: 'Expected: Feb 20',
       cost: 'Cost: ₦85,000',
+      icon: 'build',
     },
     {
       id: '3',
       title: 'Truck C - NGR 789CD',
       status: 'Active',
-      statusColor: '#28a745',
+      statusColor: '#10b981',
       supervisor: 'Mike Johnson',
       location: 'Ikoyi Area',
       progress: '8/12 streets done',
       time: 'On duty 2h 10m',
+      icon: 'car-sport',
     },
     {
       id: '4',
       title: 'Truck D - NGR 321EF',
       status: 'Idle',
-      statusColor: '#6c757d',
+      statusColor: '#64748b',
       location: 'Depot',
       note: 'No assignment',
+      icon: 'time',
     },
   ]);
 
@@ -75,7 +82,7 @@ export default function HomeScreen() {
     setLoading(true);
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 1000);
+    }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -83,140 +90,221 @@ export default function HomeScreen() {
     {
       id: 'generate-report',
       title: 'Generate Report',
-      icon: 'document-text-outline',
-      color: '#2E8B57',
+      icon: 'document-text',
+      color: '#6366f1',
       route: '/reports',
+      description: 'Create performance reports',
     },
     {
       id: 'view-fleet',
       title: 'View Fleet',
-      icon: 'car-sport-outline',
-      color: '#F59E0B',
+      icon: 'car-sport',
+      color: '#10b981',
       route: '/ceo/operations/fleet',
+      description: 'Manage all vehicles',
     },
     {
       id: 'manage-users',
-      title: 'Manage Users',
-      icon: 'people-outline',
-      color: '#3B82F6',
+      title: 'Manage Staff',
+      icon: 'people',
+      color: '#8b5cf6',
       route: '/ceo/operations/staff',
+      description: 'Team management',
     },
     {
       id: 'live-map',
       title: 'Live Map',
-      icon: 'map-outline',
-      color: '#8B5CF6',
+      icon: 'map',
+      color: '#f59e0b',
       route: '/map',
+      description: 'Real-time tracking',
     },
-   
+    {
+      id: 'analytics',
+      title: 'Analytics',
+      icon: 'bar-chart',
+      color: '#ef4444',
+      route: '/analytics',
+      description: 'Business insights',
+    },
+    {
+      id: 'settings',
+      title: 'Settings',
+      icon: 'settings',
+      color: '#64748b',
+      route: '/settings',
+      description: 'System configuration',
+    },
   ];
 
   const handleQuickActionPress = (route) => {
     router.push(route);
   };
 
+  const getMetricIcon = (title) => {
+    switch (title) {
+      case 'Monthly Revenue': return 'cash';
+      case 'Active Customers': return 'people';
+      case 'Route Completion': return 'checkmark-done';
+      case 'Unpaid Balance': return 'alert-circle';
+      default: return 'trending-up';
+    }
+  };
+
+  const getMetricColor = (title) => {
+    switch (title) {
+      case 'Monthly Revenue': return '#6366f1';
+      case 'Active Customers': return '#10b981';
+      case 'Route Completion': return '#f59e0b';
+      case 'Unpaid Balance': return '#ef4444';
+      default: return '#64748b';
+    }
+  };
+
   const renderLiveOperation = ({ item }) => (
-    <View style={styles.operationCard}>
+    <TouchableOpacity 
+      style={styles.operationCard}
+      onPress={() => router.push('/ceo/operations/fleet')}
+    >
       <View style={styles.operationHeader}>
-        <Text style={styles.operationTitle}>{item.title}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: `${item.statusColor}20` }]}>
+        <View style={styles.operationTitleContainer}>
+          <View style={[styles.operationIcon, { backgroundColor: `${item.statusColor}15` }]}>
+            <Ionicons name={item.icon} size={20} color={item.statusColor} />
+          </View>
+          <View>
+            <Text style={styles.operationTitle}>{item.title}</Text>
+            <Text style={styles.operationSubtitle}>{item.supervisor || item.location}</Text>
+          </View>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: `${item.statusColor}15` }]}>
+          <View style={[styles.statusDot, { backgroundColor: item.statusColor }]} />
           <Text style={[styles.statusText, { color: item.statusColor }]}>{item.status}</Text>
         </View>
       </View>
 
-      <View style={styles.operationInfo}>
-        {item.supervisor && (
-          <View style={styles.infoItem}>
-            <Ionicons name="person-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.supervisor}</Text>
-          </View>
-        )}
-
-        {item.location && (
-          <View style={styles.infoItem}>
-            <Ionicons name="location-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.location}</Text>
-          </View>
-        )}
-
+      <View style={styles.operationDetails}>
         {item.progress && (
-          <View style={styles.infoItem}>
-            <Ionicons name="checkmark-circle-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.progress}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+            <Text style={styles.detailText}>{item.progress}</Text>
           </View>
         )}
 
         {item.time && (
-          <View style={styles.infoItem}>
-            <Ionicons name="time-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.time}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="time" size={14} color="#f59e0b" />
+            <Text style={styles.detailText}>{item.time}</Text>
           </View>
         )}
 
         {item.collection && (
-          <View style={styles.infoItem}>
-            <Ionicons name="cash-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.collection}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="cash" size={14} color="#10b981" />
+            <Text style={styles.detailText}>{item.collection}</Text>
           </View>
         )}
 
         {item.issue && (
-          <View style={styles.infoItem}>
-            <Ionicons name="construct-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.issue}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="warning" size={14} color="#f59e0b" />
+            <Text style={styles.detailText}>{item.issue}</Text>
           </View>
         )}
 
         {item.expected && (
-          <View style={styles.infoItem}>
-            <Ionicons name="calendar-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.expected}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="calendar" size={14} color="#6366f1" />
+            <Text style={styles.detailText}>{item.expected}</Text>
           </View>
         )}
 
         {item.cost && (
-          <View style={styles.infoItem}>
-            <Ionicons name="cash-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.cost}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="card" size={14} color="#ef4444" />
+            <Text style={styles.detailText}>{item.cost}</Text>
           </View>
         )}
 
         {item.note && (
-          <View style={styles.infoItem}>
-            <Ionicons name="information-circle-outline" size={14} color="#666" />
-            <Text style={styles.infoText}>{item.note}</Text>
+          <View style={styles.detailItem}>
+            <Ionicons name="information-circle" size={14} color="#64748b" />
+            <Text style={styles.detailText}>{item.note}</Text>
           </View>
         )}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderMetricCard = (title, value, change, isPositive) => (
+    <View style={styles.metricCard}>
+      <View style={styles.metricHeader}>
+        <View style={[styles.metricIcon, { backgroundColor: `${getMetricColor(title)}15` }]}>
+          <Ionicons name={getMetricIcon(title)} size={20} color={getMetricColor(title)} />
+        </View>
+        <Text style={styles.metricTitle}>{title}</Text>
+      </View>
+      <Text style={styles.metricValue}>{value}</Text>
+      <View style={styles.metricFooter}>
+        <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
+          <Ionicons 
+            name={isPositive ? "trending-up" : "trending-down"} 
+            size={12} 
+            color={isPositive ? "#10b981" : "#ef4444"} 
+          />
+          <Text style={[styles.metricChange, { color: isPositive ? "#10b981" : "#ef4444" }]}>
+            {change}
+          </Text>
+        </View>
       </View>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
 
-      {/* Header */}
+      {/* Enhanced Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>CEO Dashboard</Text>
-        <Text style={styles.headerSubtitle}>Company Overview & Control</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerIcon}>
+            <Ionicons name="business" size={32} color="white" />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>Executive Dashboard</Text>
+            <Text style={styles.headerSubtitle}>Real-time business overview & control</Text>
+          </View>
+        </View>
+        <View style={styles.headerStats}>
+          <View style={styles.statPill}>
+            <Ionicons name="time" size={12} color="white" />
+            <Text style={styles.statPillText}>Live Updates</Text>
+          </View>
+        </View>
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+      >
         {/* Quick Actions Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsContainer}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <Text style={styles.sectionSubtitle}>Essential tools & features</Text>
+          </View>
+          <View style={styles.quickActionsGrid}>
             {quickActions.map((action) => (
               <TouchableOpacity
                 key={action.id}
-                style={[styles.quickActionCard, { borderColor: `${action.color}20` }]}
+                style={styles.quickActionCard}
                 onPress={() => handleQuickActionPress(action.route)}
               >
-                <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}20` }]}>
+                <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}15` }]}>
                   <Ionicons name={action.icon} size={24} color={action.color} />
                 </View>
                 <Text style={styles.quickActionTitle}>{action.title}</Text>
+                <Text style={styles.quickActionDescription}>{action.description}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -224,53 +312,58 @@ export default function HomeScreen() {
 
         {/* Key Metrics Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Key Metrics</Text>
-          <View style={styles.metricsContainer}>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricTitle}>Monthly Revenue</Text>
-              <Text style={styles.metricValue}>{metrics.monthlyRevenue}</Text>
-              <Text style={[styles.metricChange, styles.metricUp]}>↗ {metrics.revenueChange}</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricTitle}>Active Customers</Text>
-              <Text style={styles.metricValue}>{metrics.activeCustomers}</Text>
-              <Text style={[styles.metricChange, styles.metricUp]}>↗ {metrics.customerChange}</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricTitle}>Route Completion</Text>
-              <Text style={styles.metricValue}>{metrics.routeCompletion}</Text>
-              <Text style={[styles.metricChange, styles.metricDown]}>↘ {metrics.completionChange}</Text>
-            </View>
-            <View style={styles.metricCard}>
-              <Text style={styles.metricTitle}>Unpaid Balance</Text>
-              <Text style={styles.metricValue}>{metrics.unpaidBalance}</Text>
-              <Text style={[styles.metricChange, styles.metricDown]}>↘ {metrics.balanceChange}</Text>
-            </View>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Performance Metrics</Text>
+            <Text style={styles.sectionSubtitle}>This month's performance</Text>
+          </View>
+          <View style={styles.metricsGrid}>
+            {renderMetricCard('Monthly Revenue', metrics.monthlyRevenue, metrics.revenueChange, true)}
+            {renderMetricCard('Active Customers', metrics.activeCustomers, metrics.customerChange, true)}
+            {renderMetricCard('Route Completion', metrics.routeCompletion, metrics.completionChange, false)}
+            {renderMetricCard('Unpaid Balance', metrics.unpaidBalance, metrics.balanceChange, false)}
           </View>
         </View>
 
         {/* Live Operations Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Live Operations</Text>
-            <TouchableOpacity onPress={() => router.push('/ceo/operations/fleet')}>
-              <Text style={styles.viewAll}>View All</Text>
+            <View>
+              <Text style={styles.sectionTitle}>Live Operations</Text>
+              <Text style={styles.sectionSubtitle}>Real-time fleet activity</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.viewAllButton}
+              onPress={() => router.push('/ceo/operations/fleet')}
+            >
+              <Text style={styles.viewAllText}>View All</Text>
+              <Ionicons name="chevron-forward" size={16} color="#6366f1" />
             </TouchableOpacity>
           </View>
 
           {loading ? (
-            <ActivityIndicator size="large" color="#2E8B57" style={styles.loadingIndicator} />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#6366f1" />
+              <Text style={styles.loadingText}>Loading operations data...</Text>
+            </View>
           ) : liveOperations.length === 0 ? (
-            <Text style={styles.emptyText}>No live operations found.</Text>
+            <View style={styles.emptyState}>
+              <Ionicons name="car-outline" size={48} color="#cbd5e1" />
+              <Text style={styles.emptyTitle}>No Active Operations</Text>
+              <Text style={styles.emptyText}>All vehicles are currently offline or in maintenance</Text>
+            </View>
           ) : (
             <FlatList
               data={liveOperations}
               renderItem={renderLiveOperation}
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
             />
           )}
         </View>
+
+        {/* Additional Space */}
+        <View style={styles.bottomSpace} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -279,21 +372,61 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8fafc',
   },
   header: {
-    backgroundColor: '#2E8B57',
-    padding: 20,
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: 'white',
+    marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
-    marginTop: 4,
+    fontWeight: '400',
+  },
+  headerStats: {
+    flexDirection: 'row',
+  },
+  statPill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statPillText: {
+    fontSize: 12,
+    color: 'white',
+    fontWeight: '600',
   },
   content: {
     flex: 1,
@@ -301,152 +434,235 @@ const styles = StyleSheet.create({
   section: {
     padding: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 16,
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
-  viewAll: {
-    color: '#2E8B57',
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '400',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  viewAllText: {
+    color: '#6366f1',
     fontSize: 14,
     fontWeight: '600',
   },
-  quickActionsContainer: {
+  quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: 12,
   },
   quickActionCard: {
-    width: '48%',
+    width: (width - 52) / 2, // Calculate width for 2 columns with padding
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   quickActionIcon: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  quickActionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  quickActionDescription: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  metricCard: {
+    width: (width - 52) / 2, // Calculate width for 2 columns with padding
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  metricIcon: {
+    width: 32,
+    height: 32,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
-    alignSelf: 'center',
-  },
-  quickActionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    textAlign: 'center',
-  },
-  metricsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  metricCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    marginRight: 8,
   },
   metricTitle: {
     fontSize: 14,
     color: '#64748B',
-    marginBottom: 4,
+    fontWeight: '500',
   },
   metricValue: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 4,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  metricFooter: {
+    flexDirection: 'row',
+  },
+  changeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   metricChange: {
     fontSize: 12,
     fontWeight: '600',
   },
-  metricUp: {
-    color: '#28a745',
-  },
-  metricDown: {
-    color: '#dc3545',
-  },
   operationCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 2,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2E8B57',
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   operationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  operationTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  operationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   operationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  operationSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
-  operationInfo: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  operationDetails: {
+    gap: 8,
   },
-  infoItem: {
+  detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    width: '48%',
+    gap: 8,
   },
-  infoText: {
-    fontSize: 12,
-    color: '#64748B',
-    marginLeft: 4,
-  },
-  loadingIndicator: {
-    marginTop: 20,
-  },
-  emptyText: {
-    textAlign: 'center',
+  detailText: {
     fontSize: 14,
     color: '#64748B',
-    marginTop: 20,
+    fontWeight: '400',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  bottomSpace: {
+    height: 20,
   },
 });

@@ -7,10 +7,15 @@ import {
   Alert,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { API_BASE_URL } from '../config';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 const ViewTrucks = () => {
   const [trucks, setTrucks] = useState([]);
@@ -45,163 +50,189 @@ const ViewTrucks = () => {
     fetchTrucks();
   };
 
-  const getStatusColor = (status) => {
+  const getStatusConfig = (status) => {
     switch (status) {
       case 'operational':
-        return '#10B981';
+        return { color: '#10b981', icon: 'checkmark-circle', label: 'Operational', bgColor: 'rgba(16, 185, 129, 0.1)' };
       case 'maintenance':
-        return '#F59E0B';
+        return { color: '#f59e0b', icon: 'build', label: 'Maintenance', bgColor: 'rgba(245, 158, 11, 0.1)' };
       case 'inactive':
-        return '#EF4444';
+        return { color: '#ef4444', icon: 'close-circle', label: 'Inactive', bgColor: 'rgba(239, 68, 68, 0.1)' };
       default:
-        return '#6B7280';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'operational':
-        return '✅';
-      case 'maintenance':
-        return '🔧';
-      case 'inactive':
-        return '❌';
-      default:
-        return '❓';
+        return { color: '#6b7280', icon: 'help-circle', label: 'Unknown', bgColor: 'rgba(107, 114, 128, 0.1)' };
     }
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
-  const TruckCard = ({ truck }) => (
-    <View style={styles.truckCard}>
-      <View style={styles.truckHeader}>
-        <View style={styles.truckTitleRow}>
-          <Text style={styles.plateNumber}>{truck.plate_number}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(truck.truckStatus) }]}>
-            <Text style={styles.statusIcon}>{getStatusIcon(truck.truckStatus)}</Text>
-            <Text style={styles.statusText}>{truck.truckStatus.toUpperCase()}</Text>
+  const TruckCard = ({ truck }) => {
+    const statusConfig = getStatusConfig(truck.truckStatus);
+    
+    return (
+      <View style={styles.truckCard}>
+        {/* Header */}
+        <View style={styles.truckHeader}>
+          <View style={styles.truckIdentity}>
+            <View style={styles.truckIcon}>
+              <Ionicons name="car-sport" size={24} color="#6366f1" />
+            </View>
+            <View>
+              <Text style={styles.plateNumber}>{truck.plate_number}</Text>
+              <Text style={styles.truckModel}>{truck.truckModel}</Text>
+            </View>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
+            <Ionicons name={statusConfig.icon} size={14} color={statusConfig.color} />
+            <Text style={[styles.statusText, { color: statusConfig.color }]}>
+              {statusConfig.label}
+            </Text>
           </View>
         </View>
-        <Text style={styles.truckModel}>{truck.truckModel}</Text>
-      </View>
 
-      <View style={styles.truckDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Capacity:</Text>
-          <Text style={styles.detailValue}>{truck.truckCapacity} tons</Text>
-        </View>
-
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Assignment History:</Text>
-          <Text style={styles.detailValue}>
-            {truck.assignment_history?.length || 0} assignments
-          </Text>
-        </View>
-
-        {truck.assignment_history && truck.assignment_history.length > 0 && (
-          <View style={styles.historySection}>
-            <Text style={styles.historyTitle}>Recent Assignments:</Text>
-            {truck.assignment_history.slice(0, 3).map((assignment, index) => (
-              <View key={index} style={styles.historyItem}>
-                <Text style={styles.historyDate}>
-                  {formatDate(assignment.logged_at)}
-                </Text>
-                <Text style={styles.historyInfo}>
-                  Route: {assignment.route || 'N/A'}
-                </Text>
-              </View>
-            ))}
+        {/* Details */}
+        <View style={styles.truckDetails}>
+          <View style={styles.detailGrid}>
+            <View style={styles.detailItem}>
+              <Ionicons name="scale" size={16} color="#64748B" />
+              <Text style={styles.detailLabel}>Capacity</Text>
+              <Text style={styles.detailValue}>{truck.truckCapacity} tons</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Ionicons name="calendar" size={16} color="#64748B" />
+              <Text style={styles.detailLabel}>Assignments</Text>
+              <Text style={styles.detailValue}>
+                {truck.assignment_history?.length || 0}
+              </Text>
+            </View>
           </View>
-        )}
-      </View>
 
-      <View style={styles.truckFooter}>
-        <Text style={styles.createdDate}>
-          Created: {formatDate(truck.created_at)}
-        </Text>
-        <Text style={styles.updatedDate}>
-          Updated: {formatDate(truck.updated_at)}
-        </Text>
+          {/* Recent Assignments */}
+          {truck.assignment_history && truck.assignment_history.length > 0 && (
+            <View style={styles.historySection}>
+              <Text style={styles.historyTitle}>Recent Routes</Text>
+              {truck.assignment_history.slice(0, 2).map((assignment, index) => (
+                <View key={index} style={styles.historyItem}>
+                  <Ionicons name="location" size={14} color="#8b5cf6" />
+                  <Text style={styles.historyInfo}>
+                    {assignment.route || 'Unnamed Route'}
+                  </Text>
+                  <Text style={styles.historyDate}>
+                    {formatDate(assignment.logged_at)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Footer */}
+        <View style={styles.truckFooter}>
+          <View style={styles.dateInfo}>
+            <Ionicons name="time" size={12} color="#94a3b8" />
+            <Text style={styles.dateText}>Added {formatDate(truck.created_at)}</Text>
+          </View>
+          <TouchableOpacity style={styles.actionButton}>
+            <Ionicons name="ellipsis-horizontal" size={16} color="#64748B" />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.loadingText}>Loading trucks...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6366f1" />
+        <Text style={styles.loadingText}>Loading fleet data...</Text>
       </View>
     );
   }
+
+  const operationalCount = trucks.filter(t => t.truckStatus === 'operational').length;
+  const maintenanceCount = trucks.filter(t => t.truckStatus === 'maintenance').length;
+  const inactiveCount = trucks.filter(t => t.truckStatus === 'inactive').length;
 
   return (
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          colors={['#6366f1']}
+          tintColor="#6366f1"
+        />
       }
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.content}>
-        {/* Header Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{trucks.length}</Text>
-            <Text style={styles.statLabel}>Total Trucks</Text>
+        {/* Fleet Overview */}
+        <View style={styles.overviewCard}>
+          <View style={styles.overviewHeader}>
+            <Text style={styles.overviewTitle}>Fleet Overview</Text>
+            <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+              <Ionicons name="refresh" size={18} color="#6366f1" />
+              <Text style={styles.refreshText}>Refresh</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {trucks.filter(t => t.truckStatus === 'operational').length}
-            </Text>
-            <Text style={styles.statLabel}>Operational</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>
-              {trucks.filter(t => t.truckStatus === 'maintenance').length}
-            </Text>
-            <Text style={styles.statLabel}>Maintenance</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>{trucks.length}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={[styles.statItem, styles.statOperational]}>
+              <Text style={styles.statNumber}>{operationalCount}</Text>
+              <Text style={styles.statLabel}>Operational</Text>
+            </View>
+            <View style={[styles.statItem, styles.statMaintenance]}>
+              <Text style={styles.statNumber}>{maintenanceCount}</Text>
+              <Text style={styles.statLabel}>Maintenance</Text>
+            </View>
+            <View style={[styles.statItem, styles.statInactive]}>
+              <Text style={styles.statNumber}>{inactiveCount}</Text>
+              <Text style={styles.statLabel}>Inactive</Text>
+            </View>
           </View>
         </View>
 
         {/* Trucks List */}
-        <View style={styles.sectionContainer}>
+        <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>All Trucks</Text>
+            <Text style={styles.sectionTitle}>Fleet Vehicles</Text>
             <Text style={styles.sectionSubtitle}>
-              {trucks.length} truck{trucks.length !== 1 ? 's' : ''} in fleet
+              {trucks.length} truck{trucks.length !== 1 ? 's' : ''} in operation
             </Text>
           </View>
 
           {trucks.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🚛</Text>
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="car-sport-outline" size={48} color="#cbd5e1" />
+              </View>
               <Text style={styles.emptyTitle}>No Trucks Found</Text>
               <Text style={styles.emptyMessage}>
-                No trucks have been added to the fleet yet. Create your first truck to get started.
+                Your fleet is empty. Add your first truck to get started with route assignments.
               </Text>
+              <TouchableOpacity style={styles.emptyAction}>
+                <Ionicons name="add" size={20} color="white" />
+                <Text style={styles.emptyActionText}>Add First Truck</Text>
+              </TouchableOpacity>
             </View>
           ) : (
-            trucks.map((truck) => (
-              <TruckCard key={truck._id} truck={truck} />
-            ))
+            <View style={styles.trucksList}>
+              {trucks.map((truck) => (
+                <TruckCard key={truck._id} truck={truck} />
+              ))}
+            </View>
           )}
         </View>
-
-        {/* Action Button */}
-        {trucks.length > 0 && (
-          <View style={styles.actionContainer}>
-            <TouchableOpacity
-              style={styles.refreshButton}
-              onPress={onRefresh}
-            >
-              <Text style={styles.refreshButtonText}>🔄 Refresh Data</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
     </ScrollView>
   );
@@ -210,71 +241,108 @@ const ViewTrucks = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8fafc',
   },
-  content: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  centerContainer: {
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8fafc',
   },
   loadingText: {
+    marginTop: 12,
     fontSize: 16,
     color: '#64748B',
+    fontWeight: '500',
   },
-  statsContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    gap: 12,
+  content: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
-  statCard: {
-    flex: 1,
+  overviewCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 4,
+  },
+  overviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  overviewTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    borderRadius: 12,
+  },
+  refreshText: {
+    fontSize: 14,
+    color: '#6366f1',
+    fontWeight: '600',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+  },
+  statOperational: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  statMaintenance: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  },
+  statInactive: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#2E8B57',
+    color: '#1e293b',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
     color: '#64748B',
     fontWeight: '600',
-    textAlign: 'center',
   },
-  sectionContainer: {
+  section: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 20,
+    borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 4,
   },
   sectionHeader: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingBottom: 16,
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#1e293b',
     marginBottom: 4,
   },
   sectionSubtitle: {
@@ -282,72 +350,88 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '400',
   },
+  trucksList: {
+    gap: 12,
+  },
   truckCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#e2e8f0',
   },
   truckHeader: {
-    marginBottom: 12,
-  },
-  truckTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  truckIdentity: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    flex: 1,
+  },
+  truckIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   plateNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  truckModel: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusIcon: {
-    fontSize: 12,
-    marginRight: 4,
+    borderRadius: 8,
+    gap: 4,
   },
   statusText: {
-    fontSize: 10,
-    color: 'white',
+    fontSize: 12,
     fontWeight: '600',
   },
-  truckModel: {
-    fontSize: 16,
-    color: '#64748B',
-    fontWeight: '500',
-  },
   truckDetails: {
+    marginBottom: 16,
+  },
+  detailGrid: {
+    flexDirection: 'row',
+    gap: 16,
     marginBottom: 12,
   },
-  detailRow: {
+  detailItem: {
+    flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    gap: 8,
   },
   detailLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
+    marginRight: 'auto',
   },
   detailValue: {
     fontSize: 14,
-    color: '#1E293B',
+    color: '#1e293b',
     fontWeight: '600',
   },
   historySection: {
-    marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#e2e8f0',
   },
   historyTitle: {
     fontSize: 14,
@@ -357,38 +441,50 @@ const styles = StyleSheet.create({
   },
   historyItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  historyInfo: {
+    fontSize: 13,
+    color: '#374151',
+    flex: 1,
   },
   historyDate: {
     fontSize: 12,
     color: '#64748B',
   },
-  historyInfo: {
-    fontSize: 12,
-    color: '#374151',
-  },
   truckFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    alignItems: 'center',
     paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
   },
-  createdDate: {
+  dateInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dateText: {
     fontSize: 12,
     color: '#64748B',
   },
-  updatedDate: {
-    fontSize: 12,
-    color: '#64748B',
+  actionButton: {
+    padding: 4,
   },
-  emptyContainer: {
+  emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
   },
   emptyIcon: {
-    fontSize: 64,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
   },
   emptyTitle: {
@@ -402,22 +498,20 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,
-  },
-  actionContainer: {
     marginBottom: 20,
   },
-  refreshButton: {
-    backgroundColor: 'white',
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  emptyAction: {
+    backgroundColor: '#6366f1',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-  refreshButtonText: {
+  emptyActionText: {
+    color: 'white',
     fontSize: 16,
-    color: '#374151',
     fontWeight: '600',
   },
 });

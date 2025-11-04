@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, StyleSheet, Platform, Dimensions } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  FlatList, 
+  TextInput, 
+  StyleSheet, 
+  Platform,
+  Dimensions 
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 const validRoles = ['supervisor', 'driver', 'field_agent', 'ceo', 'c_care', 'manager', 'other'];
 
@@ -9,37 +20,57 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
   const [containerWidth, setContainerWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
 
-  // Calculate dynamic card width based on container width
   useEffect(() => {
     if (containerWidth > 0) {
-      // Calculate how many cards can fit (minimum 150px per card)
-      const minCardWidth = 150;
+      const minCardWidth = 160;
       const maxCardsPerRow = Math.floor(containerWidth / minCardWidth);
-      const actualCardWidth = containerWidth / Math.max(1, Math.min(maxCardsPerRow, 4)); // Max 4 cards per row
-      setCardWidth(actualCardWidth - 16); // Subtract padding/margins
+      const actualCardWidth = containerWidth / Math.max(1, Math.min(maxCardsPerRow, 3));
+      setCardWidth(actualCardWidth - 16);
     }
   }, [containerWidth]);
 
-  // Filter staff
   const filteredStaff = staff.filter(
     (item) =>
       item.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Group by role + format titles
   const roleGroups = validRoles.map((role) => ({
     role,
-    title: role
-      .split('_')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' '),
+    title: role.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+    icon: getRoleIcon(role),
+    color: getRoleColor(role),
     members: filteredStaff.filter(
       (item) => item.role === role || (role === 'other' && !validRoles.slice(0, -1).includes(item.role))
     ),
   })).filter((group) => group.members.length > 0);
 
-  // Toggle selection
+  function getRoleIcon(role) {
+    const icons = {
+      supervisor: 'person-circle',
+      driver: 'car-sport',
+      field_agent: 'walk',
+      ceo: 'business',
+      c_care: 'headset',
+      manager: 'person',
+      other: 'people'
+    };
+    return icons[role] || 'person';
+  }
+
+  function getRoleColor(role) {
+    const colors = {
+      supervisor: '#8b5cf6',
+      driver: '#10b981', 
+      field_agent: '#f59e0b',
+      ceo: '#ef4444',
+      c_care: '#6366f1',
+      manager: '#ec4899',
+      other: '#64748b'
+    };
+    return colors[role] || '#64748b';
+  }
+
   const toggleTeamMember = (staffId, staffRole) => {
     const isSelected = formData.team_members.some((member) => member.user === staffId);
     const updatedMembers = isSelected
@@ -48,50 +79,50 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
     setFormData({ ...formData, team_members: updatedMembers });
   };
 
-  // Render a single staff card
   const renderStaffCard = ({ item }) => {
     const isSelected = formData.team_members.some((member) => member.user === item._id);
+    const roleColor = getRoleColor(item.role);
+    
     return (
       <TouchableOpacity
         style={[
           styles.staffCard,
           { width: cardWidth },
-          isSelected && styles.staffCardSelected,
+          isSelected && [styles.staffCardSelected, { borderColor: roleColor }],
         ]}
         onPress={() => toggleTeamMember(item._id, item.role)}
       >
-        <View style={styles.avatar}>
-          <Ionicons
-            name="person-outline"
-            size={20}
-            color={isSelected ? '#FFFFFF' : '#3B82F6'}
-          />
+        <View style={[styles.avatar, { backgroundColor: `${roleColor}15` }]}>
+          <Ionicons name={getRoleIcon(item.role)} size={20} color={roleColor} />
         </View>
         <Text style={styles.staffName} numberOfLines={1}>
           {item.full_name}
         </Text>
-        <Text style={styles.roleText} numberOfLines={1}>
-          {item.role
-            .split('_')
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ')}
+        <Text style={[styles.roleText, { color: roleColor }]} numberOfLines={1}>
+          {item.role.split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
         </Text>
-        <Ionicons
-          name={isSelected ? 'checkmark-circle' : 'radio-button-off-outline'}
-          size={18}
-          color={isSelected ? '#10B981' : '#D1D5DB'}
-          style={styles.checkIcon}
-        />
+        <View style={styles.cardFooter}>
+          <Ionicons
+            name={isSelected ? 'checkmark-circle' : 'radio-button-off-outline'}
+            size={18}
+            color={isSelected ? roleColor : '#D1D5DB'}
+          />
+        </View>
       </TouchableOpacity>
     );
   };
 
-  // Render a role section
   const renderRoleSection = ({ item: group }) => {
     return (
-      <>
+      <View style={styles.roleSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionHeaderText}>{group.title}</Text>
+          <View style={[styles.roleIcon, { backgroundColor: `${group.color}15` }]}>
+            <Ionicons name={group.icon} size={16} color={group.color} />
+          </View>
+          <Text style={[styles.sectionHeaderText, { color: group.color }]}>
+            {group.title}
+          </Text>
+          <Text style={styles.sectionCount}>({group.members.length})</Text>
         </View>
         <View
           style={styles.sectionBody}
@@ -108,25 +139,59 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
             </View>
           ))}
         </View>
-      </>
+      </View>
     );
   };
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Team Members</Text>
-        <Text style={styles.subtitle}>
-          {formData.team_members.length > 0
-            ? `${formData.team_members.length} selected`
-            : 'Select team for this route'}
-        </Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerIcon}>
+            <Ionicons name="people" size={24} color="#6366f1" />
+          </View>
+          <View>
+            <Text style={styles.title}>Team Assembly</Text>
+            <Text style={styles.subtitle}>
+              {formData.team_members.length > 0
+                ? `${formData.team_members.length} member${formData.team_members.length !== 1 ? 's' : ''} selected`
+                : 'Build your route team'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Selection Summary */}
+        {formData.team_members.length > 0 && (
+          <View style={styles.selectionSummary}>
+            <View style={styles.summaryChips}>
+              {formData.team_members.slice(0, 3).map((member, index) => {
+                const staffMember = staff.find(s => s._id === member.user);
+                if (!staffMember) return null;
+                return (
+                  <View key={index} style={[styles.summaryChip, { backgroundColor: `${getRoleColor(staffMember.role)}15` }]}>
+                    <Text style={[styles.summaryChipText, { color: getRoleColor(staffMember.role) }]}>
+                      {staffMember.full_name.split(' ')[0]}
+                    </Text>
+                  </View>
+                );
+              })}
+              {formData.team_members.length > 3 && (
+                <View style={styles.moreChip}>
+                  <Text style={styles.moreChipText}>+{formData.team_members.length - 3}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color="#6B7280" style={styles.searchIcon} />
+          <Ionicons name="search" size={18} color="#64748B" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by name or role..."
-            placeholderTextColor="#9CA3AF"
+            placeholder="Search team members..."
+            placeholderTextColor="#94a3b8"
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -135,6 +200,7 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
         </View>
       </View>
 
+      {/* Team Members Grid */}
       <FlatList
         data={roleGroups}
         renderItem={renderRoleSection}
@@ -143,11 +209,22 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="search-outline" size={40} color="#D1D5DB" />
-            <Text style={styles.emptyText}>No results found</Text>
+            <Ionicons name="search-outline" size={48} color="#cbd5e1" />
+            <Text style={styles.emptyTitle}>No Team Members Found</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery ? 'Try adjusting your search terms' : 'No staff members available'}
+            </Text>
           </View>
         }
       />
+
+      {/* Requirements Hint */}
+      <View style={styles.requirements}>
+        <Ionicons name="information-circle" size={16} color="#f59e0b" />
+        <Text style={styles.requirementsText}>
+          Team must include at least one supervisor
+        </Text>
+      </View>
     </View>
   );
 };
@@ -155,128 +232,217 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'white',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
   },
   header: {
+    marginBottom: 20,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
+  headerIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
+    color: '#1e293b',
+    marginBottom: 2,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#64748B',
+  },
+  selectionSummary: {
     marginBottom: 16,
+  },
+  summaryChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  summaryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  summaryChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  moreChip: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  moreChipText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f8fafc',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 10,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#1e293b',
     paddingVertical: 0,
   },
+  roleSection: {
+    marginBottom: 24,
+  },
   sectionHeader: {
-    backgroundColor: '#F8F9FA',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  roleIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
   sectionHeaderText: {
     fontSize: 16,
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  sectionCount: {
+    fontSize: 14,
+    color: '#94a3b8',
     fontWeight: '600',
-    color: '#1F2937',
   },
   sectionBody: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 4,
-    paddingBottom: 16,
   },
   gridCardWrapper: {
     margin: 4,
   },
   staffCard: {
     padding: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#f8fafc',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
-    minHeight: 130,
+    minHeight: 140,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.03,
-        shadowRadius: 4,
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
       },
       android: {
-        elevation: 1,
+        elevation: 2,
       },
     }),
   },
   staffCardSelected: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   staffName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#1e293b',
     textAlign: 'center',
     marginBottom: 4,
   },
   roleText: {
     fontSize: 12,
-    color: '#6B7280',
+    fontWeight: '600',
     textAlign: 'center',
     marginBottom: 8,
   },
-  checkIcon: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
+  cardFooter: {
+    marginTop: 'auto',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 40,
   },
-  emptyText: {
+  emptyTitle: {
     fontSize: 16,
-    color: '#6B7280',
-    marginTop: 8,
+    fontWeight: '600',
+    color: '#374151',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
   },
   listContent: {
-    paddingBottom: 24,
+    paddingBottom: 8,
+  },
+  requirements: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  requirementsText: {
+    fontSize: 12,
+    color: '#92400e',
+    fontWeight: '500',
   },
 });
 
