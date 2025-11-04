@@ -48,6 +48,23 @@ export default function CustomerIndex() {
       color: '#3B82F6',
       route: '/ceo/operations/view-customers',
     },
+     {
+      id: 'record-payment',
+      title: 'Record Payment',
+      description: 'Record a new payment',
+      icon: 'cash',
+      color: '#F59E0B',
+      route: '/ceo/operations/record-payment',
+    },
+    
+     {
+      id: 'customer-analytics',
+      title: 'Customer Analytics',
+      description: 'Record a new payment',
+      icon: 'stats-chart',
+      color: '#8B5CF6',
+      route: '/ceo/operations/customer-analytics',
+    },
   ];
 
   const handleCardPress = (route) => {
@@ -105,10 +122,7 @@ export default function CustomerIndex() {
                   <Ionicons name="stats-chart" size={32} color="#8B5CF6" />
                 </View>
                 
-                <View style={styles.cardTextContainer}>
-                  <Text style={styles.cardTitle}>Customer Analytics</Text>
-                  <Text style={styles.cardDescription}>View statistics and insights</Text>
-                </View>
+              
 
                 <View style={styles.comingSoonBadge}>
                   <Text style={styles.comingSoonBadgeText}>Soon</Text>

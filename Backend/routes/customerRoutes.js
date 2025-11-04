@@ -5,7 +5,8 @@ const {
   getCustomerById,
   createCustomer,
   updateCustomer,
-  deleteCustomer
+  deleteCustomer,
+  getCustomersByStreet,
 } = require('../controllers/customerController');
 const auth = require('../middleware/auth');
 
@@ -14,6 +15,9 @@ router.get('/all', auth, getAllCustomers);
 
 // Get single customer by ID
 router.get('/:id', auth, getCustomerById);
+
+// Get customers by street ID
+router.get('/by-street/:streetId', auth, getCustomersByStreet);
 
 // Create new customer (CEO only)
 router.post('/create', auth, createCustomer);

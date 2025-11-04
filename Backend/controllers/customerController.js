@@ -2,6 +2,7 @@ const Customer = require('../models/customer');
 const ApartmentType = require('../models/apartment');
 const CommercialSubtype = require('../models/commercial');
 
+
 // Get all customers (with populated references)
 const getAllCustomers = async (req, res) => {
   try {
@@ -217,6 +218,83 @@ const createCustomer = async (req, res) => {
   }
 };
 
+// Get customers by street ID
+const getCustomersByStreet = async (req, res) => {
+  try {
+    const { streetId } = req.params;
+    const customers = await Customer.find({ street: streetId })
+      .populate('street', 'name')
+      .populate('apartment_type', 'name base_fee')
+      .populate('commercial_subtype', 'name base_fee')
+      .sort({ created_at: -1 });
+
+    const transformedCustomers = customers.map(customer => ({
+      _id: customer._id,
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address,
+      house_number: customer.house_number,
+      street: {
+        _id: customer.street._id,
+        streetName: customer.street.name,
+      },
+      customer_type: customer.customer_type,
+      apartment_type: customer.apartment_type,
+      commercial_subtype: customer.commercial_subtype,
+      base_fee: customer.customer_type === 'residential'
+        ? customer.apartment_type?.base_fee
+        : customer.commercial_subtype?.base_fee,
+      status: customer.status,
+      createdAt: customer.created_at,
+      updatedAt: customer.updated_at,
+    }));
+
+    return res.status(200).json({
+      message: transformedCustomers.length === 0 ? 'No customers found' : 'Customers found',
+      customers: transformedCustomers,
+    });
+  } catch (error) {
+    console.error('Get customers by street error:', error);
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ message: 'Invalid street ID' });
+    }
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+const getCustomerAnalytics = async (req, res) => {
+  try {
+    const totalCustomers = await Customer.countDocuments();
+    const newCustomersThisMonth = await Customer.countDocuments({
+      created_at: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)) }
+    });
+
+    const revenueThisMonth = await Payment.aggregate([
+      { $match: { payment_status: 'paid', month: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)) } } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
+    ]);
+
+    const customersBySegment = await Customer.aggregate([
+      { $group: { _id: '$customer_type', count: { $sum: 1 } } }
+    ]);
+
+    const customerGrowth = await Customer.aggregate([
+      { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$created_at' } }, count: { $sum: 1 } } },
+      { $sort: { '_id': 1 } }
+    ]);
+
+    res.status(200).json({
+      totalCustomers,
+      newCustomersThisMonth,
+      revenueThisMonth: revenueThisMonth[0]?.total || 0,
+      customersBySegment,
+      customerGrowth
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};
 
 // Update customer
 const updateCustomer = async (req, res) => {
@@ -325,6 +403,7 @@ module.exports = {
   getAllCustomers,
   getCustomerById,
   createCustomer,
+  getCustomersByStreet,
   updateCustomer,
   deleteCustomer,
 };
