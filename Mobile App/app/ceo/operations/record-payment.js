@@ -10,6 +10,7 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
 import { API_BASE_URL } from '../../../config';
 import { useRouter } from 'expo-router';
+
+const { width } = Dimensions.get('window');
 
 export default function RecordPayment() {
   const router = useRouter();
@@ -31,7 +34,6 @@ export default function RecordPayment() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [agentId, setAgentId] = useState('');
-  const [showCustomMonthInput, setShowCustomMonthInput] = useState(false);
   
   const [formData, setFormData] = useState({
     street: '',
@@ -212,24 +214,6 @@ export default function RecordPayment() {
     }
   };
 
-  const handleMonthChange = (value) => {
-    // Validate YYYY-MM format
-    const monthRegex = /^\d{4}-\d{2}$/;
-    if (!monthRegex.test(value)) {
-      Alert.alert('Invalid Format', 'Please use YYYY-MM format (e.g., 2024-12)');
-      return;
-    }
-
-    const [year, month] = value.split('-').map(Number);
-    if (month < 1 || month > 12) {
-      Alert.alert('Invalid Month', 'Month must be between 01 and 12');
-      return;
-    }
-
-    handleInputChange('month', value);
-    setShowCustomMonthInput(false);
-  };
-
   const handleSubmit = async () => {
     if (!formData.street || !formData.customer || !formData.amount || !formData.month) {
       Alert.alert('Validation Error', 'Please fill in all required fields');
@@ -334,14 +318,14 @@ export default function RecordPayment() {
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color="#666" />
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#64748b" />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalList}>
             {options.length === 0 ? (
               <View style={styles.emptyState}>
-                <Ionicons name="alert-circle-outline" size={48} color="#999" />
+                <Ionicons name="alert-circle-outline" size={48} color="#cbd5e1" />
                 <Text style={styles.emptyStateText}>
                   {field === 'customer' ? 'No customers on this street' : 'No options available'}
                 </Text>
@@ -390,10 +374,10 @@ export default function RecordPayment() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+        <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2E8B57" />
-          <Text style={styles.loadingText}>Loading form data...</Text>
+          <ActivityIndicator size="large" color="#6366f1" />
+          <Text style={styles.loadingText}>Loading payment form...</Text>
         </View>
       </SafeAreaView>
     );
@@ -401,13 +385,31 @@ export default function RecordPayment() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Record Payment</Text>
+          <Text style={styles.headerSubtitle}>Collect customer payments</Text>
+        </View>
+        <View style={styles.headerIcon}>
+          <Ionicons name="card" size={24} color="white" />
+        </View>
+      </View>
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Record Payment</Text>
-          
+          {/* Street Selection */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Street *</Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="location" size={16} color="#64748b" />
+              <Text style={styles.label}>Street</Text>
+              <Text style={styles.required}>*</Text>
+            </View>
             <TouchableOpacity
               style={styles.dropdown}
               onPress={() => setShowDropdown({ ...showDropdown, street: true })}
@@ -415,12 +417,17 @@ export default function RecordPayment() {
               <Text style={formData.street ? styles.dropdownTextSelected : styles.dropdownText}>
                 {formData.street ? streets.find(s => s._id === formData.street)?.streetName : 'Select Street'}
               </Text>
-              <Ionicons name="chevron-down" size={20} color="#999" />
+              <Ionicons name="chevron-down" size={20} color="#94a3b8" />
             </TouchableOpacity>
           </View>
 
+          {/* Customer Selection */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Customer *</Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="person" size={16} color="#64748b" />
+              <Text style={styles.label}>Customer</Text>
+              <Text style={styles.required}>*</Text>
+            </View>
             <TouchableOpacity
               style={[styles.dropdown, !formData.street && styles.dropdownDisabled]}
               onPress={() => {
@@ -433,7 +440,10 @@ export default function RecordPayment() {
               disabled={!formData.street}
             >
               {loadingCustomers ? (
-                <ActivityIndicator size="small" color="#2E8B57" />
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color="#6366f1" />
+                  <Text style={styles.loadingTextSmall}>Loading customers...</Text>
+                </View>
               ) : (
                 <>
                   <Text style={formData.customer ? styles.dropdownTextSelected : styles.dropdownText}>
@@ -441,7 +451,7 @@ export default function RecordPayment() {
                       ? formatCustomerDisplay(customers.find(c => c._id === formData.customer)) 
                       : 'Select Customer'}
                   </Text>
-                  <Ionicons name="chevron-down" size={20} color="#999" />
+                  <Ionicons name="chevron-down" size={20} color="#94a3b8" />
                 </>
               )}
             </TouchableOpacity>
@@ -450,63 +460,66 @@ export default function RecordPayment() {
             )}
           </View>
 
+          {/* Customer Summary Card */}
           {selectedCustomerDetails && (
             <View style={styles.customerCard}>
               <View style={styles.customerCardHeader}>
-                <Ionicons name="person-circle-outline" size={24} color="#2E8B57" />
-                <Text style={styles.customerCardTitle}>Customer Summary</Text>
+                <View style={styles.customerAvatar}>
+                  <Ionicons name="person-circle" size={32} color="#6366f1" />
+                </View>
+                <View style={styles.customerInfo}>
+                  <Text style={styles.customerName}>{selectedCustomerDetails.name}</Text>
+                  <Text style={styles.customerType}>
+                    {selectedCustomerDetails.customer_type === 'residential' 
+                      ? selectedCustomerDetails.apartment_type?.name || 'Residential'
+                      : selectedCustomerDetails.commercial_subtype?.name || 'Commercial'}
+                  </Text>
+                </View>
               </View>
               
               {loadingHistory ? (
                 <View style={styles.loadingSection}>
-                  <ActivityIndicator size="small" color="#2E8B57" />
-                  <Text style={styles.loadingText}>Loading payment history...</Text>
+                  <ActivityIndicator size="small" color="#6366f1" />
+                  <Text style={styles.loadingTextSmall}>Loading payment history...</Text>
                 </View>
               ) : (
                 <View style={styles.customerCardBody}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Name:</Text>
-                    <Text style={styles.detailValue}>{selectedCustomerDetails.name}</Text>
+                  <View style={styles.metricsGrid}>
+                    <View style={styles.metricItem}>
+                      <Text style={styles.metricLabel}>Monthly Fee</Text>
+                      <Text style={styles.metricValue}>
+                        ₦{selectedCustomerDetails.base_fee?.toLocaleString() || '0'}
+                      </Text>
+                    </View>
+                    {customerPaymentHistory && (
+                      <>
+                        <View style={styles.metricItem}>
+                          <Text style={styles.metricLabel}>Total Paid</Text>
+                          <Text style={[styles.metricValue, { color: '#10b981' }]}>
+                            ₦{customerPaymentHistory.total_paid?.toLocaleString() || '0'}
+                          </Text>
+                        </View>
+                        <View style={styles.metricItem}>
+                          <Text style={styles.metricLabel}>Outstanding</Text>
+                          <Text style={[styles.metricValue, { color: '#ef4444' }]}>
+                            ₦{customerPaymentHistory.total_outstanding?.toLocaleString() || '0'}
+                          </Text>
+                        </View>
+                      </>
+                    )}
                   </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Type:</Text>
-                    <Text style={styles.detailValue}>
-                      {selectedCustomerDetails.customer_type === 'residential' 
-                        ? selectedCustomerDetails.apartment_type?.name || 'N/A'
-                        : selectedCustomerDetails.commercial_subtype?.name || 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Monthly Fee:</Text>
-                    <Text style={[styles.detailValue, styles.feeValue]}>
-                      ₦{selectedCustomerDetails.base_fee?.toLocaleString() || '0'}
-                    </Text>
-                  </View>
-                  
-                  {customerPaymentHistory && (
-                    <>
-                      <View style={styles.divider} />
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Total Outstanding:</Text>
-                        <Text style={[styles.detailValue, { color: '#EF4444', fontWeight: '700' }]}>
-                          ₦{customerPaymentHistory.total_outstanding?.toLocaleString() || '0'}
-                        </Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Total Paid (All Time):</Text>
-                        <Text style={[styles.detailValue, { color: '#10B981' }]}>
-                          ₦{customerPaymentHistory.total_paid?.toLocaleString() || '0'}
-                        </Text>
-                      </View>
-                    </>
-                  )}
                 </View>
               )}
             </View>
           )}
 
+          {/* Month Selection */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Payment Month * (YYYY-MM)</Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="calendar" size={16} color="#64748b" />
+              <Text style={styles.label}>Payment Month</Text>
+              <Text style={styles.required}>*</Text>
+            </View>
             <View style={styles.monthInputContainer}>
               <TextInput
                 style={[styles.input, { flex: 1 }]}
@@ -525,12 +538,13 @@ export default function RecordPayment() {
                   );
                 }}
               >
-                <Ionicons name="help-circle-outline" size={24} color="#2E8B57" />
+                <Ionicons name="help-circle-outline" size={24} color="#6366f1" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.helperText}>Enter any month (past, present, or future)</Text>
+            <Text style={styles.helperText}>Format: YYYY-MM (e.g., 2024-12)</Text>
           </View>
 
+          {/* Month Balance Card */}
           {selectedMonthBalance && (
             <View style={[styles.balanceCard, { borderLeftColor: getStatusColor(selectedMonthBalance.status) }]}>
               <View style={styles.balanceHeader}>
@@ -571,8 +585,13 @@ export default function RecordPayment() {
             </View>
           )}
 
+          {/* Payment Amount */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Payment Amount (₦) *</Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="cash" size={16} color="#64748b" />
+              <Text style={styles.label}>Payment Amount (₦)</Text>
+              <Text style={styles.required}>*</Text>
+            </View>
             <TextInput
               style={styles.input}
               keyboardType="numeric"
@@ -594,34 +613,47 @@ export default function RecordPayment() {
             )}
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Payment Method *</Text>
-            <TouchableOpacity
-              style={styles.dropdown}
-              onPress={() => setShowDropdown({ ...showDropdown, payment_method: true })}
-            >
-              <Text style={formData.payment_method ? styles.dropdownTextSelected : styles.dropdownText}>
-                {formData.payment_method ? paymentMethodOptions.find(m => m.value === formData.payment_method)?.label : 'Select Method'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#999" />
-            </TouchableOpacity>
+          {/* Payment Method and Status Row */}
+          <View style={styles.row}>
+            <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="card" size={16} color="#64748b" />
+                <Text style={styles.label}>Method</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() => setShowDropdown({ ...showDropdown, payment_method: true })}
+              >
+                <Text style={formData.payment_method ? styles.dropdownTextSelected : styles.dropdownText}>
+                  {formData.payment_method ? paymentMethodOptions.find(m => m.value === formData.payment_method)?.label : 'Select Method'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="flag" size={16} color="#64748b" />
+                <Text style={styles.label}>Status</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() => setShowDropdown({ ...showDropdown, payment_status: true })}
+              >
+                <Text style={formData.payment_status ? styles.dropdownTextSelected : styles.dropdownText}>
+                  {formData.payment_status ? paymentStatusOptions.find(s => s.value === formData.payment_status)?.label : 'Select Status'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
           </View>
 
+          {/* Agent Notes */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Payment Status *</Text>
-            <TouchableOpacity
-              style={styles.dropdown}
-              onPress={() => setShowDropdown({ ...showDropdown, payment_status: true })}
-            >
-              <Text style={formData.payment_status ? styles.dropdownTextSelected : styles.dropdownText}>
-                {formData.payment_status ? paymentStatusOptions.find(s => s.value === formData.payment_status)?.label : 'Select Status'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#999" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Agent Notes</Text>
+            <View style={styles.labelContainer}>
+              <Ionicons name="document-text" size={16} color="#64748b" />
+              <Text style={styles.label}>Agent Notes</Text>
+            </View>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.agent_notes}
@@ -632,6 +664,7 @@ export default function RecordPayment() {
             />
           </View>
 
+          {/* Submit Button */}
           <TouchableOpacity 
             style={[styles.submitButton, submitting && styles.submitButtonDisabled]} 
             onPress={handleSubmit} 
@@ -640,7 +673,10 @@ export default function RecordPayment() {
             {submitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.submitButtonText}>Record Payment</Text>
+              <>
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.submitButtonText}>Record Payment</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -686,52 +722,84 @@ export default function RecordPayment() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8fafc',
   },
-  loadingContainer: {
+  header: {
+    backgroundColor: '#6366f1',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  headerContent: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  loadingSection: {
-    padding: 20,
-    alignItems: 'center',
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
   },
-  loadingText: {
-    marginTop: 8,
+  headerSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  headerIcon: {
+    padding: 8,
   },
   content: {
+    flex: 1,
     padding: 20,
   },
   section: {
     marginBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E2937',
+  formGroup: {
     marginBottom: 20,
   },
-  formGroup: {
-    marginBottom: 16,
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#475569',
-    marginBottom: 8,
+    color: '#374151',
+    marginLeft: 6,
+  },
+  required: {
+    color: '#ef4444',
+    marginLeft: 2,
+    fontSize: 14,
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 16,
-    color: '#1E293B',
+    color: '#1e293b',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   monthInputContainer: {
     flexDirection: 'row',
@@ -749,118 +817,136 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
   },
   dropdownDisabled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#f1f5f9',
     opacity: 0.6,
   },
   dropdownText: {
     flex: 1,
     fontSize: 16,
-    color: '#94A3B8',
+    color: '#94a3b8',
   },
   dropdownTextSelected: {
     flex: 1,
     fontSize: 16,
-    color: '#1E293B',
+    color: '#1e293b',
+    fontWeight: '500',
   },
   helperText: {
     fontSize: 12,
-    color: '#64748B',
-    marginTop: 4,
+    color: '#64748b',
+    marginTop: 6,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingTextSmall: {
+    fontSize: 14,
+    color: '#64748b',
   },
   customerCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 16,
-    overflow: 'hidden',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   customerCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    marginBottom: 16,
   },
-  customerCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2E8B57',
-    marginLeft: 8,
+  customerAvatar: {
+    marginRight: 12,
+  },
+  customerInfo: {
+    flex: 1,
+  },
+  customerName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  customerType: {
+    fontSize: 14,
+    color: '#64748b',
   },
   customerCardBody: {
-    padding: 16,
+    // Additional styles if needed
   },
-  detailRow: {
+  metricsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
   },
-  detailLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#1E293B',
-    fontWeight: '400',
+  metricItem: {
+    alignItems: 'center',
     flex: 1,
-    textAlign: 'right',
   },
-  feeValue: {
-    fontWeight: '700',
-    color: '#2E8B57',
+  metricLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  metricValue: {
     fontSize: 16,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 12,
+    fontWeight: 'bold',
+    color: '#1e293b',
   },
   balanceCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: 'white',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#e2e8f0',
     borderLeftWidth: 4,
-    marginBottom: 16,
+    marginBottom: 20,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   balanceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FAFAFA',
+    padding: 20,
+    backgroundColor: '#f8fafc',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#e2e8f0',
   },
   balanceTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#1e293b',
   },
   noRecordsText: {
     fontSize: 12,
-    color: '#F59E0B',
+    color: '#f59e0b',
     marginTop: 4,
   },
   statusBadge: {
     paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   statusBadgeText: {
@@ -869,7 +955,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   balanceBody: {
-    padding: 16,
+    padding: 20,
   },
   balanceRow: {
     flexDirection: 'row',
@@ -880,23 +966,31 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 12,
     borderTopWidth: 2,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: '#f1f5f9',
   },
   balanceLabel: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#64748b',
   },
   balanceAmount: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#1e293b',
   },
   submitButton: {
-    backgroundColor: '#2E8B57',
-    paddingVertical: 16,
-    borderRadius: 8,
+    backgroundColor: '#6366f1',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   submitButtonDisabled: {
     opacity: 0.6,
@@ -905,6 +999,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  loadingSection: {
+    padding: 20,
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -924,12 +1034,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#e2e8f0',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#1e293b',
+  },
+  closeButton: {
+    padding: 4,
   },
   modalList: {
     maxHeight: 400,
@@ -938,11 +1051,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#f1f5f9',
   },
   modalItemText: {
     fontSize: 16,
-    color: '#1E293B',
+    color: '#1e293b',
   },
   emptyState: {
     alignItems: 'center',
@@ -951,7 +1064,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#64748B',
+    color: '#64748b',
     marginTop: 12,
   },
 });
