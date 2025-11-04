@@ -120,29 +120,7 @@ export default function CustomerIndex() {
             </TouchableOpacity>
           ))}
 
-          {/* Coming Soon Cards */}
-          <View style={styles.comingSoonSection}>
-            <Text style={styles.comingSoonTitle}>Coming Soon</Text>
-            
-       
-
-            <View style={styles.comingSoonCard}>
-              <View style={styles.cardContent}>
-                <View style={[styles.iconContainer, { backgroundColor: '#F59E0B15' }]}>
-                  <Ionicons name="receipt" size={32} color="#F59E0B" />
-                </View>
-                
-                <View style={styles.cardTextContainer}>
-                  <Text style={styles.cardTitle}>Billing History</Text>
-                  <Text style={styles.cardDescription}>View payment records</Text>
-                </View>
-
-                <View style={styles.comingSoonBadge}>
-                  <Text style={styles.comingSoonBadgeText}>Soon</Text>
-                </View>
-              </View>
-            </View>
-          </View>
+         
         </View>
 
         {/* Info Section */}
