@@ -3,6 +3,8 @@ import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Dimensions }
 import { BarChart, PieChart } from 'react-native-chart-kit';
 import axios from 'axios';
 import { API_BASE_URL } from '../../../config';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -93,154 +95,162 @@ const CustomerAnalytics = () => {
   ];
 
   return (
-    <ScrollView 
-      style={{ flex: 1, backgroundColor: '#f9fafb' }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={{ padding: 16 }}>
-        {/* Header Stats */}
-        <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1f2937', marginBottom: 16 }}>
-          Customer Analytics
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
+        <Ionicons name="arrow-back" size={24} color="black" style={{ marginRight: 8 }} />
+        <Text style={{ fontSize: 18, fontWeight: '500', color: '#1f2937' }}>
+          Back
         </Text>
-        
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 }}>
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Total Customers</Text>
-            <Text style={[styles.statValue, { color: '#3b82f6' }]}>
-              {overview?.total_customers || 0}
-            </Text>
+      </View>
+      <ScrollView 
+        style={{ flex: 1, backgroundColor: '#f9fafb' }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <View style={{ padding: 16 }}>
+          {/* Header Stats */}
+          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1f2937', marginBottom: 16 }}>
+            Customer Analytics
+          </Text>
+          
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 24 }}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Total Customers</Text>
+              <Text style={[styles.statValue, { color: '#3b82f6' }]}>
+                {overview?.total_customers || 0}
+              </Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Active</Text>
+              <Text style={[styles.statValue, { color: '#10b981' }]}>
+                {overview?.active_customers || 0}
+              </Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Residential</Text>
+              <Text style={[styles.statValue, { color: '#1f2937', fontSize: 24 }]}>
+                {overview?.residential_customers || 0}
+              </Text>
+            </View>
+
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>Commercial</Text>
+              <Text style={[styles.statValue, { color: '#1f2937', fontSize: 24 }]}>
+                {overview?.commercial_customers || 0}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Active</Text>
-            <Text style={[styles.statValue, { color: '#10b981' }]}>
-              {overview?.active_customers || 0}
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Residential</Text>
-            <Text style={[styles.statValue, { color: '#1f2937', fontSize: 24 }]}>
-              {overview?.residential_customers || 0}
-            </Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <Text style={styles.statLabel}>Commercial</Text>
-            <Text style={[styles.statValue, { color: '#1f2937', fontSize: 24 }]}>
-              {overview?.commercial_customers || 0}
-            </Text>
-          </View>
-        </View>
-
-        {/* Customer Type Distribution */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Customer Type Distribution</Text>
-          <PieChart
-            data={customerTypeData}
-            width={screenWidth - 60}
-            height={200}
-            chartConfig={{
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            }}
-            accessor="population"
-            backgroundColor="transparent"
-            paddingLeft="15"
-            absolute
-          />
-        </View>
-
-        {/* Status Distribution */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Customer Status</Text>
-          <PieChart
-            data={statusData}
-            width={screenWidth - 60}
-            height={200}
-            chartConfig={{
-              color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-            }}
-            accessor="population"
-            backgroundColor="transparent"
-            paddingLeft="15"
-            absolute
-          />
-        </View>
-
-        {/* Growth Trend */}
-        {growth && growth.length > 0 && (
+          {/* Customer Type Distribution */}
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Customer Growth (6 Months)</Text>
-            <BarChart
-              data={{
-                labels: growth.map(item => item.month.slice(-2)),
-                datasets: [{
-                  data: growth.map(item => item.count)
-                }]
-              }}
+            <Text style={styles.chartTitle}>Customer Type Distribution</Text>
+            <PieChart
+              data={customerTypeData}
               width={screenWidth - 60}
-              height={220}
-              yAxisLabel=""
+              height={200}
               chartConfig={{
-                backgroundColor: '#ffffff',
-                backgroundGradientFrom: '#ffffff',
-                backgroundGradientTo: '#ffffff',
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
-                barPercentage: 0.7,
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
               }}
-              style={{ borderRadius: 8 }}
+              accessor="population"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              absolute
             />
           </View>
-        )}
 
-        {/* Top Streets */}
-        {byStreet && byStreet.length > 0 && (
+          {/* Status Distribution */}
           <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Top Streets by Customer Count</Text>
-            {byStreet.slice(0, 5).map((item, index) => (
-              <View key={index} style={styles.listItem}>
-                <Text style={{ color: '#374151', flex: 1 }}>{item.street_name}</Text>
-                <View style={[styles.badge, { backgroundColor: '#dbeafe' }]}>
-                  <Text style={{ color: '#1e40af', fontWeight: '600' }}>{item.customer_count}</Text>
-                </View>
-              </View>
-            ))}
+            <Text style={styles.chartTitle}>Customer Status</Text>
+            <PieChart
+              data={statusData}
+              width={screenWidth - 60}
+              height={200}
+              chartConfig={{
+                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              }}
+              accessor="population"
+              backgroundColor="transparent"
+              paddingLeft="15"
+              absolute
+            />
           </View>
-        )}
 
-        {/* Apartment Types */}
-        {byApartment && byApartment.length > 0 && (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Residential by Apartment Type</Text>
-            {byApartment.map((item, index) => (
-              <View key={index} style={styles.listItem}>
-                <Text style={{ color: '#374151', flex: 1 }}>{item.type_name}</Text>
-                <View style={[styles.badge, { backgroundColor: '#d1fae5' }]}>
-                  <Text style={{ color: '#065f46', fontWeight: '600' }}>{item.customer_count}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
+          {/* Growth Trend */}
+          {growth && growth.length > 0 && (
+            <View style={styles.chartCard}>
+              <Text style={styles.chartTitle}>Customer Growth (6 Months)</Text>
+              <BarChart
+                data={{
+                  labels: growth.map(item => item.month.slice(-2)),
+                  datasets: [{
+                    data: growth.map(item => item.count)
+                  }]
+                }}
+                width={screenWidth - 60}
+                height={220}
+                yAxisLabel=""
+                chartConfig={{
+                  backgroundColor: '#ffffff',
+                  backgroundGradientFrom: '#ffffff',
+                  backgroundGradientTo: '#ffffff',
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(55, 65, 81, ${opacity})`,
+                  barPercentage: 0.7,
+                }}
+                style={{ borderRadius: 8 }}
+              />
+            </View>
+          )}
 
-        {/* Business Types */}
-        {byBusiness && byBusiness.length > 0 && (
-          <View style={styles.chartCard}>
-            <Text style={styles.chartTitle}>Commercial by Business Type</Text>
-            {byBusiness.map((item, index) => (
-              <View key={index} style={styles.listItem}>
-                <Text style={{ color: '#374151', flex: 1 }}>{item.type_name}</Text>
-                <View style={[styles.badge, { backgroundColor: '#e9d5ff' }]}>
-                  <Text style={{ color: '#6b21a8', fontWeight: '600' }}>{item.customer_count}</Text>
+          {/* Top Streets */}
+          {byStreet && byStreet.length > 0 && (
+            <View style={styles.chartCard}>
+              <Text style={styles.chartTitle}>Top Streets by Customer Count</Text>
+              {byStreet.slice(0, 5).map((item, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={{ color: '#374151', flex: 1 }}>{item.street_name}</Text>
+                  <View style={[styles.badge, { backgroundColor: '#dbeafe' }]}>
+                    <Text style={{ color: '#1e40af', fontWeight: '600' }}>{item.customer_count}</Text>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-    </ScrollView>
+              ))}
+            </View>
+          )}
+
+          {/* Apartment Types */}
+          {byApartment && byApartment.length > 0 && (
+            <View style={styles.chartCard}>
+              <Text style={styles.chartTitle}>Residential by Apartment Type</Text>
+              {byApartment.map((item, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={{ color: '#374151', flex: 1 }}>{item.type_name}</Text>
+                  <View style={[styles.badge, { backgroundColor: '#d1fae5' }]}>
+                    <Text style={{ color: '#065f46', fontWeight: '600' }}>{item.customer_count}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* Business Types */}
+          {byBusiness && byBusiness.length > 0 && (
+            <View style={styles.chartCard}>
+              <Text style={styles.chartTitle}>Commercial by Business Type</Text>
+              {byBusiness.map((item, index) => (
+                <View key={index} style={styles.listItem}>
+                  <Text style={{ color: '#374151', flex: 1 }}>{item.type_name}</Text>
+                  <View style={[styles.badge, { backgroundColor: '#e9d5ff' }]}>
+                    <Text style={{ color: '#6b21a8', fontWeight: '600' }}>{item.customer_count}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 

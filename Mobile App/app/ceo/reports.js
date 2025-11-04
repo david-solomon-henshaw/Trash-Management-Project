@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, RefreshControl, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
-import axios from 'axios';
-import { API_BASE_URL } from '../../config';
+import { API_BASE_URL } from '../../config'
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -21,33 +21,117 @@ const Reports = () => {
 
   const fetchData = async () => {
     try {
+      console.log('Starting to fetch financial reports data...');
       const [
-        { data: overviewData },
-        { data: trendData },
-        { data: streetData },
-        { data: typeData },
-        { data: statusData },
-        { data: collectionData },
-        { data: agentData },
-        { data: outstandingData }
+        overviewRes,
+        trendRes,
+        streetRes,
+        typeRes,
+        statusRes,
+        collectionRes,
+        agentRes,
+        outstandingRes
       ] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/analytics/reports/revenue-overview`),
-        axios.get(`${API_BASE_URL}/api/analytics/reports/revenue-trend`),
-        axios.get(`${API_BASE_URL}/api/analytics/reports/revenue-by-street`),
-        axios.get(`${API_BASE_URL}/api/analytics/reports/revenue-by-customer-type`),
-        axios.get(`${API_BASE_URL}/api/analytics/reports/payment-status`),
-        axios.get(`${API_BASE_URL}/api/analytics/reports/collection-rate`),
-        axios.get(`${API_BASE_URL}/api/analytics/reports/agent-performance`),
-        axios.get(`${API_BASE_URL}/api/analytics/reports/outstanding-balances`)
+        fetch(`${API_BASE_URL}/api/analytics/reports/revenue-overview`).then(res => {
+          console.log('Revenue Overview API response status:', res.status);
+          return res;
+        }),
+        fetch(`${API_BASE_URL}/api/analytics/reports/revenue-trend`).then(res => {
+          console.log('Revenue Trend API response status:', res.status);
+          return res;
+        }),
+        fetch(`${API_BASE_URL}/api/analytics/reports/revenue-by-street`).then(res => {
+          console.log('Revenue by Street API response status:', res.status);
+          return res;
+        }),
+        fetch(`${API_BASE_URL}/api/analytics/reports/revenue-by-customer-type`).then(res => {
+          console.log('Revenue by Customer Type API response status:', res.status);
+          return res;
+        }),
+        fetch(`${API_BASE_URL}/api/analytics/reports/payment-status`).then(res => {
+          console.log('Payment Status API response status:', res.status);
+          return res;
+        }),
+        fetch(`${API_BASE_URL}/api/analytics/reports/collection-rate`).then(res => {
+          console.log('Collection Rate API response status:', res.status);
+          return res;
+        }),
+        fetch(`${API_BASE_URL}/api/analytics/reports/agent-performance`).then(res => {
+          console.log('Agent Performance API response status:', res.status);
+          return res;
+        }),
+        fetch(`${API_BASE_URL}/api/analytics/reports/outstanding-balances`).then(res => {
+          console.log('Outstanding Balances API response status:', res.status);
+          return res;
+        })
       ]);
 
+      const [
+        overviewData,
+        trendData,
+        streetData,
+        typeData,
+        statusData,
+        collectionData,
+        agentData,
+        outstandingData
+      ] = await Promise.all([
+        overviewRes.json().then(data => {
+          console.log('Revenue Overview data:', data);
+          return data;
+        }),
+        trendRes.json().then(data => {
+          console.log('Revenue Trend data:', data);
+          return data;
+        }),
+        streetRes.json().then(data => {
+          console.log('Revenue by Street data:', data);
+          return data;
+        }),
+        typeRes.json().then(data => {
+          console.log('Revenue by Customer Type data:', data);
+          return data;
+        }),
+        statusRes.json().then(data => {
+          console.log('Payment Status data:', data);
+          return data;
+        }),
+        collectionRes.json().then(data => {
+          console.log('Collection Rate data:', data);
+          return data;
+        }),
+        agentRes.json().then(data => {
+          console.log('Agent Performance data:', data);
+          return data;
+        }),
+        outstandingRes.json().then(data => {
+          console.log('Outstanding Balances data:', data);
+          return data;
+        })
+      ]);
+
+      console.log('Setting Revenue Overview state:', overviewData.data);
       setRevenueOverview(overviewData.data);
+      
+      console.log('Setting Revenue Trend state:', trendData.data || []);
       setRevenueTrend(trendData.data || []);
+      
+      console.log('Setting Revenue by Street state:', streetData.data || []);
       setRevenueByStreet(streetData.data || []);
+      
+      console.log('Setting Revenue by Type state:', typeData.data || []);
       setRevenueByType(typeData.data || []);
+      
+      console.log('Setting Payment Status state:', statusData.data || []);
       setPaymentStatus(statusData.data || []);
+      
+      console.log('Setting Collection Rate state:', collectionData.data);
       setCollectionRate(collectionData.data);
+      
+      console.log('Setting Agent Performance state:', agentData.data || []);
       setAgentPerformance(agentData.data || []);
+      
+      console.log('Setting Outstanding Balances state:', outstandingData.data);
       setOutstandingBalances(outstandingData.data);
     } catch (error) {
       console.error('Error fetching reports:', error);
@@ -72,9 +156,9 @@ const Reports = () => {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' }}>
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' }}>
         <ActivityIndicator size="large" color="#3b82f6" />
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -97,11 +181,12 @@ const Reports = () => {
     : [];
 
   return (
-    <ScrollView 
-      style={{ flex: 1, backgroundColor: '#f9fafb' }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={{ padding: 16 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <View style={{ padding: 16 }}>
         {/* Header */}
         <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1f2937', marginBottom: 16 }}>
           Financial Reports
@@ -312,6 +397,7 @@ const Reports = () => {
         )}
       </View>
     </ScrollView>
+  </SafeAreaView>
   );
 };
 

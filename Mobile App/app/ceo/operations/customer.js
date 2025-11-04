@@ -65,6 +65,14 @@ export default function CustomerIndex() {
       color: '#8B5CF6',
       route: '/ceo/operations/customer-analytics',
     },
+     {
+      id: 'billing-history',
+      title: 'Billing History',
+      description: 'View payment record',
+      icon: 'receipt',
+      color: '#F59E0B',
+      route: '/ceo/operations/billing-history',
+    },
   ];
 
   const handleCardPress = (route) => {
@@ -116,19 +124,7 @@ export default function CustomerIndex() {
           <View style={styles.comingSoonSection}>
             <Text style={styles.comingSoonTitle}>Coming Soon</Text>
             
-            <View style={styles.comingSoonCard}>
-              <View style={styles.cardContent}>
-                <View style={[styles.iconContainer, { backgroundColor: '#8B5CF615' }]}>
-                  <Ionicons name="stats-chart" size={32} color="#8B5CF6" />
-                </View>
-                
-              
-
-                <View style={styles.comingSoonBadge}>
-                  <Text style={styles.comingSoonBadgeText}>Soon</Text>
-                </View>
-              </View>
-            </View>
+       
 
             <View style={styles.comingSoonCard}>
               <View style={styles.cardContent}>

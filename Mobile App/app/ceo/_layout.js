@@ -25,6 +25,8 @@ export default function CeoTabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
+          headerShown: false
+
         }}
       />
       <Tabs.Screen
