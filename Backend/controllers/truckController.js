@@ -1,7 +1,7 @@
 const Truck = require('../models/trucks');
 const Staff = require('../models/staff');
 const Team = require('../models/teams');
-const Route = require('../models/truck_routes');
+const Route = require('../models/routes');
 
 const createTruck = async (req, res) => {
   if (req.user && req.user.role !== 'ceo') {

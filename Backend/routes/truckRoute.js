@@ -6,7 +6,7 @@ const {
   getAllTrucks, 
   getSupervisorAssignments 
 } = require('../controllers/truckController');
-const auth = require('../middleware/auth'); // Assuming you have auth middleware
+const auth = require('../middleware/auth');
 
 // CEO only routes
 router.post('/create', auth, createTruck);
@@ -15,5 +15,8 @@ router.get('/', auth, getAllTrucks);
 
 // Supervisor routes
 router.get('/assignments/my-assignments', auth, getSupervisorAssignments);
+
+// NEW: Supervisor assignments route for frontend compatibility
+router.get('/supervisor-assignments', auth, getSupervisorAssignments);
 
 module.exports = router;

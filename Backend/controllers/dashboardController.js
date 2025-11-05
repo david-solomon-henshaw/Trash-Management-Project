@@ -1,7 +1,7 @@
 // controllers/dashboardController.js
 const Customer = require('../models/customer');
 const Payment = require('../models/payment');
-const Route = require('../models/truck_routes');
+const Route = require('../models/routes');
 const Truck = require('../models/trucks');
 const Staff = require('../models/staff');
 const Street = require('../models/street');

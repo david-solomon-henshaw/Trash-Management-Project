@@ -4,8 +4,17 @@ const analyticsController = require('../controllers/analyticsController');
 
 // ==================== CUSTOMER ANALYTICS ROUTES ====================
 
+// GET /api/analytics/customer-overview (NEW - for frontend compatibility)
+router.get('/customer-overview', analyticsController.getCustomerOverview);
+
 // GET /api/analytics/customers/overview
 router.get('/customers/overview', analyticsController.getCustomerOverview);
+
+// GET /api/analytics/revenue-overview (NEW - for frontend compatibility)
+router.get('/revenue-overview', analyticsController.getRevenueOverview);
+
+// GET /api/analytics/reports/revenue-overview
+router.get('/reports/revenue-overview', analyticsController.getRevenueOverview);
 
 // GET /api/analytics/customers/growth
 router.get('/customers/growth', analyticsController.getCustomerGrowth);
@@ -20,9 +29,6 @@ router.get('/customers/by-apartment-type', analyticsController.getCustomersByApa
 router.get('/customers/by-business-type', analyticsController.getCustomersByBusinessType);
 
 // ==================== FINANCIAL REPORTS ROUTES ====================
-
-// GET /api/analytics/reports/revenue-overview
-router.get('/reports/revenue-overview', analyticsController.getRevenueOverview);
 
 // GET /api/analytics/reports/revenue-trend
 router.get('/reports/revenue-trend', analyticsController.getRevenueTrend);
