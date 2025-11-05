@@ -7,11 +7,15 @@ const {
   updateCustomer,
   deleteCustomer,
   getCustomersByStreet,
+  getAssignedCustomers,
 } = require('../controllers/customerController');
 const auth = require('../middleware/auth');
 
 // Get all customers
 router.get('/all', auth, getAllCustomers);
+
+// Get customers assigned to supervisor's routes
+router.get('/assigned', auth, getAssignedCustomers);
 
 // Get single customer by ID
 router.get('/:id', auth, getCustomerById);

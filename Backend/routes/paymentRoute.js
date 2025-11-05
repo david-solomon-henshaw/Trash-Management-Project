@@ -6,6 +6,7 @@ const {
   verifyPayment,
   getPaymentSummary, 
   cancelPayment,
+  getTodayCollections,
 } = require('../controllers/paymentController');
 const auth = require('../middleware/auth');
 
@@ -23,5 +24,8 @@ router.put('/verify/:paymentId', auth, verifyPayment);
 
 // Cancel/Delete payment (CEO only)
 router.delete('/:paymentId', auth, cancelPayment);
+
+// Get today's collections by supervisor
+router.get('/today-collections', auth, getTodayCollections);
 
 module.exports = router;

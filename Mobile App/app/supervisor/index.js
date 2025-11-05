@@ -25,7 +25,11 @@ export default function SupervisorHome() {
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
   const [recentPayments, setRecentPayments] = useState([]);
-  const [supervisorAssignments, setSupervisorAssignments] = useState([]);
+  const [supervisorStats, setSupervisorStats] = useState({
+    assignedCustomers: 0,
+    todayCollections: 0,
+    pendingCollections: 0
+  });
 
   const quickActions = [
     {
@@ -36,74 +40,80 @@ export default function SupervisorHome() {
       screen: 'payments'
     },
     {
-      title: 'Add Customer',
-      description: 'Register new customer',
-      icon: 'person-add',
-      color: '#6366F1',
-      screen: 'add-new-customer'
-    },
-    {
       title: 'Payment History',
       description: 'View payment records',
       icon: 'receipt',
       color: '#F59E0B',
       screen: 'payment-history'
+    },
+    {
+      title: 'My Routes',
+      description: 'View assigned areas',
+      icon: 'map',
+      color: '#6366F1',
+      screen: 'routes'
     }
   ];
-const fetchDashboardData = async () => {
-  try {
-    console.log('Starting to fetch dashboard data...');
-    const token = await AsyncStorage.getItem('token');
-    console.log('Token retrieved:', token ? 'Token exists' : 'No token found');
-    const headers = { Authorization: `Bearer ${token}` };
-    console.log('API Base URL:', API_BASE_URL);
 
-    // Fetch analytics data
-    console.log('Making API calls to fetch analytics data...');
-    const [customerOverview, revenueOverview, assignments] = await Promise.all([
-      axios.get(`${API_BASE_URL}/api/analytics/customer-overview`, { headers }),
-      axios.get(`${API_BASE_URL}/api/analytics/revenue-overview`, { headers }),
-      axios.get(`${API_BASE_URL}/api/trucks/supervisor-assignments`, { headers })
-    ]);
+  const fetchDashboardData = async () => {
+    try {
+      console.log('Starting to fetch dashboard data...');
+      const token = await AsyncStorage.getItem('token');
+      console.log('Token retrieved:', token ? 'Token exists' : 'No token found');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Fetch supervisor-specific data
+      console.log('Making API calls to fetch supervisor data...');
+      const [assignments, paymentsToday, assignedCustomers] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/trucks/supervisor-assignments`, { headers }),
+        axios.get(`${API_BASE_URL}/api/payments/today-collections`, { headers }),
+        axios.get(`${API_BASE_URL}/api/customers/assigned`, { headers })
+      ]);
 
-    console.log('Analytics data fetched successfully');
-    
-    // FIX: Remove duplicate setDashboardData call - keep only one
-    setDashboardData({
-      customers: customerOverview.data.data,
-      revenue: revenueOverview.data.data,
-      assignments: assignments.data.assignments || []
-    });
-
-    // Fetch recent payments
-    console.log('Fetching recent payments...');
-    const paymentsResponse = await axios.get(`${API_BASE_URL}/api/billing/search?query=`, { headers });
-    console.log('Payments response:', paymentsResponse.data);
-    
-    if (paymentsResponse.data.success && paymentsResponse.data.customers) {
-      // Get first 5 customers to show as "recent"
-      setRecentPayments(paymentsResponse.data.customers.slice(0, 5));
-      console.log('Recent payments set successfully');
-    } else {
-      console.log('No payments data found or invalid response structure');
-    }
-
-  } catch (error) {
-    console.error('Dashboard data error:', error.message);
-    console.error('Full error:', error);
-    if (error.response) {
-      console.error('Error response:', {
-        status: error.response.status,
-        data: error.response.data
+      console.log('Assignments Response:', assignments.data);
+      console.log('Today Collections Response:', paymentsToday.data);
+      console.log('Assigned Customers Response:', assignedCustomers.data);
+      
+      // Set supervisor-specific stats
+      setSupervisorStats({
+        assignedCustomers: assignedCustomers.data.count || 0,
+        todayCollections: paymentsToday.data.amount || 0,
+        pendingCollections: assignedCustomers.data.count || 0 // Simplified - would need proper calculation
       });
+
+      // Set assignments data
+      setDashboardData({
+        assignments: assignments.data.assignments || []
+      });
+
+      // Fetch recent customers in assigned areas
+      console.log('Fetching assigned customers...');
+      const customersResponse = await axios.get(`${API_BASE_URL}/api/customers/assigned?limit=5`, { headers });
+      
+      if (customersResponse.data.success && customersResponse.data.customers) {
+        setRecentPayments(customersResponse.data.customers.slice(0, 5));
+        console.log('Assigned customers set successfully');
+      } else {
+        console.log('No assigned customers found');
+        setRecentPayments([]);
+      }
+
+    } catch (error) {
+      console.error('Dashboard data error:', error.message);
+      if (error.response) {
+        console.error('Error response:', {
+          status: error.response.status,
+          data: error.response.data
+        });
+      }
+      Alert.alert('Error', 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+      console.log('Dashboard data fetch completed');
     }
-    Alert.alert('Error', 'Failed to load dashboard data');
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-    console.log('Dashboard data fetch completed');
-  }
-};
+  };
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -142,7 +152,7 @@ const fetchDashboardData = async () => {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.greeting}>Welcome, Supervisor!</Text>
-          <Text style={styles.subtitle}>Manage operations and collections</Text>
+          <Text style={styles.subtitle}>Manage your collections and routes</Text>
         </View>
         <TouchableOpacity style={styles.profileButton}>
           <Ionicons name="person-circle" size={32} color="white" />
@@ -156,16 +166,16 @@ const fetchDashboardData = async () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#16A085']} />
         }
       >
-        {/* Quick Stats */}
+        {/* Supervisor Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: '#D1FAE5' }]}>
               <Ionicons name="people" size={24} color="#10B981" />
             </View>
             <Text style={styles.statNumber}>
-              {dashboardData?.customers?.active_customers || 0}
+              {supervisorStats.assignedCustomers}
             </Text>
-            <Text style={styles.statLabel}>Active Customers</Text>
+            <Text style={styles.statLabel}>Assigned Customers</Text>
           </View>
 
           <View style={styles.statCard}>
@@ -173,19 +183,19 @@ const fetchDashboardData = async () => {
               <Ionicons name="cash" size={24} color="#6366F1" />
             </View>
             <Text style={styles.statNumber}>
-              {dashboardData?.revenue?.monthly_revenue ? formatCurrency(dashboardData.revenue.monthly_revenue) : '₦0'}
+              {formatCurrency(supervisorStats.todayCollections)}
             </Text>
-            <Text style={styles.statLabel}>Monthly Revenue</Text>
+            <Text style={styles.statLabel}>Today's Collections</Text>
           </View>
 
           <View style={styles.statCard}>
             <View style={[styles.statIcon, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="car-sport" size={24} color="#F59E0B" />
+              <Ionicons name="time" size={24} color="#F59E0B" />
             </View>
             <Text style={styles.statNumber}>
-              {dashboardData?.assignments?.length || 0}
+              {supervisorStats.pendingCollections}
             </Text>
-            <Text style={styles.statLabel}>Active Routes</Text>
+            <Text style={styles.statLabel}>Pending Collections</Text>
           </View>
         </View>
 
@@ -209,11 +219,11 @@ const fetchDashboardData = async () => {
           </View>
         </View>
 
-        {/* Recent Activity - Payments */}
+        {/* Assigned Customers */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Customers</Text>
-            <TouchableOpacity onPress={() => router.push('/supervisor/payment-history')}>
+            <Text style={styles.sectionTitle}>Assigned Customers</Text>
+            <TouchableOpacity onPress={() => router.push('/supervisor/customers')}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -221,13 +231,17 @@ const fetchDashboardData = async () => {
           {recentPayments.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyTitle}>No Customers</Text>
-              <Text style={styles.emptyText}>Customers will appear here once added</Text>
+              <Text style={styles.emptyTitle}>No Assigned Customers</Text>
+              <Text style={styles.emptyText}>You will see customers here once assigned to routes</Text>
             </View>
           ) : (
             <View style={styles.activityList}>
               {recentPayments.map((customer, index) => (
-                <View key={customer._id} style={styles.activityItem}>
+                <TouchableOpacity 
+                  key={customer._id} 
+                  style={styles.activityItem}
+                  onPress={() => router.push(`/supervisor/customer/${customer._id}`)}
+                >
                   <View style={styles.customerAvatar}>
                     <Ionicons 
                       name={customer.customer_type === 'residential' ? 'home' : 'business'} 
@@ -240,6 +254,9 @@ const fetchDashboardData = async () => {
                     <Text style={styles.customerDetails}>
                       {customer.house_number}, {customer.street?.streetName}
                     </Text>
+                    <Text style={styles.customerFee}>
+                      Monthly: {formatCurrency(customer.base_fee)}
+                    </Text>
                   </View>
                   <View style={[
                     styles.statusBadge,
@@ -249,25 +266,29 @@ const fetchDashboardData = async () => {
                       {customer.status === 'active' ? 'Active' : 'Inactive'}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           )}
         </View>
 
         {/* Current Assignments */}
-        {dashboardData?.assignments && dashboardData.assignments.length > 0 && (
+        {dashboardData?.assignments && dashboardData.assignments.length > 0 ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Current Assignments</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/supervisor/routes')}>
                 <Text style={styles.viewAllText}>View All</Text>
               </TouchableOpacity>
             </View>
             
             <View style={styles.assignmentsList}>
               {dashboardData.assignments.slice(0, 3).map((assignment, index) => (
-                <TouchableOpacity key={assignment._id} style={styles.assignmentCard}>
+                <TouchableOpacity 
+                  key={assignment._id} 
+                  style={styles.assignmentCard}
+                  onPress={() => router.push(`/supervisor/route/${assignment._id}`)}
+                >
                   <View style={styles.assignmentHeader}>
                     <View style={styles.assignmentInfo}>
                       <Text style={styles.assignmentTitle}>
@@ -296,40 +317,43 @@ const fetchDashboardData = async () => {
               ))}
             </View>
           </View>
-        )}
-
-        {/* Revenue Summary */}
-        {dashboardData?.revenue && (
+        ) : (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Revenue Summary</Text>
-            <View style={styles.revenueCard}>
-              <View style={styles.revenueRow}>
-                <Text style={styles.revenueLabel}>Total Collected:</Text>
-                <Text style={styles.revenueValue}>
-                  {formatCurrency(dashboardData.revenue.total_revenue)}
-                </Text>
-              </View>
-              <View style={styles.revenueRow}>
-                <Text style={styles.revenueLabel}>Cash Payments:</Text>
-                <Text style={styles.revenueValue}>
-                  {formatCurrency(dashboardData.revenue.cash_revenue)}
-                </Text>
-              </View>
-              <View style={styles.revenueRow}>
-                <Text style={styles.revenueLabel}>Transfer Payments:</Text>
-                <Text style={styles.revenueValue}>
-                  {formatCurrency(dashboardData.revenue.transfer_revenue)}
-                </Text>
-              </View>
-              <View style={[styles.revenueRow, styles.revenueRowHighlight]}>
-                <Text style={styles.revenueLabel}>Pending Verification:</Text>
-                <Text style={[styles.revenueValue, { color: '#EF4444' }]}>
-                  {formatCurrency(dashboardData.revenue.pending_amount)}
-                </Text>
-              </View>
+            <View style={styles.emptyState}>
+              <Ionicons name="map-outline" size={48} color="#CBD5E1" />
+              <Text style={styles.emptyTitle}>No Active Assignments</Text>
+              <Text style={styles.emptyText}>You will see your routes and assignments here</Text>
             </View>
           </View>
         )}
+
+        {/* Today's Performance */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Today's Performance</Text>
+          <View style={styles.revenueCard}>
+            <View style={styles.revenueRow}>
+              <Text style={styles.revenueLabel}>Collections Made:</Text>
+              <Text style={styles.revenueValue}>
+                {formatCurrency(supervisorStats.todayCollections)}
+              </Text>
+            </View>
+            <View style={styles.revenueRow}>
+              <Text style={styles.revenueLabel}>Customers Visited:</Text>
+              <Text style={styles.revenueValue}>
+                0/{supervisorStats.assignedCustomers}
+              </Text>
+            </View>
+            <View style={[styles.revenueRow, styles.revenueRowHighlight]}>
+              <Text style={styles.revenueLabel}>Success Rate:</Text>
+              <Text style={[styles.revenueValue, { color: supervisorStats.todayCollections > 0 ? '#10B981' : '#64748B' }]}>
+                {supervisorStats.assignedCustomers > 0 ? 
+                  `${Math.round((supervisorStats.todayCollections / (supervisorStats.assignedCustomers * 10000)) * 100)}%` : 
+                  '0%'
+                }
+              </Text>
+            </View>
+          </View>
+        </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -511,6 +535,11 @@ const styles = StyleSheet.create({
   customerDetails: {
     fontSize: 14,
     color: '#64748B',
+  },
+  customerFee: {
+    fontSize: 12,
+    color: '#16A085',
+    marginTop: 2,
   },
   statusBadge: {
     paddingHorizontal: 8,

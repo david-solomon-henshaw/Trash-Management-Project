@@ -542,3 +542,41 @@ module.exports = {
   getPaymentSummary,
   cancelPayment,
 };
+
+// Get today's collections by supervisor
+const getTodayCollections = async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const collections = await Payment.aggregate([
+      {
+        $match: {
+          agent_id: new mongoose.Types.ObjectId(supervisorId),
+          payment_date: { $gte: today },
+          payment_status: 'paid'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          amount: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    res.json({
+      success: true,
+      amount: collections[0]?.amount || 0,
+      count: collections[0]?.count || 0
+    });
+  } catch (error) {
+    console.error('Get today collections error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Add to exports
+module.exports.getTodayCollections = getTodayCollections;

@@ -1,6 +1,7 @@
 const Customer = require('../models/customer');
 const ApartmentType = require('../models/apartment');
 const CommercialSubtype = require('../models/commercial');
+const Route = require('../models/routes');
 
 
 // Get all customers (with populated references)
@@ -407,3 +408,61 @@ module.exports = {
   updateCustomer,
   deleteCustomer,
 };
+
+
+// Get customers assigned to supervisor's routes
+const getAssignedCustomers = async (req, res) => {
+  try {
+    const supervisorId = req.user.id;
+    
+    // Get routes assigned to this supervisor
+    const routes = await Route.find({ supervisor: supervisorId })
+      .populate('streets');
+    
+    const streetIds = routes.flatMap(route => route.streets.map(street => street._id));
+    
+    // Get customers in these streets
+    const customers = await Customer.find({ 
+      street: { $in: streetIds },
+      status: 'active'
+    })
+    .populate('street', 'name')
+    .populate('apartment_type', 'name base_fee')
+    .populate('commercial_subtype', 'name base_fee')
+    .limit(req.query.limit || 50);
+
+    // Transform customers to match frontend format
+    const transformedCustomers = customers.map(customer => ({
+      _id: customer._id,
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      address: customer.address,
+      house_number: customer.house_number,
+      street: customer.street ? {
+        _id: customer.street._id,
+        streetName: customer.street.name,
+      } : null,
+      customer_type: customer.customer_type,
+      apartment_type: customer.apartment_type,
+      commercial_subtype: customer.commercial_subtype,
+      base_fee: customer.customer_type === 'residential'
+        ? customer.apartment_type?.base_fee
+        : customer.commercial_subtype?.base_fee,
+      status: customer.status,
+      createdAt: customer.created_at,
+    }));
+
+    res.json({
+      success: true,
+      customers: transformedCustomers,
+      count: customers.length
+    });
+  } catch (error) {
+    console.error('Get assigned customers error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+  // Export the function
+  module.exports.getAssignedCustomers = getAssignedCustomers;
