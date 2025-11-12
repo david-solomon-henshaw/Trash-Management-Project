@@ -45,7 +45,7 @@ export default function CustomerIndex() {
       description: 'Register a new customer account',
       icon: 'person-add',
       color: '#10b981',
-      route: '/ceo/operations/add-customer',
+      route: '/manager/operations/add-customer',
     },
     {
       id: 'view-customers',
@@ -53,7 +53,7 @@ export default function CustomerIndex() {
       description: 'Browse all registered customers',
       icon: 'people',
       color: '#3b82f6',
-      route: '/ceo/operations/view-customers',
+      route: '/manager/operations/view-customers',
     },
     {
       id: 'record-payment',
@@ -61,7 +61,7 @@ export default function CustomerIndex() {
       description: 'Record customer payments',
       icon: 'card',
       color: '#f59e0b',
-      route: '/ceo/operations/record-payment',
+      route: '/manager/operations/record-payment',
     },
     {
       id: 'customer-analytics',
@@ -69,7 +69,7 @@ export default function CustomerIndex() {
       description: 'View customer insights and reports',
       icon: 'stats-chart',
       color: '#8b5cf6',
-      route: '/ceo/operations/customer-analytics',
+      route: '/manager/operations/customer-analytics',
     },
     {
       id: 'billing-history',
@@ -77,7 +77,7 @@ export default function CustomerIndex() {
       description: 'View payment records and history',
       icon: 'receipt',
       color: '#ef4444',
-      route: '/ceo/operations/billing-history',
+      route: '/manager/operations/billing-history',
     },
   ];
 

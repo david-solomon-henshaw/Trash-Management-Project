@@ -22,7 +22,7 @@ router.get('/summary/:customerId', auth, getPaymentSummary);
 // Verify payment (for transfer payments)
 router.put('/verify/:paymentId', auth, verifyPayment);
 
-// Cancel/Delete payment (CEO only)
+// Cancel/Delete payment (Manager only)
 router.delete('/:paymentId', auth, cancelPayment);
 
 // Get today's collections by supervisor

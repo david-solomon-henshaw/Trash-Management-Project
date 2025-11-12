@@ -23,13 +23,13 @@ router.get('/:id', auth, getCustomerById);
 // Get customers by street ID
 router.get('/by-street/:streetId', auth, getCustomersByStreet);
 
-// Create new customer (CEO only)
+// Create new customer (Manager only)
 router.post('/create', auth, createCustomer);
 
-// Update customer (CEO only)
+// Update customer (Manager only)
 router.put('/:id', auth, updateCustomer);
 
-// Delete customer (CEO only)
+// Delete customer (Manager only)
 router.delete('/:id', auth, deleteCustomer);
 
 module.exports = router;

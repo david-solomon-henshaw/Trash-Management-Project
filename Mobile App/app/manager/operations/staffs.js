@@ -36,7 +36,7 @@ const Staffs = () => {
 
     // Available roles list
     const roles = [
-        { label: 'CEO', value: 'ceo' },
+        { label: 'Manager', value: 'manager' },
         { label: 'Customer Care', value: 'c_care' },
         { label: 'Supervisor', value: 'supervisor' },
         { label: 'Field Agent', value: 'field_agent' },
@@ -50,7 +50,7 @@ const Staffs = () => {
     };
 
     const roleDescriptions = {
-        ceo: 'Full system access including all management functions and reports.',
+        manager: 'Full system access including all management functions and reports.',
         c_care: 'Access to customer management, payment tracking, and support functions.',
         supervisor: 'Access to fleet management, route assignments, and staff oversight.',
         driver: 'This role does not require app login access. Driver will follow truck assignments without needing username/password.',
@@ -240,7 +240,7 @@ const Staffs = () => {
                         {formData.role && (
                             <View style={styles.roleInfo}>
                                 <Text style={styles.roleInfoTitle}>
-                                    {formData.role === 'ceo' && 'CEO Role'}
+                                    {formData.role === 'manager' && 'Manager Role'}
                                     {formData.role === 'c_care' && 'Customer Care Role'}
                                     {formData.role === 'supervisor' && 'Supervisor Role'}
                                     {formData.role === 'driver' && 'Driver Role'}

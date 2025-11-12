@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config';
+import AssignmentDetailsModal from '../../components/AssignmentDetailModal';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +31,9 @@ export default function SupervisorHome() {
     todayCollections: 0,
     pendingCollections: 0
   });
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [startingAssignment, setStartingAssignment] = useState(false);
 
   const quickActions = [
     {
@@ -61,35 +65,38 @@ export default function SupervisorHome() {
       const token = await AsyncStorage.getItem('token');
       console.log('Token retrieved:', token ? 'Token exists' : 'No token found');
       const headers = { Authorization: `Bearer ${token}` };
-      
+
       // Fetch supervisor-specific data
       console.log('Making API calls to fetch supervisor data...');
-      const [assignments, paymentsToday, assignedCustomers] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/trucks/supervisor-assignments`, { headers }),
+      const [allAssignments, paymentsToday, assignedCustomers] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/trucks/all-assignments`, { headers }),
         axios.get(`${API_BASE_URL}/api/payments/today-collections`, { headers }),
         axios.get(`${API_BASE_URL}/api/customers/assigned`, { headers })
       ]);
 
-      console.log('Assignments Response:', assignments.data);
+      console.log('All Assignments Response:', allAssignments.data);
       console.log('Today Collections Response:', paymentsToday.data);
       console.log('Assigned Customers Response:', assignedCustomers.data);
-      
+
       // Set supervisor-specific stats
       setSupervisorStats({
         assignedCustomers: assignedCustomers.data.count || 0,
         todayCollections: paymentsToday.data.amount || 0,
-        pendingCollections: assignedCustomers.data.count || 0 // Simplified - would need proper calculation
+        pendingCollections: assignedCustomers.data.count || 0
       });
 
-      // Set assignments data
-      setDashboardData({
-        assignments: assignments.data.assignments || []
-      });
+      // Set ALL assignments data (today + future)
+      if (allAssignments.data.success) {
+        setDashboardData({
+          assignments: allAssignments.data.assignments || [], // Show ALL assignments
+          allAssignments: allAssignments.data.assignments
+        });
+      }
 
       // Fetch recent customers in assigned areas
       console.log('Fetching assigned customers...');
       const customersResponse = await axios.get(`${API_BASE_URL}/api/customers/assigned?limit=5`, { headers });
-      
+
       if (customersResponse.data.success && customersResponse.data.customers) {
         setRecentPayments(customersResponse.data.customers.slice(0, 5));
         console.log('Assigned customers set successfully');
@@ -123,6 +130,48 @@ export default function SupervisorHome() {
     fetchDashboardData();
   };
 
+  const handleAssignmentPress = (assignment) => {
+    setSelectedAssignment(assignment);
+    setShowAssignmentModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowAssignmentModal(false);
+    setSelectedAssignment(null);
+  };
+
+  const handleStartAssignment = async (assignment) => {
+    if (startingAssignment) return;
+    
+    setStartingAssignment(true);
+    
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/trucks/start-assignment`,
+        { assignment_id: assignment._id },
+        { headers }
+      );
+
+      if (response.data.success) {
+        Alert.alert('Success', response.data.message);
+        // Refresh the dashboard data to show updated status
+        fetchDashboardData();
+        handleCloseModal();
+      } else {
+        Alert.alert('Error', response.data.message || 'Failed to start assignment');
+      }
+    } catch (error) {
+      console.error('Start assignment error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to start assignment';
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setStartingAssignment(false);
+    }
+  };
+
   const formatCurrency = (amount) => {
     if (!amount) return '₦0';
     return `₦${amount.toLocaleString()}`;
@@ -131,21 +180,63 @@ export default function SupervisorHome() {
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      year: 'numeric'
     });
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#16A085" />
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Group assignments by date status
+  // Group assignments by date status - FIXED VERSION
+const getGroupedAssignments = () => {
+  if (!dashboardData?.assignments) return { today: [], upcoming: [] };
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const todayAssignments = [];
+  const upcomingAssignments = [];
+
+  dashboardData.assignments.forEach(assignment => {
+    const assignmentDate = new Date(assignment.scheduled_date);
+    assignmentDate.setHours(0, 0, 0, 0);
+    
+    // Compare dates properly
+    if (assignmentDate.getTime() === today.getTime()) {
+      todayAssignments.push(assignment);
+    } else if (assignmentDate > today) {
+      upcomingAssignments.push(assignment);
+    }
+  });
+
+  return {
+    today: todayAssignments,
+    upcoming: upcomingAssignments
+  };
+};
+const groupedAssignments = getGroupedAssignments();
+
+// TEMPORARY DEBUG - Remove after testing
+console.log('=== ASSIGNMENT DEBUG INFO ===');
+console.log('All assignments:', dashboardData?.assignments?.length || 0);
+console.log('Today assignments:', groupedAssignments.today.length);
+console.log('Upcoming assignments:', groupedAssignments.upcoming.length);
+
+if (dashboardData?.assignments) {
+  dashboardData.assignments.forEach((assignment, index) => {
+    const assignmentDate = new Date(assignment.scheduled_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    assignmentDate.setHours(0, 0, 0, 0);
+    
+    console.log(`Assignment ${index + 1}:`, {
+      date: assignment.scheduled_date,
+      formattedDate: formatDate(assignment.scheduled_date),
+      status: assignment.status,
+      isToday: assignmentDate.getTime() === today.getTime(),
+      canStart: assignment.status === 'scheduled' && assignmentDate.getTime() === today.getTime()
+    });
+  });
+}
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -159,7 +250,7 @@ export default function SupervisorHome() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -219,6 +310,139 @@ export default function SupervisorHome() {
           </View>
         </View>
 
+        {/* Today's Assignments */}
+       {groupedAssignments.today.length > 0 ? (
+  <View style={styles.section}>
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>Today's Assignments</Text>
+      <TouchableOpacity onPress={() => router.push('/supervisor/routes')}>
+        <Text style={styles.viewAllText}>View All</Text>
+      </TouchableOpacity>
+    </View>
+    
+    <View style={styles.assignmentsList}>
+      {groupedAssignments.today.slice(0, 3).map((assignment, index) => {
+        const canStart = assignment.status === 'scheduled';
+        return (
+          <TouchableOpacity 
+            key={assignment._id} 
+            style={styles.assignmentCard}
+            onPress={() => handleAssignmentPress(assignment)}
+          >
+            <View style={styles.assignmentHeader}>
+              <View style={styles.assignmentInfo}>
+                <Text style={styles.assignmentTitle}>
+                  {assignment.assigned_truck?.truckModel} - {assignment.assigned_truck?.plate_number}
+                </Text>
+                <Text style={styles.assignmentDate}>
+                  {formatDate(assignment.scheduled_date)}
+                </Text>
+              </View>
+              <View style={styles.assignmentActions}>
+                <View style={[
+                  styles.assignmentStatus,
+                  { 
+                    backgroundColor: assignment.status === 'scheduled' ? '#F59E0B' : 
+                                    assignment.status === 'in_progress' ? '#10B981' :
+                                    assignment.status === 'completed' ? '#6366F1' : '#6B7280'
+                  }
+                ]}>
+                  <Text style={styles.assignmentStatusText}>
+                    {assignment.status === 'scheduled' ? 'Ready to Start' : 
+                     assignment.status === 'in_progress' ? 'In Progress' :
+                     assignment.status === 'completed' ? 'Completed' : assignment.status}
+                  </Text>
+                </View>
+                {canStart && (
+                  <TouchableOpacity 
+                    style={styles.startButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      handleStartAssignment(assignment);
+                    }}
+                    disabled={startingAssignment}
+                  >
+                    {startingAssignment ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <Ionicons name="play" size={16} color="white" />
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+            <Text style={styles.assignmentStreets}>
+              {assignment.streets?.slice(0, 2).map(street => street.name).join(', ')}
+              {assignment.streets?.length > 2 && '...'}
+            </Text>
+            <Text style={styles.teamInfo}>
+              Team: {assignment.assigned_team?.team_members?.length || 0} members
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  </View>
+) : (
+  <View style={styles.section}>
+    <View style={styles.emptyState}>
+      <Ionicons name="map-outline" size={48} color="#CBD5E1" />
+      <Text style={styles.emptyTitle}>No Assignments Today</Text>
+      <Text style={styles.emptyText}>You have no assignments scheduled for today</Text>
+    </View>
+  </View>
+)}
+
+        {/* Upcoming Assignments */}
+        {groupedAssignments.upcoming.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Upcoming Assignments</Text>
+              <TouchableOpacity onPress={() => router.push('/supervisor/routes')}>
+                <Text style={styles.viewAllText}>View All</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.assignmentsList}>
+              {groupedAssignments.upcoming.slice(0, 3).map((assignment, index) => (
+                <TouchableOpacity 
+                  key={assignment._id} 
+                  style={styles.assignmentCard}
+                  onPress={() => handleAssignmentPress(assignment)}
+                >
+                  <View style={styles.assignmentHeader}>
+                    <View style={styles.assignmentInfo}>
+                      <Text style={styles.assignmentTitle}>
+                        {assignment.assigned_truck?.truckModel} - {assignment.assigned_truck?.plate_number}
+                      </Text>
+                      <Text style={styles.assignmentDate}>
+                        {formatDate(assignment.scheduled_date)}
+                      </Text>
+                    </View>
+                    <View style={[
+                      styles.assignmentStatus,
+                      { 
+                        backgroundColor: '#F59E0B'
+                      }
+                    ]}>
+                      <Text style={styles.assignmentStatusText}>
+                        Upcoming
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.assignmentStreets}>
+                    {assignment.streets?.slice(0, 2).map(street => street.name).join(', ')}
+                    {assignment.streets?.length > 2 && '...'}
+                  </Text>
+                  <Text style={styles.teamInfo}>
+                    Team: {assignment.assigned_team?.team_members?.length || 0} members
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Assigned Customers */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -227,7 +451,7 @@ export default function SupervisorHome() {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          
+
           {recentPayments.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={48} color="#CBD5E1" />
@@ -237,16 +461,16 @@ export default function SupervisorHome() {
           ) : (
             <View style={styles.activityList}>
               {recentPayments.map((customer, index) => (
-                <TouchableOpacity 
-                  key={customer._id} 
+                <TouchableOpacity
+                  key={customer._id}
                   style={styles.activityItem}
                   onPress={() => router.push(`/supervisor/customer/${customer._id}`)}
                 >
                   <View style={styles.customerAvatar}>
-                    <Ionicons 
-                      name={customer.customer_type === 'residential' ? 'home' : 'business'} 
-                      size={20} 
-                      color="#64748B" 
+                    <Ionicons
+                      name={customer.customer_type === 'residential' ? 'home' : 'business'}
+                      size={20}
+                      color="#64748B"
                     />
                   </View>
                   <View style={styles.activityInfo}>
@@ -272,61 +496,6 @@ export default function SupervisorHome() {
           )}
         </View>
 
-        {/* Current Assignments */}
-        {dashboardData?.assignments && dashboardData.assignments.length > 0 ? (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Current Assignments</Text>
-              <TouchableOpacity onPress={() => router.push('/supervisor/routes')}>
-                <Text style={styles.viewAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.assignmentsList}>
-              {dashboardData.assignments.slice(0, 3).map((assignment, index) => (
-                <TouchableOpacity 
-                  key={assignment._id} 
-                  style={styles.assignmentCard}
-                  onPress={() => router.push(`/supervisor/route/${assignment._id}`)}
-                >
-                  <View style={styles.assignmentHeader}>
-                    <View style={styles.assignmentInfo}>
-                      <Text style={styles.assignmentTitle}>
-                        {assignment.assigned_truck?.truckModel} - {assignment.assigned_truck?.plate_number}
-                      </Text>
-                      <Text style={styles.assignmentDate}>
-                        {formatDate(assignment.scheduled_date)}
-                      </Text>
-                    </View>
-                    <View style={[
-                      styles.assignmentStatus,
-                      { backgroundColor: assignment.status === 'in_progress' ? '#10B981' : 
-                        assignment.status === 'completed' ? '#6366F1' : '#F59E0B' }
-                    ]}>
-                      <Text style={styles.assignmentStatusText}>
-                        {assignment.status === 'in_progress' ? 'Active' : 
-                         assignment.status === 'completed' ? 'Completed' : 'Scheduled'}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.assignmentStreets}>
-                    {assignment.streets?.slice(0, 2).map(street => street.name).join(', ')}
-                    {assignment.streets?.length > 2 && '...'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View style={styles.section}>
-            <View style={styles.emptyState}>
-              <Ionicons name="map-outline" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyTitle}>No Active Assignments</Text>
-              <Text style={styles.emptyText}>You will see your routes and assignments here</Text>
-            </View>
-          </View>
-        )}
-
         {/* Today's Performance */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Today's Performance</Text>
@@ -346,8 +515,8 @@ export default function SupervisorHome() {
             <View style={[styles.revenueRow, styles.revenueRowHighlight]}>
               <Text style={styles.revenueLabel}>Success Rate:</Text>
               <Text style={[styles.revenueValue, { color: supervisorStats.todayCollections > 0 ? '#10B981' : '#64748B' }]}>
-                {supervisorStats.assignedCustomers > 0 ? 
-                  `${Math.round((supervisorStats.todayCollections / (supervisorStats.assignedCustomers * 10000)) * 100)}%` : 
+                {supervisorStats.assignedCustomers > 0 ?
+                  `${Math.round((supervisorStats.todayCollections / (supervisorStats.assignedCustomers * 10000)) * 100)}%` :
                   '0%'
                 }
               </Text>
@@ -357,6 +526,15 @@ export default function SupervisorHome() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Assignment Details Modal */}
+      <AssignmentDetailsModal
+        visible={showAssignmentModal}
+        assignment={selectedAssignment}
+        onClose={handleCloseModal}
+        onStartAssignment={handleStartAssignment}
+        startingAssignment={startingAssignment}
+      />
     </SafeAreaView>
   );
 }
@@ -579,6 +757,11 @@ const styles = StyleSheet.create({
   assignmentInfo: {
     flex: 1,
   },
+  assignmentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   assignmentTitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -599,9 +782,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: 'white',
   },
+  startButton: {
+    backgroundColor: '#10B981',
+    padding: 8,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   assignmentStreets: {
     fontSize: 14,
     color: '#64748B',
+  },
+  teamInfo: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   revenueCard: {
     backgroundColor: 'white',

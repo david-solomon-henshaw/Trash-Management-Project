@@ -56,8 +56,8 @@ const getCommercialSubtypeById = async (req, res) => {
 
 // Create a new commercial subtype
 const createCommercialSubtype = async (req, res) => {
-  if (req.user && req.user.role !== 'ceo') {
-    return res.status(403).json({ message: 'Only CEO can create commercial subtypes' });
+  if (req.user && req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Only Manager can create commercial subtypes' });
   }
 
   const { name, base_fee } = req.body;

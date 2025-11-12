@@ -23,13 +23,14 @@ import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
-export default function AddNewCustomerForm() {
+export default function AddCustomerForm() {
   const router = useRouter();
   const [streets, setStreets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [apartmentTypes, setApartmentTypes] = useState([]);
   const [commercialSubtypes, setCommercialSubtypes] = useState([]);
+  const [institutionalSubtypes, setInstitutionalSubtypes] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -40,6 +41,7 @@ export default function AddNewCustomerForm() {
     customer_type: '',
     apartment_type: '',
     commercial_subtype: '',
+    institutional_subtype: '',
     status: 'active'
   });
 
@@ -48,6 +50,7 @@ export default function AddNewCustomerForm() {
     customer_type: false,
     apartment_type: false,
     commercial_subtype: false,
+    institutional_subtype: false,
     status: false
   });
 
@@ -85,6 +88,10 @@ export default function AddNewCustomerForm() {
       const commercialSubtypeData = await axios.get(`${API_BASE_URL}/api/commercial-subtypes`, { headers });
       setCommercialSubtypes(commercialSubtypeData.data.commercialSubtypes || []);
 
+      // Fetch institutional subtypes
+      const institutionalSubtypeData = await axios.get(`${API_BASE_URL}/api/institutional-subtypes`, { headers });
+      setInstitutionalSubtypes(institutionalSubtypeData.data.institutionalSubtypes || []);
+
     } catch (error) {
       console.error('Fetch error:', error);
       Alert.alert('Error', 'Failed to fetch data');
@@ -96,6 +103,7 @@ export default function AddNewCustomerForm() {
   const customerTypes = [
     { value: 'residential', label: 'Residential' },
     { value: 'commercial', label: 'Commercial' },
+    { value: 'institutional', label: 'Institutional' },
   ];
 
   const statusOptions = [
@@ -173,6 +181,10 @@ export default function AddNewCustomerForm() {
       Alert.alert('Validation Error', 'Business type is required for commercial customers');
       return false;
     }
+    if (formData.customer_type === 'institutional' && !formData.institutional_subtype) {
+      Alert.alert('Validation Error', 'Institutional type is required for institutional customers');
+      return false;
+    }
     return true;
   };
 
@@ -194,6 +206,7 @@ export default function AddNewCustomerForm() {
         customer_type: formData.customer_type,
         apartment_type: formData.apartment_type,
         commercial_subtype: formData.commercial_subtype,
+        institutional_subtype: formData.institutional_subtype,
         status: formData.status,
       };
 
@@ -392,7 +405,7 @@ export default function AddNewCustomerForm() {
             {/* Street Dropdown */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
-                <Ionicons name="road-map" size={16} color="#64748b" />
+                <Ionicons name="pin" size={16} color="#64748b" />
                 <Text style={styles.label}>
                   Street <Text style={styles.required}>*</Text>
                 </Text>
@@ -514,6 +527,27 @@ export default function AddNewCustomerForm() {
               </View>
             )}
 
+            {/* Institutional Subtype - Only for Institutional */}
+            {formData.customer_type === 'institutional' && (
+              <View style={styles.inputGroup}>
+                <View style={styles.labelContainer}>
+                  <Ionicons name="school-outline" size={16} color="#64748b" />
+                  <Text style={styles.label}>
+                    Institutional Type <Text style={styles.required}>*</Text>
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.dropdownButton}
+                  onPress={() => toggleDropdown('institutional_subtype')}
+                >
+                  <Text style={[styles.dropdownText, formData.institutional_subtype_label && styles.dropdownTextSelected]}>
+                    {formData.institutional_subtype_label || 'Select institutional type'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Status Dropdown */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
@@ -592,6 +626,13 @@ export default function AddNewCustomerForm() {
         options={commercialSubtypes}
         field="commercial_subtype"
         title="Select Business Type"
+      />
+      <DropdownModal
+        visible={showDropdown.institutional_subtype}
+        onClose={() => toggleDropdown('institutional_subtype')}
+        options={institutionalSubtypes}
+        field="institutional_subtype"
+        title="Select Institutional Type"
       />
       <DropdownModal
         visible={showDropdown.status}

@@ -13,13 +13,15 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-const validRoles = ['supervisor', 'driver', 'field_agent', 'ceo', 'c_care', 'manager', 'other'];
+const validRoles = ['supervisor', 'driver', 'field_agent', 'manager', 'c_care'];
 
 const TeamMemberSelection = ({ formData, setFormData, staff }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [containerWidth, setContainerWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
 
+  console.log(staff, 'staff');
+  
   useEffect(() => {
     if (containerWidth > 0) {
       const minCardWidth = 160;
@@ -50,7 +52,7 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
       supervisor: 'person-circle',
       driver: 'car-sport',
       field_agent: 'walk',
-      ceo: 'business',
+      manager: 'business',
       c_care: 'headset',
       manager: 'person',
       other: 'people'
@@ -63,7 +65,7 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
       supervisor: '#8b5cf6',
       driver: '#10b981', 
       field_agent: '#f59e0b',
-      ceo: '#ef4444',
+      manager: '#ef4444',
       c_care: '#6366f1',
       manager: '#ec4899',
       other: '#64748b'

@@ -2,8 +2,8 @@ const Street = require('../models/street');
 
 // Existing function (keep as is)
 const addStreet = async (req, res) => {
-  if (req.user && req.user.role !== 'ceo') {
-    return res.status(403).json({ message: 'Only CEO can create streets' });
+  if (req.user && req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Only Manager can create streets' });
   }
  
   const { streetName, details } = req.body;
@@ -98,8 +98,8 @@ const getStreetById = async (req, res) => {
 
 // NEW: Update street
 const updateStreet = async (req, res) => {
-  if (req.user && req.user.role !== 'ceo') {
-    return res.status(403).json({ message: 'Only CEO can update streets' });
+  if (req.user && req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Only Manager can update streets' });
   }
   
   try {
@@ -161,8 +161,8 @@ const updateStreet = async (req, res) => {
 
 // NEW: Delete street
 const deleteStreet = async (req, res) => {
-  if (req.user && req.user.role !== 'ceo') {
-    return res.status(403).json({ message: 'Only CEO can delete streets' });
+  if (req.user && req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Only Manager can delete streets' });
   }
   
   try {

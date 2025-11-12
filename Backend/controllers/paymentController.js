@@ -3,6 +3,7 @@ const Customer = require('../models/customer');
 const mongoose = require('mongoose');
 const { generatePaymentReceipt } = require('../utils/receiptGenerator');
 const { sendPaymentReceipt } = require('../utils/emailService');
+const InstitutionalSubtype = require('../models/institutional'); // Add this import
 
 // Create a new payment with comprehensive validation and dynamic month handling
 const createPayment = async (req, res) => {
@@ -41,7 +42,7 @@ const createPayment = async (req, res) => {
 
     // Verify customer exists
     const customer = await Customer.findById(customer_id)
-      .populate('apartment_type commercial_subtype')
+      .populate('apartment_type commercial_subtype institutional_subtype') // Add institutional_subtype
       .session(session);
 
     if (!customer) {
@@ -59,21 +60,21 @@ const createPayment = async (req, res) => {
       return res.status(400).json({ message: 'Invalid month format. Use YYYY-MM' });
     }
 
-    // Calculate total fee for the month based on customer type
     let totalFee = 0;
     if (customer.customer_type === 'residential' && customer.apartment_type) {
       totalFee = customer.apartment_type.base_fee;
     } else if (customer.customer_type === 'commercial' && customer.commercial_subtype) {
       totalFee = customer.commercial_subtype.base_fee;
+    } else if (customer.customer_type === 'institutional' && customer.institutional_subtype) {
+      totalFee = customer.institutional_subtype.base_fee;
     }
 
     if (totalFee === 0) {
       await session.abortTransaction();
       return res.status(400).json({
-        message: 'Cannot determine fee for this customer. Missing apartment/commercial type.'
+        message: 'Cannot determine fee for this customer. Missing apartment/commercial/institutional type.'
       });
     }
-
     // CHECK 1: Prevent duplicate payments (same customer, same month, same amount, within 5 minutes)
     const recentDuplicate = await Payment.findOne({
       customer_id,
@@ -184,10 +185,10 @@ const createPayment = async (req, res) => {
     let receiptSent = false;
     let emailError = null;
 
-    if (customer.email && customer.email.trim() !== '') {
+     if (customer.email && customer.email.trim() !== '') {
       try {
-        // Populate customer references for full address
-        await customer.populate('street apartment_type commercial_subtype');
+        // Populate customer references for full address - FIXED
+        await customer.populate('street apartment_type commercial_subtype institutional_subtype');
 
         // Prepare receipt data
         const receiptData = {
@@ -198,7 +199,7 @@ const createPayment = async (req, res) => {
           receiptNumber: receiptNumber,
           paymentDate: savedPayment.payment_date,
           month: (() => {
-            const [year, monthNum] = month.split('-').map(Number);  // Renamed to monthNum
+            const [year, monthNum] = month.split('-').map(Number);
             const date = new Date(Date.UTC(year, monthNum - 1, 1));
             return date.toLocaleDateString('en-US', {
               month: 'long',
@@ -472,7 +473,7 @@ const getPaymentSummary = async (req, res) => {
   }
 };
 
-// Delete/Cancel a payment (CEO only)
+// Delete/Cancel a payment (Manager only)
 const cancelPayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -533,15 +534,230 @@ const cancelPayment = async (req, res) => {
     session.endSession();
   }
 };
+// Get all payments with filtering and pagination
+const getAllPayments = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      customer_id,
+      payment_status,
+      payment_method,
+      month,
+      start_date,
+      end_date,
+      verified
+    } = req.query;
 
+    const filter = {};
 
-module.exports = {
-  createPayment,
-  getPaymentsByCustomer,
-  verifyPayment,
-  getPaymentSummary,
-  cancelPayment,
+    // Build filter object
+    if (customer_id) filter.customer_id = customer_id;
+    if (payment_status) filter.payment_status = payment_status;
+    if (payment_method) filter.payment_method = payment_method;
+    if (verified !== undefined) filter.verified = verified === 'true';
+    if (month) {
+      const [year, monthNum] = month.split('-').map(Number);
+      filter.month = {
+        $gte: new Date(year, monthNum - 1, 1),
+        $lt: new Date(year, monthNum, 1)
+      };
+    }
+    if (start_date || end_date) {
+      filter.payment_date = {};
+      if (start_date) filter.payment_date.$gte = new Date(start_date);
+      if (end_date) filter.payment_date.$lte = new Date(end_date);
+    }
+
+    const payments = await Payment.find(filter)
+      .populate('customer_id', 'name phone email address')
+      .populate('agent_id', 'full_name username')
+      .populate('verified_by', 'full_name username')
+      .sort({ payment_date: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Payment.countDocuments(filter);
+
+    return res.status(200).json({
+      message: payments.length === 0 ? 'No payments found' : 'Payments retrieved successfully',
+      payments,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalPayments: total,
+        hasNext: page * limit < total,
+        hasPrev: page > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('Get all payments error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
 };
+
+// Get payments by month
+const getPaymentsByMonth = async (req, res) => {
+  try {
+    const { month } = req.params; // Format: YYYY-MM
+    const { page = 1, limit = 50 } = req.query;
+
+    const [year, monthNum] = month.split('-').map(Number);
+    const monthStart = new Date(year, monthNum - 1, 1);
+    const monthEnd = new Date(year, monthNum, 1);
+
+    const payments = await Payment.find({
+      month: { $gte: monthStart, $lt: monthEnd }
+    })
+      .populate('customer_id', 'name phone address house_number')
+      .populate('agent_id', 'full_name username')
+      .populate('verified_by', 'full_name username')
+      .sort({ payment_date: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Payment.countDocuments({
+      month: { $gte: monthStart, $lt: monthEnd }
+    });
+
+    // Calculate summary for the month
+    const summary = await Payment.aggregate([
+      {
+        $match: {
+          month: { $gte: monthStart, $lt: monthEnd },
+          payment_status: 'paid'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total_collected: { $sum: '$amount' },
+          payment_count: { $sum: 1 },
+          cash_total: {
+            $sum: { $cond: [{ $eq: ['$payment_method', 'cash'] }, '$amount', 0] }
+          },
+          transfer_total: {
+            $sum: { $cond: [{ $eq: ['$payment_method', 'transfer'] }, '$amount', 0] }
+          }
+        }
+      }
+    ]);
+
+    return res.status(200).json({
+      message: payments.length === 0 ? 'No payments found for this month' : 'Monthly payments retrieved successfully',
+      month: month,
+      summary: summary[0] || {
+        total_collected: 0,
+        payment_count: 0,
+        cash_total: 0,
+        transfer_total: 0
+      },
+      payments,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalPayments: total
+      }
+    });
+
+  } catch (error) {
+    console.error('Get payments by month error:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Update payment endpoint
+const updatePayment = async (req, res) => {
+  if (req.user && req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Only Manager can update payments' });
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { paymentId } = req.params;
+    const {
+      amount,
+      payment_status,
+      payment_method,
+      agent_notes,
+      verified,
+      verified_by
+    } = req.body;
+
+    const payment = await Payment.findById(paymentId).session(session);
+    if (!payment) {
+      await session.abortTransaction();
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
+    // Store original values for recalculation
+    const originalAmount = payment.amount;
+    const originalStatus = payment.payment_status;
+
+    // Update fields if provided
+    if (amount !== undefined) payment.amount = parseFloat(amount);
+    if (payment_status !== undefined) payment.payment_status = payment_status;
+    if (payment_method !== undefined) payment.payment_method = payment_method;
+    if (agent_notes !== undefined) payment.agent_notes = agent_notes;
+    if (verified !== undefined) payment.verified = verified;
+    if (verified_by !== undefined) payment.verified_by = verified_by;
+
+    // Auto-verify cash payments
+    if (payment.payment_method === 'cash') {
+      payment.verified = true;
+      payment.verified_by = payment.agent_id;
+      payment.verified_date = new Date();
+    }
+
+    // If payment status changed to paid or amount changed, recalculate customer balance
+    if (payment.amount !== originalAmount || payment.payment_status !== originalStatus) {
+      const customer = await Customer.findById(payment.customer_id).session(session);
+      if (customer) {
+        const monthlyFeeIndex = customer.monthly_fees.findIndex(
+          fee => fee.month.getTime() === payment.month.getTime()
+        );
+
+        if (monthlyFeeIndex !== -1) {
+          const totalPaid = await Payment.aggregate([
+            {
+              $match: {
+                customer_id: customer._id,
+                month: payment.month,
+                payment_status: 'paid'
+              }
+            },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+          ]).session(session);
+
+          const amountPaid = totalPaid.length > 0 ? totalPaid[0].total : 0;
+          customer.monthly_fees[monthlyFeeIndex].remaining_balance =
+            customer.monthly_fees[monthlyFeeIndex].total_fee - amountPaid;
+
+          await customer.save({ session });
+        }
+      }
+    }
+
+    const updatedPayment = await payment.save({ session });
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      message: 'Payment updated successfully',
+      payment: updatedPayment,
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Error updating payment:', error);
+    return res.status(500).json({ message: 'Server error' });
+  } finally {
+    session.endSession();
+  }
+};
+
 
 // Get today's collections by supervisor
 const getTodayCollections = async (req, res) => {
@@ -549,7 +765,7 @@ const getTodayCollections = async (req, res) => {
     const supervisorId = req.user.id;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const collections = await Payment.aggregate([
       {
         $match: {
@@ -578,5 +794,14 @@ const getTodayCollections = async (req, res) => {
   }
 };
 
-// Add to exports
-module.exports.getTodayCollections = getTodayCollections;
+module.exports = {
+  createPayment,
+  getAllPayments, // Add this
+  getPaymentsByCustomer,
+  getPaymentsByMonth, // Add this
+  verifyPayment,
+  getPaymentSummary,
+  updatePayment, // Add this
+  cancelPayment,
+  getTodayCollections
+};

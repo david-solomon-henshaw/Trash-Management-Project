@@ -489,7 +489,7 @@ export default function ViewCustomers() {
               ) : (
                 <TouchableOpacity
                   style={styles.emptyButton}
-                  onPress={() => router.push('/ceo/customer/add-customer')}
+                  onPress={() => router.push('/manager/operations/add-customer')}
                 >
                   <Ionicons name="add" size={20} color="white" />
                   <Text style={styles.emptyButtonText}>Add Customer</Text>
@@ -584,7 +584,7 @@ export default function ViewCustomers() {
       {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/ceo/customer/add-customer')}
+        onPress={() => router.push('/manager/customer/add-customer')}
       >
         <Ionicons name="add" size={24} color="white" />
       </TouchableOpacity>

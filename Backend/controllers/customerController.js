@@ -1,6 +1,7 @@
 const Customer = require('../models/customer');
 const ApartmentType = require('../models/apartment');
 const CommercialSubtype = require('../models/commercial');
+const InstitutionalSubtype = require('../models/institutional')
 const Route = require('../models/routes');
 
 
@@ -11,6 +12,7 @@ const getAllCustomers = async (req, res) => {
       .populate('street', 'name')
       .populate('apartment_type', 'name base_fee')
       .populate('commercial_subtype', 'name base_fee')
+      .populate('institutional_subtype', 'name base_fee')
       .sort({ created_at: -1 });
 
     const transformedCustomers = customers.map(customer => ({
@@ -24,12 +26,14 @@ const getAllCustomers = async (req, res) => {
         _id: customer.street._id,
         streetName: customer.street.name,
       },
-      customer_type: customer.customer_type,
+      customer_type: customer.customer_type, 
       apartment_type: customer.apartment_type,
       commercial_subtype: customer.commercial_subtype,
       base_fee: customer.customer_type === 'residential'
         ? customer.apartment_type?.base_fee
-        : customer.commercial_subtype?.base_fee,
+        : customer.customer_type === 'commercial'
+        ? customer.commercial_subtype?.base_fee
+        : customer.institutional_subtype?.base_fee, // Add institutional
       status: customer.status,
       createdAt: customer.created_at,
       updatedAt: customer.updated_at,
@@ -52,7 +56,8 @@ const getCustomerById = async (req, res) => {
     const customer = await Customer.findById(id)
       .populate('street', 'name')
       .populate('apartment_type', 'name base_fee')
-      .populate('commercial_subtype', 'name base_fee');
+      .populate('commercial_subtype', 'name base_fee')
+      .populate('institutional_subtype', 'name base_fee'); // Add this
 
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
@@ -72,9 +77,12 @@ const getCustomerById = async (req, res) => {
       customer_type: customer.customer_type,
       apartment_type: customer.apartment_type,
       commercial_subtype: customer.commercial_subtype,
+      institutional_subtype: customer.institutional_subtype, // Add this
       base_fee: customer.customer_type === 'residential'
         ? customer.apartment_type?.base_fee
-        : customer.commercial_subtype?.base_fee,
+        : customer.customer_type === 'commercial'
+        ? customer.commercial_subtype?.base_fee
+        : customer.institutional_subtype?.base_fee, // Add institutional
       status: customer.status,
       createdAt: customer.created_at,
       updatedAt: customer.updated_at,
@@ -92,11 +100,10 @@ const getCustomerById = async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 };
-
 // Create new customer
 const createCustomer = async (req, res) => {
-  if (req.user && req.user.role !== 'ceo') {
-    return res.status(403).json({ message: 'Only CEO can create customers' });
+  if (req.user && req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Only Manager can create customers' });
   }
   try {
     const {
@@ -109,6 +116,7 @@ const createCustomer = async (req, res) => {
       customer_type,
       apartment_type,
       commercial_subtype,
+      institutional_subtype, // Fixed spelling
       status,
     } = req.body;
 
@@ -131,6 +139,11 @@ const createCustomer = async (req, res) => {
         message: 'Business type is required for commercial customers',
       });
     }
+    if (customer_type === 'institutional' && !institutional_subtype) { // Fixed spelling
+      return res.status(400).json({
+        message: 'Institutional Type is required for institutional customers',
+      });
+    }
 
     // Check for duplicate (same street and house number)
     const existingCustomer = await Customer.findOne({
@@ -151,6 +164,9 @@ const createCustomer = async (req, res) => {
     } else if (customer_type === 'commercial') {
       const commSubtype = await CommercialSubtype.findById(commercial_subtype);
       base_fee = commSubtype.base_fee;
+    } else {
+      const instSubType = await InstitutionalSubtype.findById(institutional_subtype); // Fixed spelling
+      base_fee = instSubType.base_fee;
     }
 
     // Create customer data
@@ -164,9 +180,8 @@ const createCustomer = async (req, res) => {
       customer_type,
       base_fee,
       status: status || 'active',
-      // Initialize monthly_fees with the current month
       monthly_fees: [{
-        month: new Date(), // Current month
+        month: new Date(),
         total_fee: base_fee,
         remaining_balance: base_fee,
         payments: []
@@ -179,6 +194,9 @@ const createCustomer = async (req, res) => {
     if (customer_type === 'commercial') {
       customerData.commercial_subtype = commercial_subtype;
     }
+    if (customer_type === 'institutional') {
+      customerData.institutional_subtype = institutional_subtype; // Fixed spelling
+    }
 
     const customer = new Customer(customerData);
     await customer.save();
@@ -190,6 +208,9 @@ const createCustomer = async (req, res) => {
     }
     if (customer_type === 'commercial') {
       await customer.populate('commercial_subtype', 'name base_fee');
+    }
+    if (customer_type === 'institutional') {
+      await customer.populate('institutional_subtype', 'name base_fee'); // Fixed spelling
     }
 
     return res.status(201).json({
@@ -208,6 +229,7 @@ const createCustomer = async (req, res) => {
         customer_type: customer.customer_type,
         apartment_type: customer.apartment_type,
         commercial_subtype: customer.commercial_subtype,
+        institutional_subtype: customer.institutional_subtype, // Fixed spelling
         base_fee: customer.base_fee,
         status: customer.status,
         createdAt: customer.created_at,
@@ -227,6 +249,7 @@ const getCustomersByStreet = async (req, res) => {
       .populate('street', 'name')
       .populate('apartment_type', 'name base_fee')
       .populate('commercial_subtype', 'name base_fee')
+      .populate('institutional_subtype', 'name base_fee') // Add this
       .sort({ created_at: -1 });
 
     const transformedCustomers = customers.map(customer => ({
@@ -243,9 +266,12 @@ const getCustomersByStreet = async (req, res) => {
       customer_type: customer.customer_type,
       apartment_type: customer.apartment_type,
       commercial_subtype: customer.commercial_subtype,
+      institutional_subtype: customer.institutional_subtype, // Add this
       base_fee: customer.customer_type === 'residential'
         ? customer.apartment_type?.base_fee
-        : customer.commercial_subtype?.base_fee,
+        : customer.customer_type === 'commercial'
+        ? customer.commercial_subtype?.base_fee
+        : customer.institutional_subtype?.base_fee, // Add institutional
       status: customer.status,
       createdAt: customer.created_at,
       updatedAt: customer.updated_at,
@@ -299,8 +325,8 @@ const getCustomerAnalytics = async (req, res) => {
 
 // Update customer
 const updateCustomer = async (req, res) => {
-  if (req.user && req.user.role !== 'ceo') {
-    return res.status(403).json({ message: 'Only CEO can update customers' });
+  if (req.user && req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Only Manager can update customers' });
   }
 
   try {
@@ -336,6 +362,9 @@ const updateCustomer = async (req, res) => {
     if (customer.customer_type === 'commercial') {
       await customer.populate('commercial_subtype', 'name base_fee');
     }
+    if (customer.customer_type === 'institutional') { // Fixed condition
+      await customer.populate('institutional_subtype', 'name base_fee');
+    }
 
     return res.status(200).json({
       message: 'Customer updated successfully',
@@ -353,6 +382,7 @@ const updateCustomer = async (req, res) => {
         customer_type: customer.customer_type,
         apartment_type: customer.apartment_type,
         commercial_subtype: customer.commercial_subtype,
+        institutional_subtype: customer.institutional_subtype,
         base_fee: customer.base_fee,
         status: customer.status,
         updatedAt: customer.updated_at,
@@ -369,8 +399,8 @@ const updateCustomer = async (req, res) => {
 
 // Delete customer
 const deleteCustomer = async (req, res) => {
-  if (req.user && req.user.role !== 'ceo') {
-    return res.status(403).json({ message: 'Only CEO can delete customers' });
+  if (req.user && req.user.role !== 'manager') {
+    return res.status(403).json({ message: 'Only Manager can delete customers' });
   }
 
   try {
@@ -400,17 +430,6 @@ const deleteCustomer = async (req, res) => {
   }
 };
 
-module.exports = {
-  getAllCustomers,
-  getCustomerById,
-  createCustomer,
-  getCustomersByStreet,
-  updateCustomer,
-  deleteCustomer,
-};
-
-
-// Get customers assigned to supervisor's routes
 const getAssignedCustomers = async (req, res) => {
   try {
     const supervisorId = req.user.id;
@@ -429,6 +448,7 @@ const getAssignedCustomers = async (req, res) => {
     .populate('street', 'name')
     .populate('apartment_type', 'name base_fee')
     .populate('commercial_subtype', 'name base_fee')
+    .populate('institutional_subtype', 'name base_fee') // Add this
     .limit(req.query.limit || 50);
 
     // Transform customers to match frontend format
@@ -446,9 +466,12 @@ const getAssignedCustomers = async (req, res) => {
       customer_type: customer.customer_type,
       apartment_type: customer.apartment_type,
       commercial_subtype: customer.commercial_subtype,
+      institutional_subtype: customer.institutional_subtype, // Add this
       base_fee: customer.customer_type === 'residential'
         ? customer.apartment_type?.base_fee
-        : customer.commercial_subtype?.base_fee,
+        : customer.customer_type === 'commercial'
+        ? customer.commercial_subtype?.base_fee
+        : customer.institutional_subtype?.base_fee, // Add institutional
       status: customer.status,
       createdAt: customer.created_at,
     }));
@@ -464,5 +487,14 @@ const getAssignedCustomers = async (req, res) => {
   }
 };
 
-  // Export the function
-  module.exports.getAssignedCustomers = getAssignedCustomers;
+module.exports = {
+  getAllCustomers,
+  getCustomerById,
+  createCustomer,
+  getCustomersByStreet,
+  updateCustomer,
+  deleteCustomer,
+  getAssignedCustomers
+};
+
+

@@ -10,7 +10,7 @@ const teamSchema = new mongoose.Schema({
       },
       role: {
         type: String,
-        enum: ['supervisor', 'driver', 'field_agent'],
+        enum: ['supervisor', 'driver', 'field_agent','manager'],
         required: [true, 'Role is required'],
       },
     },

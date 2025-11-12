@@ -102,14 +102,14 @@ const AssignRoute = () => {
       Alert.alert('Error', 'At least one street must be selected');
       return false;
     }
-    const hasSupervisor = formData.team_members.some(member => member.role === 'supervisor');
+    const hasSupervisor = formData.team_members.some(member => member.role === 'supervisor' || member.role === 'manager');
     if (!hasSupervisor) {
-      Alert.alert('Error', 'Team must have a supervisor');
+      Alert.alert('Error', 'Team must have a supervisor or manager');
       return false;
     }
     
     const invalidMembers = formData.team_members.some(
-      member => !member.user || !['supervisor', 'driver', 'field_agent'].includes(member.role)
+      member => !member.user || !['supervisor', 'driver', 'field_agent', 'manager'].includes(member.role)
     );
     if (invalidMembers) {
       Alert.alert('Error', 'All team members must have a valid user and role');

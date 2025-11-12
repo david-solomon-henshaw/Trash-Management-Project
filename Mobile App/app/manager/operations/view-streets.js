@@ -265,7 +265,7 @@ export default function ViewStreets() {
               {!searchQuery && (
                 <TouchableOpacity
                   style={styles.emptyButton}
-                  onPress={() => router.push('/ceo/streets/add-street')}
+                  onPress={() => router.push('/manager/streets/add-street')}
                 >
                   <Text style={styles.emptyButtonText}>+ Add Street</Text>
                 </TouchableOpacity>
@@ -317,7 +317,7 @@ export default function ViewStreets() {
       {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/ceo/streets/add-street')}
+        onPress={() => router.push('/manager/streets/add-street')}
         accessibilityLabel="Add new street"
       >
         <Ionicons name="add" size={28} color="white" />

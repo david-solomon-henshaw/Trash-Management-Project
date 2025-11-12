@@ -7,7 +7,7 @@ const customerSchema = new mongoose.Schema({
   address: { type: String, required: true, trim: true },
   house_number: { type: String, required: true, trim: true },
   street: { type: mongoose.Schema.Types.ObjectId, ref: 'Streets', required: true },
-  customer_type: { type: String, enum: ['residential', 'commercial'], required: true },
+  customer_type: { type: String, enum: ['residential', 'commercial', 'institutional'], required: true },
   apartment_type: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'ApartmentTypes', 
@@ -17,6 +17,11 @@ const customerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'CommercialSubtypes', 
     required: function() { return this.customer_type === 'commercial'; } 
+  },
+   institutional_subtype: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'InstitutionalSubtypes', 
+    required: function() { return this.customer_type === 'institutional'; } 
   },
   status: { type: String, enum: ['active', 'non-active'], default: 'active' },
   monthly_fees: [{
@@ -30,6 +35,12 @@ const customerSchema = new mongoose.Schema({
 });
 
 customerSchema.index({ street: 1, house_number: 1 });
+
+// Update timestamp on save
+customerSchema.pre('save', function(next) {
+  this.updated_at = Date.now();
+  next();
+});
 
 const Customer = mongoose.model('Customers', customerSchema);
 

@@ -20,61 +20,66 @@ export default function OperationsIndex() {
       title: 'Staff Management',
       description: 'Manage staff accounts and roles',
       icon: '👥',
-      iconLib: 'people-outline',
       color: '#16A085',
-      route: '/ceo/operations/staffs',
-      stats: '24 Active',
+      route: '/manager/operations/staffs',
     },
     {
       id: 'fleet',
       title: 'Fleet Management',
       description: 'Manage trucks, routes, and assignments',
       icon: '🚛',
-      iconLib: 'car-outline',
       color: '#f59e0b',
-      route: '/ceo/operations/fleet',
-      stats: '12 Vehicles',
+      route: '/manager/operations/fleet',
     },
     {
       id: 'apartment-types',
-      title: 'Apartment Types',
+      title: 'Residential Apartment Types',
       description: 'Manage apartment types and base fees',
       icon: '🏠',
-      iconLib: 'home-outline',
       color: '#10b981',
-      route: '/ceo/operations/apartment-types',
-      stats: '8 Types',
+      route: '/manager/operations/apartment-types',
     },
     {
       id: 'commercial-subtypes',
       title: 'Commercial Subtypes',
       description: 'Manage commercial subtypes and base fees',
       icon: '🏢',
-      iconLib: 'business-outline',
       color: '#8b5cf6',
-      route: '/ceo/operations/commercial-subtypes',
-      stats: '6 Subtypes',
-    },
+      route: '/manager/operations/commercial-subtypes',
+    },{
+    id: 'institutional-subtypes',
+  title: 'Institutional Subtypes',
+  description: 'Manage institutional subtypes and base fees',
+  icon: '🏛️',
+  color: '#8B4513',
+  route: '/manager/operations/institutional-subtypes',
+},
     {
       id: 'streets',
       title: 'Street Management',
       description: 'Manage streets and locations',
       icon: '📍',
-      iconLib: 'pin-outline',
       color: '#ef4444',
-      route: '/ceo/operations/streets',
-      stats: '45 Streets',
+      route: '/manager/operations/streets',
     },
     {
       id: 'customer',
       title: 'Customer Management',
       description: 'Manage and organize customer accounts',
       icon: '👤',
-      iconLib: 'people',
       color: '#ec4899',
-      route: '/ceo/operations/customer',
-      stats: '156 Customers',
+      route: '/manager/operations/customer',
     },
+    {
+      id: 'service-hub',
+      title: 'Service Hub',
+      description: 'Manage services, pricing, and service categories',
+      icon: '🛠️',
+      color: '#06b6d4',
+      route: '/manager/operations/service-hub',
+    },
+    
+  
   ];
 
   const handleCardPress = (route) => {
@@ -100,24 +105,6 @@ export default function OperationsIndex() {
         </View>
       </View>
 
-      {/* Stats Bar */}
-      <View style={styles.statsBar}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>6</Text>
-          <Text style={styles.statLabel}>Modules</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>251</Text>
-          <Text style={styles.statLabel}>Total Items</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>Active</Text>
-          <Text style={styles.statLabel}>System</Text>
-        </View>
-      </View>
-
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.cardsContainer}>
@@ -126,39 +113,30 @@ export default function OperationsIndex() {
             <Text style={styles.sectionSubtitle}>Select a module to manage</Text>
           </View>
           
-          {operationsActions.map((action, index) => (
-            <TouchableOpacity
-              key={action.id}
-              style={[
-                styles.actionCard,
-                index === 0 && styles.firstCard,
-              ]}
-              onPress={() => handleCardPress(action.route)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.cardContent}>
-                <View style={[styles.iconContainer, { backgroundColor: action.color }]}>
-                  <Text style={styles.iconEmoji}>{action.icon}</Text>
+          {/* Grid Layout for Tiles */}
+          <View style={styles.gridContainer}>
+            {operationsActions.map((action) => (
+              <TouchableOpacity
+                key={action.id}
+                style={styles.tileCard}
+                onPress={() => handleCardPress(action.route)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.tileIconContainer, { backgroundColor: action.color }]}>
+                  <Text style={styles.tileIconEmoji}>{action.icon}</Text>
                 </View>
                 
-                <View style={styles.cardTextContainer}>
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.cardTitle}>{action.title}</Text>
-                    <View style={[styles.statsBadge, { backgroundColor: `${action.color}15` }]}>
-                      <Text style={[styles.statsText, { color: action.color }]}>
-                        {action.stats}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.cardDescription}>{action.description}</Text>
+                <View style={styles.tileTextContainer}>
+                  <Text style={styles.tileTitle}>{action.title}</Text>
+                  <Text style={styles.tileDescription}>{action.description}</Text>
                 </View>
                 
-                <View style={styles.chevronContainer}>
-                  <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+                <View style={styles.tileArrow}>
+                  <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Enhanced Info Section */}
@@ -235,44 +213,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Stats Bar
-  statsBar: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginTop: -16,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    zIndex: 10,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#16A085',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#64748b',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#e2e8f0',
-    marginHorizontal: 8,
-  },
-
   // Content
   content: {
     flex: 1,
@@ -282,7 +222,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   sectionHeader: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -296,11 +236,20 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
 
-  // Action Cards
-  actionCard: {
+  // Grid Layout
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+
+  // Tile Cards
+  tileCard: {
     backgroundColor: 'white',
     borderRadius: 16,
-    marginBottom: 12,
+    width: '48%',
+    marginBottom: 16,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -309,69 +258,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f1f5f9',
   },
-  firstCard: {
-    borderWidth: 2,
-    borderColor: '#16A085',
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+  tileIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
-  iconEmoji: {
-    fontSize: 28,
+  tileIconEmoji: {
+    fontSize: 24,
   },
-  cardTextContainer: {
+  tileTextContainer: {
     flex: 1,
+    marginBottom: 8,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 16,
+  tileTitle: {
+    fontSize: 15,
     fontWeight: '700',
     color: '#1e293b',
-    flex: 1,
+    marginBottom: 4,
   },
-  statsBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  statsText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  cardDescription: {
-    fontSize: 13,
+  tileDescription: {
+    fontSize: 12,
     color: '#64748b',
-    lineHeight: 18,
+    lineHeight: 16,
   },
-  chevronContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
+  tileArrow: {
+    alignSelf: 'flex-end',
   },
 
   // Info Section
