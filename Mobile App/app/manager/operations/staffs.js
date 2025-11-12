@@ -14,9 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { API_BASE_URL } from '../../../config'
 import axios from 'axios'
+import { useRouter } from 'expo-router';
 
 const Staffs = () => {
-    const navigation = useNavigation();
+    
     
     // State variables to store form data
     const [formData, setFormData] = useState({
@@ -27,6 +28,7 @@ const Staffs = () => {
         username: '',
         password: '',
     });
+  const router = useRouter();
 
     // State to show/hide fields based on role selection
     const [showLoginFields, setShowLoginFields] = useState(true);
@@ -151,8 +153,7 @@ const Staffs = () => {
 
     // Function to handle back navigation
     const handleBackPress = () => {
-        navigation.goBack();
-    };
+    router.push('/manager/operations');    };
 
     return (
         <SafeAreaView style={styles.container}>

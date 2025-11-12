@@ -35,8 +35,7 @@ export default function CustomerIndex() {
   };
 
   const handleBackPress = () => {
-    router.back();
-  };
+  router.push('/manager/operations');  };
 
   const customerActions = [
     {

@@ -17,13 +17,11 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
-import { API_BASE_URL } from '../../config';
-import { useRouter } from 'expo-router';
+import { API_BASE_URL } from '../config';
 
 const { width } = Dimensions.get('window');
 
-export default function Payment() {
-  const router = useRouter();
+export default function PaymentModal({ visible, onClose }) {
   const [streets, setStreets] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomerDetails, setSelectedCustomerDetails] = useState(null);
@@ -55,15 +53,41 @@ export default function Payment() {
   });
 
   useEffect(() => {
-    checkAuth();
-    fetchData();
-  }, []);
+    if (visible) {
+      checkAuth();
+      fetchData();
+    }
+  }, [visible]);
+
+  const resetForm = () => {
+    setFormData({
+      street: '',
+      customer: '',
+      amount: '',
+      payment_status: 'paid',
+      payment_method: 'cash',
+      month: new Date().toISOString().slice(0, 7),
+      agent_notes: '',
+      is_full_payment: false,
+      pickup_id: '',
+    });
+    setSelectedCustomerDetails(null);
+    setCustomerPaymentHistory(null);
+    setSelectedMonthBalance(null);
+    setCustomers([]);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   const checkAuth = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
       if (!token) {
-        router.replace('/Login');
+        Alert.alert('Error', 'Please login again');
+        handleClose();
       } else {
         const decodedToken = jwtDecode(token);
         setAgentId(decodedToken.user.id);
@@ -74,7 +98,8 @@ export default function Payment() {
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      Alert.alert('Error', 'Authentication failed');
+      handleClose();
     }
   };
 
@@ -278,7 +303,15 @@ export default function Payment() {
         }
       }
       
-      Alert.alert('Success', message, [{ text: 'OK', onPress: () => router.back() }]);
+      Alert.alert('Success', message, [
+        { 
+          text: 'OK', 
+          onPress: () => {
+            resetForm();
+            onClose();
+          }
+        }
+      ]);
     } catch (error) {
       console.error('Error recording payment:', error);
       Alert.alert('Error', error.response?.data?.message || 'Failed to record payment');
@@ -373,349 +406,353 @@ export default function Payment() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>Loading payment form...</Text>
-        </View>
-      </SafeAreaView>
+      <Modal visible={visible} animationType="slide">
+        <SafeAreaView style={styles.container}>
+          <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366f1" />
+            <Text style={styles.loadingText}>Loading payment form...</Text>
+          </View>
+        </SafeAreaView>
+      </Modal>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Record Payment</Text>
-          <Text style={styles.headerSubtitle}>Collect customer payments</Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <Ionicons name="card" size={24} color="white" />
-        </View>
-      </View>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
-          {/* Street Selection */}
-          <View style={styles.formGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="location" size={16} color="#64748b" />
-              <Text style={styles.label}>Street</Text>
-              <Text style={styles.required}>*</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.dropdown}
-              onPress={() => setShowDropdown({ ...showDropdown, street: true })}
-            >
-              <Text style={formData.street ? styles.dropdownTextSelected : styles.dropdownText}>
-                {formData.street ? streets.find(s => s._id === formData.street)?.streetName : 'Select Street'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#94a3b8" />
-            </TouchableOpacity>
+    <Modal visible={visible} animationType="slide">
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
+        
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleClose} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Record Payment</Text>
+            <Text style={styles.headerSubtitle}>Collect customer payments</Text>
           </View>
+          <View style={styles.headerIcon}>
+            <Ionicons name="card" size={24} color="white" />
+          </View>
+        </View>
 
-          {/* Customer Selection */}
-          <View style={styles.formGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="person" size={16} color="#64748b" />
-              <Text style={styles.label}>Customer</Text>
-              <Text style={styles.required}>*</Text>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <View style={styles.section}>
+            {/* Street Selection */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="location" size={16} color="#64748b" />
+                <Text style={styles.label}>Street</Text>
+                <Text style={styles.required}>*</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.dropdown}
+                onPress={() => setShowDropdown({ ...showDropdown, street: true })}
+              >
+                <Text style={formData.street ? styles.dropdownTextSelected : styles.dropdownText}>
+                  {formData.street ? streets.find(s => s._id === formData.street)?.streetName : 'Select Street'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[styles.dropdown, !formData.street && styles.dropdownDisabled]}
-              onPress={() => {
-                if (!formData.street) {
-                  Alert.alert('Select Street First', 'Please select a street before choosing a customer');
-                  return;
-                }
-                setShowDropdown({ ...showDropdown, customer: true });
-              }}
-              disabled={!formData.street}
-            >
-              {loadingCustomers ? (
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator size="small" color="#6366f1" />
-                  <Text style={styles.loadingTextSmall}>Loading customers...</Text>
+
+            {/* Customer Selection */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="person" size={16} color="#64748b" />
+                <Text style={styles.label}>Customer</Text>
+                <Text style={styles.required}>*</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.dropdown, !formData.street && styles.dropdownDisabled]}
+                onPress={() => {
+                  if (!formData.street) {
+                    Alert.alert('Select Street First', 'Please select a street before choosing a customer');
+                    return;
+                  }
+                  setShowDropdown({ ...showDropdown, customer: true });
+                }}
+                disabled={!formData.street}
+              >
+                {loadingCustomers ? (
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color="#6366f1" />
+                    <Text style={styles.loadingTextSmall}>Loading customers...</Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={formData.customer ? styles.dropdownTextSelected : styles.dropdownText}>
+                      {formData.customer 
+                        ? formatCustomerDisplay(customers.find(c => c._id === formData.customer)) 
+                        : 'Select Customer'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+                  </>
+                )}
+              </TouchableOpacity>
+              {!formData.street && (
+                <Text style={styles.helperText}>Select a street first</Text>
+              )}
+            </View>
+
+            {/* Customer Summary Card */}
+            {selectedCustomerDetails && (
+              <View style={styles.customerCard}>
+                <View style={styles.customerCardHeader}>
+                  <View style={styles.customerAvatar}>
+                    <Ionicons name="person-circle" size={32} color="#6366f1" />
+                  </View>
+                  <View style={styles.customerInfo}>
+                    <Text style={styles.customerName}>{selectedCustomerDetails.name}</Text>
+                    <Text style={styles.customerType}>
+                      {selectedCustomerDetails.customer_type === 'residential' 
+                        ? selectedCustomerDetails.apartment_type?.name || 'Residential'
+                        : selectedCustomerDetails.commercial_subtype?.name || 'Commercial'}
+                    </Text>
+                  </View>
                 </View>
-              ) : (
-                <>
-                  <Text style={formData.customer ? styles.dropdownTextSelected : styles.dropdownText}>
-                    {formData.customer 
-                      ? formatCustomerDisplay(customers.find(c => c._id === formData.customer)) 
-                      : 'Select Customer'}
+                
+                {loadingHistory ? (
+                  <View style={styles.loadingSection}>
+                    <ActivityIndicator size="small" color="#6366f1" />
+                    <Text style={styles.loadingTextSmall}>Loading payment history...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.customerCardBody}>
+                    <View style={styles.metricsGrid}>
+                      <View style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>Monthly Fee</Text>
+                        <Text style={styles.metricValue}>
+                          ₦{selectedCustomerDetails.base_fee?.toLocaleString() || '0'}
+                        </Text>
+                      </View>
+                      {customerPaymentHistory && (
+                        <>
+                          <View style={styles.metricItem}>
+                            <Text style={styles.metricLabel}>Total Paid</Text>
+                            <Text style={[styles.metricValue, { color: '#10b981' }]}>
+                              ₦{customerPaymentHistory.total_paid?.toLocaleString() || '0'}
+                            </Text>
+                          </View>
+                          <View style={styles.metricItem}>
+                            <Text style={styles.metricLabel}>Outstanding</Text>
+                            <Text style={[styles.metricValue, { color: '#ef4444' }]}>
+                              ₦{customerPaymentHistory.total_outstanding?.toLocaleString() || '0'}
+                            </Text>
+                          </View>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Month Selection */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="calendar" size={16} color="#64748b" />
+                <Text style={styles.label}>Payment Month</Text>
+                <Text style={styles.required}>*</Text>
+              </View>
+              <View style={styles.monthInputContainer}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={formData.month}
+                  onChangeText={(text) => handleInputChange('month', text)}
+                  placeholder="2024-12"
+                  maxLength={7}
+                  editable={!!formData.customer}
+                />
+                <TouchableOpacity
+                  style={styles.monthHelpButton}
+                  onPress={() => {
+                    Alert.alert(
+                      'Month Format',
+                      'Enter month in YYYY-MM format\n\nExamples:\n• 2024-01 (January 2024)\n• 2023-12 (December 2023)\n• 2025-06 (June 2025)\n\nYou can enter any past or future month.'
+                    );
+                  }}
+                >
+                  <Ionicons name="help-circle-outline" size={24} color="#6366f1" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.helperText}>Format: YYYY-MM (e.g., 2024-12)</Text>
+            </View>
+
+            {/* Month Balance Card */}
+            {selectedMonthBalance && (
+              <View style={[styles.balanceCard, { borderLeftColor: getStatusColor(selectedMonthBalance.status) }]}>
+                <View style={styles.balanceHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.balanceTitle}>
+                      {(() => {
+                        const [year, month] = formData.month.split('-').map(Number);
+                        const date = new Date(Date.UTC(year, month - 1, 1));
+                        return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+                      })()} Balance
+                    </Text>
+                    {!selectedMonthBalance.has_records && (
+                      <Text style={styles.noRecordsText}>ℹ️ No payment records for this month</Text>
+                    )}
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedMonthBalance.status) }]}>
+                    <Text style={styles.statusBadgeText}>{getStatusLabel(selectedMonthBalance.status)}</Text>
+                  </View>
+                </View>
+                <View style={styles.balanceBody}>
+                  <View style={styles.balanceRow}>
+                    <Text style={styles.balanceLabel}>Monthly Fee:</Text>
+                    <Text style={styles.balanceAmount}>₦{selectedMonthBalance.total_fee.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.balanceRow}>
+                    <Text style={styles.balanceLabel}>Paid So Far:</Text>
+                    <Text style={[styles.balanceAmount, { color: '#10B981' }]}>
+                      ₦{selectedMonthBalance.paid_so_far.toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={[styles.balanceRow, styles.balanceRowHighlight]}>
+                    <Text style={[styles.balanceLabel, { fontWeight: '700' }]}>Remaining:</Text>
+                    <Text style={[styles.balanceAmount, { fontWeight: '700', fontSize: 18, color: '#EF4444' }]}>
+                      ₦{selectedMonthBalance.remaining.toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Payment Amount */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="cash" size={16} color="#64748b" />
+                <Text style={styles.label}>Payment Amount (₦)</Text>
+                <Text style={styles.required}>*</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={formData.amount}
+                onChangeText={(text) => handleInputChange('amount', text)}
+                placeholder="Enter amount"
+              />
+              {selectedMonthBalance && formData.amount && (
+                <Text style={[
+                  styles.helperText,
+                  parseFloat(formData.amount) > selectedMonthBalance.remaining && { color: '#EF4444' }
+                ]}>
+                  {parseFloat(formData.amount) < selectedMonthBalance.remaining 
+                    ? `Partial payment: ₦${(selectedMonthBalance.remaining - parseFloat(formData.amount)).toLocaleString()} will remain` 
+                    : parseFloat(formData.amount) === selectedMonthBalance.remaining
+                      ? '✓ Full payment for this month'
+                      : `⚠ Overpayment by ₦${(parseFloat(formData.amount) - selectedMonthBalance.remaining).toLocaleString()}`}
+                </Text>
+              )}
+            </View>
+
+            {/* Payment Method and Status Row */}
+            <View style={styles.row}>
+              <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
+                <View style={styles.labelContainer}>
+                  <Ionicons name="card" size={16} color="#64748b" />
+                  <Text style={styles.label}>Method</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => setShowDropdown({ ...showDropdown, payment_method: true })}
+                >
+                  <Text style={formData.payment_method ? styles.dropdownTextSelected : styles.dropdownText}>
+                    {formData.payment_method ? paymentMethodOptions.find(m => m.value === formData.payment_method)?.label : 'Select Method'}
                   </Text>
                   <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
+                <View style={styles.labelContainer}>
+                  <Ionicons name="flag" size={16} color="#64748b" />
+                  <Text style={styles.label}>Status</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.dropdown}
+                  onPress={() => setShowDropdown({ ...showDropdown, payment_status: true })}
+                >
+                  <Text style={formData.payment_status ? styles.dropdownTextSelected : styles.dropdownText}>
+                    {formData.payment_status ? paymentStatusOptions.find(s => s.value === formData.payment_status)?.label : 'Select Status'}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Agent Notes */}
+            <View style={styles.formGroup}>
+              <View style={styles.labelContainer}>
+                <Ionicons name="document-text" size={16} color="#64748b" />
+                <Text style={styles.label}>Agent Notes</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={formData.agent_notes}
+                onChangeText={(text) => handleInputChange('agent_notes', text)}
+                placeholder="Add any notes about this payment..."
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity 
+              style={[styles.submitButton, submitting && styles.submitButtonDisabled]} 
+              onPress={handleSubmit} 
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.submitButtonText}>Record Payment</Text>
                 </>
               )}
             </TouchableOpacity>
-            {!formData.street && (
-              <Text style={styles.helperText}>Select a street first</Text>
-            )}
           </View>
+        </ScrollView>
 
-          {/* Customer Summary Card */}
-          {selectedCustomerDetails && (
-            <View style={styles.customerCard}>
-              <View style={styles.customerCardHeader}>
-                <View style={styles.customerAvatar}>
-                  <Ionicons name="person-circle" size={32} color="#6366f1" />
-                </View>
-                <View style={styles.customerInfo}>
-                  <Text style={styles.customerName}>{selectedCustomerDetails.name}</Text>
-                  <Text style={styles.customerType}>
-                    {selectedCustomerDetails.customer_type === 'residential' 
-                      ? selectedCustomerDetails.apartment_type?.name || 'Residential'
-                      : selectedCustomerDetails.commercial_subtype?.name || 'Commercial'}
-                  </Text>
-                </View>
-              </View>
-              
-              {loadingHistory ? (
-                <View style={styles.loadingSection}>
-                  <ActivityIndicator size="small" color="#6366f1" />
-                  <Text style={styles.loadingTextSmall}>Loading payment history...</Text>
-                </View>
-              ) : (
-                <View style={styles.customerCardBody}>
-                  <View style={styles.metricsGrid}>
-                    <View style={styles.metricItem}>
-                      <Text style={styles.metricLabel}>Monthly Fee</Text>
-                      <Text style={styles.metricValue}>
-                        ₦{selectedCustomerDetails.base_fee?.toLocaleString() || '0'}
-                      </Text>
-                    </View>
-                    {customerPaymentHistory && (
-                      <>
-                        <View style={styles.metricItem}>
-                          <Text style={styles.metricLabel}>Total Paid</Text>
-                          <Text style={[styles.metricValue, { color: '#10b981' }]}>
-                            ₦{customerPaymentHistory.total_paid?.toLocaleString() || '0'}
-                          </Text>
-                        </View>
-                        <View style={styles.metricItem}>
-                          <Text style={styles.metricLabel}>Outstanding</Text>
-                          <Text style={[styles.metricValue, { color: '#ef4444' }]}>
-                            ₦{customerPaymentHistory.total_outstanding?.toLocaleString() || '0'}
-                          </Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
-                </View>
-              )}
-            </View>
-          )}
-
-          {/* Month Selection */}
-          <View style={styles.formGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="calendar" size={16} color="#64748b" />
-              <Text style={styles.label}>Payment Month</Text>
-              <Text style={styles.required}>*</Text>
-            </View>
-            <View style={styles.monthInputContainer}>
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                value={formData.month}
-                onChangeText={(text) => handleInputChange('month', text)}
-                placeholder="2024-12"
-                maxLength={7}
-                editable={!!formData.customer}
-              />
-              <TouchableOpacity
-                style={styles.monthHelpButton}
-                onPress={() => {
-                  Alert.alert(
-                    'Month Format',
-                    'Enter month in YYYY-MM format\n\nExamples:\n• 2024-01 (January 2024)\n• 2023-12 (December 2023)\n• 2025-06 (June 2025)\n\nYou can enter any past or future month.'
-                  );
-                }}
-              >
-                <Ionicons name="help-circle-outline" size={24} color="#6366f1" />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.helperText}>Format: YYYY-MM (e.g., 2024-12)</Text>
-          </View>
-
-          {/* Month Balance Card */}
-          {selectedMonthBalance && (
-            <View style={[styles.balanceCard, { borderLeftColor: getStatusColor(selectedMonthBalance.status) }]}>
-              <View style={styles.balanceHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.balanceTitle}>
-                    {(() => {
-                      const [year, month] = formData.month.split('-').map(Number);
-                      const date = new Date(Date.UTC(year, month - 1, 1));
-                      return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-                    })()} Balance
-                  </Text>
-                  {!selectedMonthBalance.has_records && (
-                    <Text style={styles.noRecordsText}>ℹ️ No payment records for this month</Text>
-                  )}
-                </View>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(selectedMonthBalance.status) }]}>
-                  <Text style={styles.statusBadgeText}>{getStatusLabel(selectedMonthBalance.status)}</Text>
-                </View>
-              </View>
-              <View style={styles.balanceBody}>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>Monthly Fee:</Text>
-                  <Text style={styles.balanceAmount}>₦{selectedMonthBalance.total_fee.toLocaleString()}</Text>
-                </View>
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>Paid So Far:</Text>
-                  <Text style={[styles.balanceAmount, { color: '#10B981' }]}>
-                    ₦{selectedMonthBalance.paid_so_far.toLocaleString()}
-                  </Text>
-                </View>
-                <View style={[styles.balanceRow, styles.balanceRowHighlight]}>
-                  <Text style={[styles.balanceLabel, { fontWeight: '700' }]}>Remaining:</Text>
-                  <Text style={[styles.balanceAmount, { fontWeight: '700', fontSize: 18, color: '#EF4444' }]}>
-                    ₦{selectedMonthBalance.remaining.toLocaleString()}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Payment Amount */}
-          <View style={styles.formGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="cash" size={16} color="#64748b" />
-              <Text style={styles.label}>Payment Amount (₦)</Text>
-              <Text style={styles.required}>*</Text>
-            </View>
-            <TextInput
-              style={styles.input}
-              keyboardType="numeric"
-              value={formData.amount}
-              onChangeText={(text) => handleInputChange('amount', text)}
-              placeholder="Enter amount"
-            />
-            {selectedMonthBalance && formData.amount && (
-              <Text style={[
-                styles.helperText,
-                parseFloat(formData.amount) > selectedMonthBalance.remaining && { color: '#EF4444' }
-              ]}>
-                {parseFloat(formData.amount) < selectedMonthBalance.remaining 
-                  ? `Partial payment: ₦${(selectedMonthBalance.remaining - parseFloat(formData.amount)).toLocaleString()} will remain` 
-                  : parseFloat(formData.amount) === selectedMonthBalance.remaining
-                    ? '✓ Full payment for this month'
-                    : `⚠ Overpayment by ₦${(parseFloat(formData.amount) - selectedMonthBalance.remaining).toLocaleString()}`}
-              </Text>
-            )}
-          </View>
-
-          {/* Payment Method and Status Row */}
-          <View style={styles.row}>
-            <View style={[styles.formGroup, { flex: 1, marginRight: 8 }]}>
-              <View style={styles.labelContainer}>
-                <Ionicons name="card" size={16} color="#64748b" />
-                <Text style={styles.label}>Method</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.dropdown}
-                onPress={() => setShowDropdown({ ...showDropdown, payment_method: true })}
-              >
-                <Text style={formData.payment_method ? styles.dropdownTextSelected : styles.dropdownText}>
-                  {formData.payment_method ? paymentMethodOptions.find(m => m.value === formData.payment_method)?.label : 'Select Method'}
-                </Text>
-                <Ionicons name="chevron-down" size={20} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.formGroup, { flex: 1, marginLeft: 8 }]}>
-              <View style={styles.labelContainer}>
-                <Ionicons name="flag" size={16} color="#64748b" />
-                <Text style={styles.label}>Status</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.dropdown}
-                onPress={() => setShowDropdown({ ...showDropdown, payment_status: true })}
-              >
-                <Text style={formData.payment_status ? styles.dropdownTextSelected : styles.dropdownText}>
-                  {formData.payment_status ? paymentStatusOptions.find(s => s.value === formData.payment_status)?.label : 'Select Status'}
-                </Text>
-                <Ionicons name="chevron-down" size={20} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Agent Notes */}
-          <View style={styles.formGroup}>
-            <View style={styles.labelContainer}>
-              <Ionicons name="document-text" size={16} color="#64748b" />
-              <Text style={styles.label}>Agent Notes</Text>
-            </View>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={formData.agent_notes}
-              onChangeText={(text) => handleInputChange('agent_notes', text)}
-              placeholder="Add any notes about this payment..."
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-
-          {/* Submit Button */}
-          <TouchableOpacity 
-            style={[styles.submitButton, submitting && styles.submitButtonDisabled]} 
-            onPress={handleSubmit} 
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.submitButtonText}>Record Payment</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* Modals */}
-      <DropdownModal
-        visible={showDropdown.street}
-        onClose={() => setShowDropdown({ ...showDropdown, street: false })}
-        options={streets}
-        field="street"
-        title="Select Street"
-        isSimpleValue={false}
-      />
-      <DropdownModal
-        visible={showDropdown.customer}
-        onClose={() => setShowDropdown({ ...showDropdown, customer: false })}
-        options={customers}
-        field="customer"
-        title="Select Customer"
-        isSimpleValue={false}
-      />
-      <DropdownModal
-        visible={showDropdown.payment_status}
-        onClose={() => setShowDropdown({ ...showDropdown, payment_status: false })}
-        options={paymentStatusOptions}
-        field="payment_status"
-        title="Select Payment Status"
-        isSimpleValue={true}
-      />
-      <DropdownModal
-        visible={showDropdown.payment_method}
-        onClose={() => setShowDropdown({ ...showDropdown, payment_method: false })}
-        options={paymentMethodOptions}
-        field="payment_method"
-        title="Select Payment Method"
-        isSimpleValue={true}
-      />
-    </SafeAreaView>
+        {/* Modals */}
+        <DropdownModal
+          visible={showDropdown.street}
+          onClose={() => setShowDropdown({ ...showDropdown, street: false })}
+          options={streets}
+          field="street"
+          title="Select Street"
+          isSimpleValue={false}
+        />
+        <DropdownModal
+          visible={showDropdown.customer}
+          onClose={() => setShowDropdown({ ...showDropdown, customer: false })}
+          options={customers}
+          field="customer"
+          title="Select Customer"
+          isSimpleValue={false}
+        />
+        <DropdownModal
+          visible={showDropdown.payment_status}
+          onClose={() => setShowDropdown({ ...showDropdown, payment_status: false })}
+          options={paymentStatusOptions}
+          field="payment_status"
+          title="Select Payment Status"
+          isSimpleValue={true}
+        />
+        <DropdownModal
+          visible={showDropdown.payment_method}
+          onClose={() => setShowDropdown({ ...showDropdown, payment_method: false })}
+          options={paymentMethodOptions}
+          field="payment_method"
+          title="Select Payment Method"
+          isSimpleValue={true}
+        />
+      </SafeAreaView>
+    </Modal>
   );
 }
 

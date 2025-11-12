@@ -9,6 +9,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { API_BASE_URL } from '../config';
 import axios from 'axios';
@@ -17,10 +18,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 const CreateTruck = () => {
   const [formData, setFormData] = useState({
-    plate: '',
-    model: '',
-    capacity: '',
-    status: '',
+    plate_number: '',
+    truckModel: '', // Changed from truckmodel
+    truckCapacity: '',
+    truckStatus: '',
   });
 
   const [showStatusOptions, setShowStatusOptions] = useState(false);
@@ -52,7 +53,7 @@ const CreateTruck = () => {
   };
 
   const handleStatusChange = (selectedStatus) => {
-    setFormData({ ...formData, status: selectedStatus });
+    setFormData({ ...formData, truckStatus: selectedStatus });
     setShowStatusOptions(false);
   };
 
@@ -61,18 +62,18 @@ const CreateTruck = () => {
   };
 
   const validateForm = () => {
-    if (!formData.plate || !formData.model || !formData.capacity || !formData.status) {
+    if (!formData.plate_number || !formData.truckModel || !formData.truckCapacity || !formData.truckStatus) {
       Alert.alert('Error', 'Please fill in all required fields');
       return false;
     }
 
-    const capacityNum = parseFloat(formData.capacity);
-    if (isNaN(capacityNum) || capacityNum <= 0) {
-      Alert.alert('Error', 'Please enter a valid capacity (positive number)');
+    const truckCapacityNum = parseFloat(formData.truckCapacity);
+    if (isNaN(truckCapacityNum) || truckCapacityNum <= 0) {
+      Alert.alert('Error', 'Please enter a valid truckCapacity (positive number)');
       return false;
     }
 
-    if (formData.plate.length < 3) {
+    if (formData.plate_number.length < 3) {
       Alert.alert('Error', 'Plate number must be at least 3 characters');
       return false;
     }
@@ -81,6 +82,7 @@ const CreateTruck = () => {
   };
 
   const handleSubmit = async () => {
+    console.log('Submitting form data:', formData);
     if (!validateForm()) return;
     
     setSubmitting(true);
@@ -90,7 +92,7 @@ const CreateTruck = () => {
         `${API_BASE_URL}/api/trucks/create`,
         {
           ...formData,
-          capacity: parseFloat(formData.capacity),
+          truckCapacity: parseFloat(formData.truckCapacity),
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -111,15 +113,15 @@ const CreateTruck = () => {
 
   const resetForm = () => {
     setFormData({
-      plate: '',
-      model: '',
-      capacity: '',
-      status: '',
+      plate_number: '',
+      truckModel: '', // Changed from truckmodel
+      truckCapacity: '',
+      truckStatus: '',
     });
     setShowStatusOptions(false);
   };
 
-  const isFormValid = formData.plate && formData.model && formData.capacity && formData.status;
+  const isFormValid = formData.plate_number && formData.truckModel && formData.truckCapacity && formData.truckStatus;
 
   return (
     <KeyboardAvoidingView 
@@ -146,7 +148,7 @@ const CreateTruck = () => {
               <Text style={styles.sectionTitle}>Truck Details</Text>
             </View>
 
-            {/* Plate and Model Row */}
+            {/* Plate_number and truckModel Row */}
             <View style={styles.inputRow}>
               <View style={[styles.formGroup, { flex: 1 }]}>
                 <Text style={styles.label}>Plate Number *</Text>
@@ -156,39 +158,39 @@ const CreateTruck = () => {
                     style={styles.textInput}
                     placeholder="ABC-123"
                     placeholderTextColor="#94a3b8"
-                    value={formData.plate}
-                    onChangeText={(text) => handleInputChange('plate', text)}
+                    value={formData.plate_number}
+                    onChangeText={(text) => handleInputChange('plate_number', text)}
                     autoCapitalize="characters"
                   />
                 </View>
               </View>
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 12 }]}>
-                <Text style={styles.label}>Model *</Text>
+                <Text style={styles.label}>Truck Model *</Text> {/* Updated label */}
                 <View style={styles.inputContainer}>
                   <Ionicons name="construct" size={20} color="#94a3b8" style={styles.inputIcon} />
                   <TextInput
                     style={styles.textInput}
-                    placeholder="Truck Model"
+                    placeholder="Truck model"
                     placeholderTextColor="#94a3b8"
-                    value={formData.model}
-                    onChangeText={(text) => handleInputChange('model', text)}
+                    value={formData.truckModel} // Changed from truckmodel
+                    onChangeText={(text) => handleInputChange('truckModel', text)} // Changed from truckmodel
                   />
                 </View>
               </View>
             </View>
 
-            {/* Capacity */}
+            {/* truckCapacity */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Capacity (tons) *</Text>
+              <Text style={styles.label}>Truck Capacity (tons) *</Text>
               <View style={styles.inputContainer}>
                 <Ionicons name="scale" size={20} color="#94a3b8" style={styles.inputIcon} />
                 <TextInput
                   style={styles.textInput}
                   placeholder="0.00"
                   placeholderTextColor="#94a3b8"
-                  value={formData.capacity}
-                  onChangeText={(text) => handleInputChange('capacity', text)}
+                  value={formData.truckCapacity}
+                  onChangeText={(text) => handleInputChange('truckCapacity', text)}
                   keyboardType="decimal-pad"
                 />
                 <Text style={styles.inputSuffix}>tons</Text>
@@ -199,7 +201,7 @@ const CreateTruck = () => {
           {/* STATUS */}
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="traffic-cone" size={20} color="#f59e0b" />
+              <Ionicons name="pin" size={20} color="#f59e0b" />
               <Text style={styles.sectionTitle}>Truck Status</Text>
             </View>
 
@@ -210,8 +212,8 @@ const CreateTruck = () => {
                 onPress={() => setShowStatusOptions(!showStatusOptions)}
               >
                 <Ionicons name="stats-chart" size={20} color="#94a3b8" style={styles.inputIcon} />
-                {formData.status ? (
-                  getStatusDisplay(formData.status)
+                {formData.truckStatus ? (
+                  getStatusDisplay(formData.truckStatus)
                 ) : (
                   <Text style={styles.placeholderText}>Select truck status</Text>
                 )}
@@ -229,14 +231,14 @@ const CreateTruck = () => {
                       key={status.value}
                       style={[
                         styles.dropdownOption,
-                        formData.status === status.value && styles.selectedOption
+                        formData.truckStatus === status.value && styles.selectedOption
                       ]}
                       onPress={() => handleStatusChange(status.value)}
                     >
                       <Ionicons name={status.icon} size={18} color={status.color} />
                       <Text style={[
                         styles.dropdownOptionText,
-                        formData.status === status.value && styles.selectedOptionText
+                        formData.truckStatus === status.value && styles.selectedOptionText
                       ]}>
                         {status.label}
                       </Text>

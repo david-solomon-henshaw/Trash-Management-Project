@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../../config';
+import LiveOperationModal from '../../components/LiveOperationModal'; // Import the modal
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +28,8 @@ export default function HomeScreen() {
   const [liveOperations, setLiveOperations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedOperation, setSelectedOperation] = useState(null);
+  const [showOperationModal, setShowOperationModal] = useState(false);
 
   // Simple status formatting
   const getStatusColor = (status) => {
@@ -137,6 +140,22 @@ export default function HomeScreen() {
     fetchDashboardData();
   };
 
+  const handleOperationPress = (operation) => {
+    setSelectedOperation(operation);
+    setShowOperationModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowOperationModal(false);
+    setSelectedOperation(null);
+  };
+
+  const handleViewFullDetails = () => {
+    handleCloseModal();
+    // You can add navigation to detailed view here if needed
+    // router.push(`/manager/operations/route/${selectedOperation.id}`);
+  };
+
   // Quick actions (unchanged)
   const quickActions = [
     {
@@ -146,14 +165,6 @@ export default function HomeScreen() {
       color: '#ef4444',
       route: '/manager/operations/live',
       description: 'Real-time tracking',
-    },
-    {
-      id: 'assign-routes',
-      title: 'Assign Routes',
-      icon: 'navigate',
-      color: '#6366f1',
-      route: '/manager/operations/assign',
-      description: 'Create assignments',
     },
     {
       id: 'fleet-management',
@@ -168,99 +179,105 @@ export default function HomeScreen() {
       title: 'Team Management',
       icon: 'people',
       color: '#8b5cf6',
-      route: '/manager/operations/teams',
+      route: '/manager/operations/staffs',
       description: 'Staff & teams',
     },
-    {
-      id: 'reports-analytics',
-      title: 'Reports',
-      icon: 'document-text',
-      color: '#f59e0b',
-      route: '/manager/analytics',
-      description: 'Performance insights',
-    },
-    {
-      id: 'customer-management',
-      title: 'Customers',
-      icon: 'business',
-      color: '#06b6d4',
-      route: '/manager/operations/customer',
-      description: 'Customer database',
-    },
+    
+  
   ];
 
   const handleQuickActionPress = (route) => {
     router.push(route);
   };
 
-  const renderLiveOperation = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.operationCard}
-      onPress={() => router.push(`/manager/operations/route/${item.id}`)}
-    >
-      <View style={styles.operationHeader}>
-        <View style={styles.operationTitleContainer}>
-          <View style={[styles.operationIcon, { backgroundColor: `${item.statusColor}15` }]}>
-            <Ionicons name={item.icon} size={20} color={item.statusColor} />
-          </View>
-          <View style={styles.operationTextContainer}>
-            <Text style={styles.operationTitle}>{item.title}</Text>
-            <Text style={styles.operationSubtitle}>
-              {item.supervisor ? `Supervisor: ${item.supervisor}` : 'No supervisor'}
-            </Text>
-          </View>
+  // In your HomeScreen.js - Update the renderLiveOperation function
+const renderLiveOperation = ({ item }) => (
+  <TouchableOpacity 
+    style={styles.operationCard}
+    onPress={() => handleOperationPress(item)}
+  >
+    <View style={styles.operationHeader}>
+      <View style={styles.operationTitleContainer}>
+        <View style={[styles.operationIcon, { backgroundColor: `${item.statusColor}15` }]}>
+          <Ionicons name={item.icon} size={20} color={item.statusColor} />
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: `${item.statusColor}15` }]}>
-          <View style={[styles.statusDot, { backgroundColor: item.statusColor }]} />
-          <Text style={[styles.statusText, { color: item.statusColor }]}>
-            {item.status.replace('_', ' ')}
+        <View style={styles.operationTextContainer}>
+          <Text style={styles.operationTitle}>{item.title}</Text>
+          <Text style={styles.operationSubtitle}>
+            {item.supervisor ? `Supervisor: ${item.supervisor}` : 'No supervisor'}
           </Text>
         </View>
       </View>
+      <View style={[styles.statusBadge, { backgroundColor: `${item.statusColor}15` }]}>
+        <View style={[styles.statusDot, { backgroundColor: item.statusColor }]} />
+        <Text style={[styles.statusText, { color: item.statusColor }]}>
+          {item.status.replace('_', ' ')}
+        </Text>
+      </View>
+    </View>
 
-      <View style={styles.operationDetails}>
-        {/* Show truck capacity */}
-        {item.truck && (
-          <View style={styles.detailItem}>
-            <Ionicons name="speedometer" size={14} color="#64748b" />
-            <Text style={styles.detailText}>
-              {item.truck.truckModel} • {item.truck.truckCapacity}kg capacity
-            </Text>
-          </View>
-        )}
-
-        {/* Show streets count */}
+    <View style={styles.operationDetails}>
+      {/* Show truck capacity */}
+      {item.truck && (
         <View style={styles.detailItem}>
-          <Ionicons name="map" size={14} color="#64748b" />
+          <Ionicons name="speedometer" size={14} color="#64748b" />
           <Text style={styles.detailText}>
-            {item.streets?.length || 0} streets assigned
+            {item.truck.truckModel} • {item.truck.truckCapacity}kg capacity
           </Text>
         </View>
+      )}
 
-        {/* Show current location if available */}
-        {item.assignment_lifecycle?.current_location && (
-          <View style={styles.detailItem}>
-            <Ionicons name="location" size={14} color="#6366f1" />
-            <Text style={styles.detailText}>
-              Live Location: {item.assignment_lifecycle.current_location.latitude.toFixed(4)}, {item.assignment_lifecycle.current_location.longitude.toFixed(4)}
-            </Text>
-          </View>
-        )}
-
-        {/* Show start time if available */}
-        {item.assignment_lifecycle?.started_at && (
-          <View style={styles.detailItem}>
-            <Ionicons name="time" size={14} color="#f59e0b" />
-            <Text style={styles.detailText}>
-              Started: {new Date(item.assignment_lifecycle.started_at).toLocaleTimeString()}
-            </Text>
-          </View>
-        )}
+      {/* Show streets count */}
+      <View style={styles.detailItem}>
+        <Ionicons name="map" size={14} color="#64748b" />
+        <Text style={styles.detailText}>
+          {item.streets?.length || 0} streets assigned
+        </Text>
       </View>
-    </TouchableOpacity>
-  );
 
-  // ... rest of your component (renderMetricCard, getMetricColor, etc.) remains the same ...
+      {/* Show current location if available - UPDATED */}
+      {item.assignment_lifecycle?.current_location && (
+        <View style={styles.detailItem}>
+          <Ionicons name="location" size={14} color="#6366f1" />
+          <Text style={styles.detailText}>
+            Live Location: {item.assignment_lifecycle.current_location.latitude.toFixed(4)}, {item.assignment_lifecycle.current_location.longitude.toFixed(4)}
+          </Text>
+        </View>
+      )}
+
+      {/* Show start time if available - UPDATED */}
+      {item.assignment_lifecycle?.started_at && (
+        <View style={styles.detailItem}>
+          <Ionicons name="time" size={14} color="#f59e0b" />
+          <Text style={styles.detailText}>
+            Started: {new Date(item.assignment_lifecycle.started_at).toLocaleTimeString()}
+          </Text>
+        </View>
+      )}
+
+      {/* NEW: Show checkpoints count */}
+      {item.assignment_lifecycle?.checkpoints && item.assignment_lifecycle.checkpoints.length > 0 && (
+        <View style={styles.detailItem}>
+          <Ionicons name="flag" size={14} color="#8b5cf6" />
+          <Text style={styles.detailText}>
+            {item.assignment_lifecycle.checkpoints.length} checkpoints completed
+          </Text>
+        </View>
+      )}
+
+      {/* NEW: Show last update time */}
+      {item.updated_at && (
+        <View style={styles.detailItem}>
+          <Ionicons name="refresh" size={14} color="#10b981" />
+          <Text style={styles.detailText}>
+            Updated: {new Date(item.updated_at).toLocaleTimeString()}
+          </Text>
+        </View>
+      )}
+    </View>
+  </TouchableOpacity>
+);
+
   const renderMetricCard = (title, value, change, isPositive, icon) => (
     <View style={styles.metricCard}>
       <View style={styles.metricHeader}>
@@ -424,11 +441,19 @@ export default function HomeScreen() {
         {/* Additional Space */}
         <View style={styles.bottomSpace} />
       </ScrollView>
+
+      {/* Live Operation Modal */}
+      <LiveOperationModal
+        visible={showOperationModal}
+        operation={selectedOperation}
+        onClose={handleCloseModal}
+        onViewFullDetails={handleViewFullDetails}
+      />
     </SafeAreaView>
   );
 }
 
-
+// ... keep all your existing styles exactly as they were ...
 const styles = StyleSheet.create({
   container: {
     flex: 1,

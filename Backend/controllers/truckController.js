@@ -209,17 +209,54 @@ const getActiveRoutes = async (req, res) => {
     .sort({ 'assignment_lifecycle.started_at': -1 })
     .lean();
 
-    // Simple format - just return the essential data
-    const formattedRoutes = activeRoutes.map(route => ({
-      id: route._id.toString(),
-      title: route.assigned_truck ? `Truck ${route.assigned_truck.plate_number}` : 'Unassigned Truck',
-      supervisor: route.supervisor?.full_name || 'No supervisor',
-      status: route.status,
-      truck: route.assigned_truck,
-      assignment_lifecycle: route.assignment_lifecycle,
-      streets: route.streets || [],
-      scheduled_date: route.scheduled_date
-    }));
+    // Enhanced formatting with complete location data
+    const formattedRoutes = activeRoutes.map(route => {
+      // Extract current location with proper fallbacks
+      const currentLocation = route.assignment_lifecycle?.current_location || 
+                            route.assignment_lifecycle?.location_history?.[0] || 
+                            null;
+
+      // Format location for map display
+      const mapLocation = currentLocation ? {
+        latitude: currentLocation.latitude || 0,
+        longitude: currentLocation.longitude || 0,
+        accuracy: currentLocation.accuracy || 0,
+        speed: currentLocation.speed || 0,
+        timestamp: currentLocation.timestamp || new Date().toISOString(),
+        battery_level: currentLocation.battery_level || null
+      } : null;
+
+      // Get last checkpoint or start location
+      const lastCheckpoint = route.assignment_lifecycle?.checkpoints?.slice(-1)[0] || null;
+      const startLocation = route.assignment_lifecycle?.checkpoints?.find(cp => cp.type === 'start') || null;
+
+      return {
+        id: route._id.toString(),
+        title: route.assigned_truck ? `Truck ${route.assigned_truck.plate_number}` : 'Unassigned Truck',
+        supervisor: route.supervisor?.full_name || 'No supervisor',
+        status: route.status,
+        truck: route.assigned_truck ? {
+          _id: route.assigned_truck._id,
+          plate_number: route.assigned_truck.plate_number,
+          truckModel: route.assigned_truck.truckModel,
+          truckCapacity: route.assigned_truck.truckCapacity,
+          truckStatus: route.assigned_truck.truckStatus
+        } : null,
+        assignment_lifecycle: {
+          current_location: mapLocation,
+          location_history: route.assignment_lifecycle?.location_history || [],
+          checkpoints: route.assignment_lifecycle?.checkpoints || [],
+          started_at: route.assignment_lifecycle?.started_at,
+          started_by: route.assignment_lifecycle?.started_by,
+          last_checkpoint: lastCheckpoint,
+          start_location: startLocation
+        },
+        streets: route.streets || [],
+        scheduled_date: route.scheduled_date,
+        created_at: route.created_at,
+        updated_at: route.updated_at
+      };
+    });
 
     return res.status(200).json({
       success: true,
@@ -404,7 +441,7 @@ const startAssignment = async (req, res) => {
     });
   }
 
-  const { assignment_id } = req.body;
+  const { assignment_id, start_location } = req.body;
 
   if (!assignment_id) {
     return res.status(400).json({ 
@@ -457,23 +494,63 @@ const startAssignment = async (req, res) => {
     assignment.assignment_lifecycle.started_at = new Date();
     assignment.assignment_lifecycle.started_by = req.user.id;
     
-    // Add start checkpoint
-    assignment.assignment_lifecycle.checkpoints.push({
+    // Create start checkpoint with location data
+    const startCheckpoint = {
       type: 'start',
       timestamp: new Date(),
       notes: 'Assignment started by supervisor'
-    });
+    };
+
+    // Add location data if provided
+    if (start_location && start_location.latitude && start_location.longitude) {
+      startCheckpoint.location = {
+        latitude: start_location.latitude,
+        longitude: start_location.longitude
+      };
+
+      // Also update current location and add to location history
+      assignment.assignment_lifecycle.current_location = {
+        latitude: start_location.latitude,
+        longitude: start_location.longitude,
+        timestamp: new Date(),
+        accuracy: start_location.accuracy || null,
+        speed: null, // Will be updated with real-time tracking
+        battery_level: null // Can be added from mobile device info
+      };
+
+      // Add to location history
+      assignment.assignment_lifecycle.location_history.push({
+        latitude: start_location.latitude,
+        longitude: start_location.longitude,
+        timestamp: new Date(),
+        accuracy: start_location.accuracy || null,
+        speed: null,
+        is_moving: false
+      });
+    }
+
+    assignment.assignment_lifecycle.checkpoints.push(startCheckpoint);
 
     await assignment.save();
+
+    // Populate the response with more details
+    const updatedAssignment = await Route.findById(assignment_id)
+      .populate('assigned_truck', 'plate_number truckModel')
+      .populate('streets', 'name location')
+      .populate('supervisor', 'full_name');
 
     return res.status(200).json({
       success: true,
       message: 'Assignment started successfully',
       assignment: {
-        _id: assignment._id,
-        status: assignment.status,
-        started_at: assignment.assignment_lifecycle.started_at,
-        display_status: 'In Progress'
+        _id: updatedAssignment._id,
+        status: updatedAssignment.status,
+        started_at: updatedAssignment.assignment_lifecycle.started_at,
+        display_status: 'In Progress',
+        start_location: startCheckpoint.location,
+        truck: updatedAssignment.assigned_truck,
+        streets: updatedAssignment.streets,
+        supervisor: updatedAssignment.supervisor
       }
     });
 
@@ -485,6 +562,354 @@ const startAssignment = async (req, res) => {
     });
   }
 };
+
+
+// Add this function to truckController.js for background location updates
+const updateRouteLocation = async (req, res) => {
+  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'manager')) {
+    return res.status(403).json({ 
+      success: false,
+      message: 'Only supervisors and managers can update route locations' 
+    });
+  }
+
+  const { route_id, location_data } = req.body;
+
+  if (!route_id || !location_data) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Route ID and location data are required' 
+    });
+  }
+
+  if (!location_data.latitude || !location_data.longitude) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Valid latitude and longitude are required' 
+    });
+  }
+
+  try {
+    const route = await Route.findById(route_id);
+    
+    if (!route) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Route not found' 
+      });
+    }
+
+    // Check if the current user is the supervisor of this route
+    if (route.supervisor.toString() !== req.user.id) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'You can only update locations for your assigned routes' 
+      });
+    }
+
+    // Check if the route is in progress
+    if (route.status !== 'in_progress') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Can only update location for routes in progress' 
+      });
+    }
+
+    // Create location update object
+    const locationUpdate = {
+      latitude: location_data.latitude,
+      longitude: location_data.longitude,
+      timestamp: new Date(),
+      accuracy: location_data.accuracy || null,
+      speed: location_data.speed || null,
+      battery_level: location_data.battery_level || null
+    };
+
+    // Update current location
+    route.assignment_lifecycle.current_location = locationUpdate;
+
+    // Add to location history
+    route.assignment_lifecycle.location_history.unshift({
+      latitude: location_data.latitude,
+      longitude: location_data.longitude,
+      timestamp: new Date(),
+      accuracy: location_data.accuracy || null,
+      speed: location_data.speed || null,
+      is_moving: location_data.is_moving || false
+    });
+
+    // Keep only last 100 location history entries to prevent database bloat
+    if (route.assignment_lifecycle.location_history.length > 100) {
+      route.assignment_lifecycle.location_history = 
+        route.assignment_lifecycle.location_history.slice(0, 100);
+    }
+
+    await route.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Location updated successfully',
+      location: {
+        latitude: location_data.latitude,
+        longitude: location_data.longitude,
+        timestamp: new Date(),
+        accuracy: location_data.accuracy,
+        speed: location_data.speed
+      },
+      route_status: route.status
+    });
+
+  } catch (error) {
+    console.error('Update route location error:', error);
+    return res.status(500).json({
+      success: false,
+      message: `Failed to update route location: ${error.message}`,
+    });
+  }
+};
+
+// Get supervisor's in-progress assignment for today
+const getSupervisorInProgressAssignment = async (req, res) => {
+  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'manager')) {
+    return res.status(403).json({ 
+      success: false,
+      message: 'Only supervisors and managers can view assignments' 
+    });
+  }
+
+  try {
+    const supervisorId = req.user.id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find today's in-progress assignment for this supervisor
+    const assignment = await Route.findOne({ 
+      supervisor: supervisorId,
+      scheduled_date: {
+        $gte: today,
+        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000) // Today only
+      },
+      status: 'in_progress'
+    })
+    .populate('assigned_truck', 'plate_number truckModel truckCapacity truckStatus')
+    .populate({
+      path: 'assigned_team',
+      populate: {
+        path: 'team_members.user',
+        select: 'full_name role'
+      }
+    })
+    .populate('streets', 'name location _id')
+    .populate('supervisor', 'full_name')
+    .lean();
+
+    if (!assignment) {
+      return res.status(200).json({
+        success: true,
+        message: 'No in-progress assignment found for today',
+        assignment: null
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'In-progress assignment retrieved successfully',
+      assignment: assignment
+    });
+
+  } catch (error) {
+    console.error('Get in-progress assignment error:', error);
+    return res.status(500).json({
+      success: false,
+      message: `Failed to retrieve assignment: ${error.message}`,
+    });
+  }
+};
+
+// Add this function to your truckController.js
+// In truckController.js - Fix the updateAssignmentStatus function
+const updateAssignmentStatus = async (req, res) => {
+  console.log('Received update request:', req.body);
+  
+  try {
+    const { assignment_id, status, notes, location } = req.body;
+    const supervisor_id = req.user.id;
+
+    // Validate required fields
+    if (!assignment_id || !status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Assignment ID and status are required'
+      });
+    }
+
+    // Validate status
+    const validStatuses = ['in_progress', 'paused', 'at_dumpsite', 'completed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be one of: in_progress, paused, at_dumpsite, completed'
+      });
+    }
+
+    // Find the assignment
+    const assignment = await Route.findById(assignment_id)
+      .populate('assigned_truck')
+      .populate({
+        path: 'assigned_team',
+        populate: {
+          path: 'team_members.user',
+          select: 'full_name role'
+        }
+      });
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Assignment not found'
+      });
+    }
+
+    console.log('Current assignment status:', assignment.status);
+    console.log('Requested status:', status);
+
+    // Check authorization
+    if (assignment.supervisor.toString() !== supervisor_id) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not authorized to update this assignment'
+      });
+    }
+
+    // Status transition validation
+    const statusFlow = {
+      'scheduled': ['in_progress'],
+      'in_progress': ['paused', 'at_dumpsite', 'completed'],
+      'paused': ['in_progress'], // Allow resume (in_progress) from paused
+      'at_dumpsite': ['in_progress', 'completed']
+    };
+
+    if (!statusFlow[assignment.status]?.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot change status from ${assignment.status} to ${status}`
+      });
+    }
+
+    // CORRECTED: Checkpoint type function
+    const getCheckpointType = (currentStatus, newStatus) => {
+      console.log('Determining checkpoint type:', { currentStatus, newStatus });
+      
+      // Resume from paused
+      if (currentStatus === 'paused' && newStatus === 'in_progress') {
+        return 'resume';
+      }
+      // Start from scheduled
+      if (currentStatus === 'scheduled' && newStatus === 'in_progress') {
+        return 'start';
+      }
+      // Pause from in_progress
+      if (currentStatus === 'in_progress' && newStatus === 'paused') {
+        return 'pause';
+      }
+      // Dumpsite from in_progress
+      if (currentStatus === 'in_progress' && newStatus === 'at_dumpsite') {
+        return 'dumpsite';
+      }
+      // Complete from in_progress or at_dumpsite
+      if (newStatus === 'completed') {
+        return 'end';
+      }
+      
+      return 'custom';
+    };
+
+    // Update assignment status
+    const oldStatus = assignment.status;
+    assignment.status = status;
+
+    // Add checkpoint to lifecycle
+    const checkpoint = {
+      type: getCheckpointType(oldStatus, status),
+      timestamp: new Date(),
+      notes: notes || '',
+      location: location || null
+    };
+
+    console.log('Created checkpoint:', checkpoint);
+
+    // Initialize assignment_lifecycle if needed
+    if (!assignment.assignment_lifecycle) {
+      assignment.assignment_lifecycle = {
+        checkpoints: [],
+        current_location: null,
+        location_history: []
+      };
+    }
+
+    if (!assignment.assignment_lifecycle.checkpoints) {
+      assignment.assignment_lifecycle.checkpoints = [];
+    }
+
+    assignment.assignment_lifecycle.checkpoints.push(checkpoint);
+
+    // Update timestamps based on status
+    if (status === 'in_progress' && oldStatus === 'paused') {
+      // Resuming from pause
+      assignment.assignment_lifecycle.resumed_at = new Date();
+      console.log('Setting resumed_at timestamp');
+    } else if (status === 'in_progress' && oldStatus === 'scheduled') {
+      // Starting fresh
+      assignment.assignment_lifecycle.started_at = new Date();
+      assignment.assignment_lifecycle.started_by = supervisor_id;
+    } else if (status === 'paused') {
+      assignment.assignment_lifecycle.paused_at = new Date();
+    } else if (status === 'completed') {
+      assignment.assignment_lifecycle.completed_at = new Date();
+      assignment.assignment_lifecycle.completed_by = supervisor_id;
+    }
+
+    // Update current location if provided
+    if (location) {
+      assignment.assignment_lifecycle.current_location = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        timestamp: new Date(),
+        accuracy: location.accuracy || null,
+        speed: location.speed || null,
+        battery_level: location.battery_level || null
+      };
+    }
+
+    await assignment.save();
+    console.log('Assignment saved successfully');
+
+    // Return updated assignment
+    const updatedAssignment = await Route.findById(assignment_id)
+      .populate('assigned_truck')
+      .populate({
+        path: 'assigned_team',
+        populate: {
+          path: 'team_members.user',
+          select: 'full_name role'
+        }
+      })
+      .populate('streets');
+
+    res.json({
+      success: true,
+      message: `Assignment status updated from ${oldStatus} to ${status}`,
+      assignment: updatedAssignment
+    });
+
+  } catch (error) {
+    console.error('Update assignment status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while updating assignment status'
+    });
+  }
+};
 module.exports = {
   createTruck,
   assignRouteToTruck,
@@ -493,5 +918,8 @@ module.exports = {
   addMaintenanceRecord,
     getAllSupervisorAssignments, 
   updateTruckStatus,
-  startAssignment
+  startAssignment,
+  updateRouteLocation,
+    getSupervisorInProgressAssignment,
+    updateAssignmentStatus
 };

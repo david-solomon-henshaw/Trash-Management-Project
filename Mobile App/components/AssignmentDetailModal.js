@@ -9,6 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Animated,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -19,7 +20,9 @@ export default function AssignmentDetailsModal({
   assignment, 
   onClose,
   onStartAssignment,
-  startingAssignment 
+  onUpdateAssignmentStatus,
+  startingAssignment,
+  updatingStatus
 }) {
   const slideAnim = React.useRef(new Animated.Value(height)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -96,8 +99,67 @@ export default function AssignmentDetailsModal({
     return texts[status] || status;
   };
 
+  // Status update handler
+// In AssignmentDetailsModal.js - Update the handleStatusUpdate function
+const handleStatusUpdate = async (newStatus) => {
+  if (updatingStatus) return;
+  
+  let notes = '';
+  
+  // For certain statuses, you might want to prompt for notes
+  if (newStatus === 'paused') {
+    notes = 'Assignment paused by supervisor';
+  } else if (newStatus === 'at_dumpsite') {
+    notes = 'Arrived at dumpsite';
+  } else if (newStatus === 'completed') {
+    notes = 'Assignment completed successfully';
+  } else if (newStatus === 'in_progress' && assignment.status === 'paused') {
+    notes = 'Assignment resumed by supervisor';
+  }
+  
+  try {
+    await onUpdateAssignmentStatus(assignment, newStatus, notes);
+  } catch (error) {
+    Alert.alert('Error', 'Failed to update assignment status');
+  }
+};
+
+  // Get available actions based on current status
+// In AssignmentDetailsModal.js - Fix the getAvailableActions function
+const getAvailableActions = () => {
+  if (!assignment) return [];
+  
+  const actions = [];
+  
+  switch (assignment.status) {
+    case 'in_progress':
+      actions.push(
+        { type: 'paused', label: 'Pause Assignment', icon: 'pause-circle', color: '#F59E0B' },
+        { type: 'at_dumpsite', label: 'Arrive at Dumpsite', icon: 'location', color: '#8B5CF6' },
+        { type: 'completed', label: 'Complete Assignment', icon: 'checkmark-circle', color: '#10B981' }
+      );
+      break;
+      
+    case 'paused':
+      actions.push(
+        { type: 'in_progress', label: 'Resume Assignment', icon: 'play-circle', color: '#10B981' } // This is correct
+      );
+      break;
+      
+    case 'at_dumpsite':
+      actions.push(
+        { type: 'in_progress', label: 'Leave Dumpsite', icon: 'play-circle', color: '#10B981' },
+        { type: 'completed', label: 'Complete Assignment', icon: 'checkmark-circle', color: '#10B981' }
+      );
+      break;
+  }
+  
+  return actions;
+};
+
   const statusConfig = getStatusConfig(assignment.status);
   const canStartAssignment = assignment.is_today && assignment.status === 'scheduled';
+  const availableActions = getAvailableActions();
 
   return (
     <Modal
@@ -361,33 +423,50 @@ export default function AssignmentDetailsModal({
             <View style={styles.bottomSpacer} />
           </ScrollView>
 
-          {/* Action Footer */}
-          {(canStartAssignment || assignment.status === 'in_progress') && (
-            <View style={styles.footer}>
-              {canStartAssignment ? (
-                <TouchableOpacity 
-                  style={styles.primaryButton}
-                  onPress={() => onStartAssignment(assignment)}
-                  disabled={startingAssignment}
-                  activeOpacity={0.8}
-                >
-                  {startingAssignment ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <>
-                      <Ionicons name="play-circle" size={24} color="white" />
-                      <Text style={styles.primaryButtonText}>Start Assignment</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={styles.pauseButton} activeOpacity={0.8}>
-                  <Ionicons name="pause-circle" size={24} color="white" />
-                  <Text style={styles.primaryButtonText}>Pause Assignment</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
+          {/* Updated Action Footer */}
+          <View style={styles.footer}>
+            {canStartAssignment ? (
+              <TouchableOpacity 
+                style={styles.primaryButton}
+                onPress={() => onStartAssignment(assignment)}
+                disabled={startingAssignment}
+                activeOpacity={0.8}
+              >
+                {startingAssignment ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <>
+                    <Ionicons name="play-circle" size={24} color="white" />
+                    <Text style={styles.primaryButtonText}>Start Assignment</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : availableActions.length > 0 ? (
+              <View style={styles.actionButtonsContainer}>
+                {availableActions.map((action, index) => (
+                  <TouchableOpacity
+                    key={action.type}
+                    style={[
+                      styles.statusActionButton,
+                      { backgroundColor: action.color }
+                    ]}
+                    onPress={() => handleStatusUpdate(action.type)}
+                    disabled={updatingStatus}
+                    activeOpacity={0.8}
+                  >
+                    {updatingStatus ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <>
+                        <Ionicons name={action.icon} size={24} color="white" />
+                        <Text style={styles.primaryButtonText}>{action.label}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+          </View>
         </View>
       </Animated.View>
     </Modal>
@@ -754,6 +833,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
+  actionButtonsContainer: {
+    gap: 12,
+  },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -768,15 +850,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  pauseButton: {
+  statusActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F59E0B',
-    paddingVertical: 18,
+    paddingVertical: 16,
     borderRadius: 16,
     gap: 10,
-    shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
