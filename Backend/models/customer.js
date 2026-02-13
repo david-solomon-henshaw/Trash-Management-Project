@@ -1,8 +1,9 @@
 const mongoose = require('mongoose');
 
 const customerSchema = new mongoose.Schema({
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
   name: { type: String, required: true, trim: true },
-  email: { type: String,trim: true},
+  email: { type: String, trim: true },
   phone: { type: String, required: true, trim: true },
   address: { type: String, required: true, trim: true },
   house_number: { type: String, required: true, trim: true },
@@ -18,7 +19,7 @@ const customerSchema = new mongoose.Schema({
     ref: 'CommercialSubtypes', 
     required: function() { return this.customer_type === 'commercial'; } 
   },
-   institutional_subtype: { 
+  institutional_subtype: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'InstitutionalSubtypes', 
     required: function() { return this.customer_type === 'institutional'; } 
@@ -31,17 +32,18 @@ const customerSchema = new mongoose.Schema({
     payments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Payments' }]
   }],
   created_at: { type: Date, default: Date.now },
-  updated_at: { type: Date, default: Date.now }
+  updated_at: { type: Date, default: Date.now } 
 });
 
-customerSchema.index({ street: 1, house_number: 1 });
+// Indexes
+customerSchema.index({ companyId: 1, street: 1, house_number: 1 }, { unique: true });
+customerSchema.index({ companyId: 1, phone: 1 });
+customerSchema.index({ companyId: 1, email: 1 });
 
-// Update timestamp on save
 customerSchema.pre('save', function(next) {
   this.updated_at = Date.now();
   next();
 });
 
 const Customer = mongoose.model('Customers', customerSchema);
-
 module.exports = Customer;

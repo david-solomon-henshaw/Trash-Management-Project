@@ -1,34 +1,14 @@
 const mongoose = require('mongoose');
 
 const routeSchema = new mongoose.Schema({
-  streets: [{ 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Streets' 
-  }],
-  assigned_team: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Teams',
-    required: [true, 'Assigned team is required']
-  },
-  assigned_truck: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Trucks',
-    required: [true, 'Assigned truck is required']
-  },
-  supervisor: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Staffs',
-    required: [true, 'Supervisor is required']
-  },
-  scheduled_date: { 
-    type: Date, 
-    required: [true, 'Scheduled date is required']
-  },
-  status: { 
-    type: String, 
-    enum: ['scheduled', 'in_progress', 'paused', 'at_dumpsite', 'completed', 'cancelled'],
-    default: 'scheduled'
-  },
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+  name: { type: String, required: true }, // e.g., "North Side Route"
+  streets: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Streets' }],
+  assigned_team: { type: mongoose.Schema.Types.ObjectId, ref: 'Teams', required: true },
+  assigned_truck: { type: mongoose.Schema.Types.ObjectId, ref: 'Trucks', required: true },
+  supervisor: { type: mongoose.Schema.Types.ObjectId, ref: 'Staffs', required: true },
+  scheduled_date: { type: Date, required: true },
+  status: { type: String, enum: ['scheduled', 'in_progress', 'paused', 'at_dumpsite', 'completed', 'cancelled'], default: 'scheduled' },
   assignment_lifecycle: {
     started_at: { type: Date },
     started_by: { type: mongoose.Schema.Types.ObjectId, ref: 'Staffs' },
@@ -36,7 +16,6 @@ const routeSchema = new mongoose.Schema({
     resumed_at: { type: Date },
     completed_at: { type: Date },
     completed_by: { type: mongoose.Schema.Types.ObjectId, ref: 'Staffs' },
-    
     current_location: {
       latitude: { type: Number },
       longitude: { type: Number },
@@ -45,7 +24,6 @@ const routeSchema = new mongoose.Schema({
       speed: { type: Number },
       battery_level: { type: Number }
     },
-    
     location_history: [{
       latitude: { type: Number, required: true },
       longitude: { type: Number, required: true },
@@ -54,30 +32,21 @@ const routeSchema = new mongoose.Schema({
       speed: { type: Number },
       is_moving: { type: Boolean }
     }],
-    
     checkpoints: [{
-      type: {
-        type: String,
-        enum: ['start', 'pause', 'resume', 'dumpsite', 'custom', 'end'],
-        required: true
-      },
-      location: {
-        latitude: { type: Number },
-        longitude: { type: Number }
-      },
+      type: { type: String, enum: ['start', 'pause', 'resume', 'dumpsite', 'custom', 'end'], required: true },
+      location: { latitude: { type: Number }, longitude: { type: Number } },
       timestamp: { type: Date, default: Date.now },
       notes: { type: String }
     }]
   },
-  created_at: { 
-    type: Date, 
-    default: Date.now 
-  },
-  updated_at: { 
-    type: Date, 
-    default: Date.now 
-  }
+  created_at: { type: Date, default: Date.now },
+  updated_at: { type: Date, default: Date.now }
 });
+
+// Indexes
+routeSchema.index({ companyId: 1, scheduled_date: -1 });
+routeSchema.index({ companyId: 1, assigned_team: 1, scheduled_date: -1 });
+routeSchema.index({ companyId: 1, status: 1 });
 
 routeSchema.methods.addLocation = function(locationData) {
   this.assignment_lifecycle.current_location = {
@@ -99,7 +68,7 @@ routeSchema.methods.addLocation = function(locationData) {
   });
 };
 
-routeSchema.pre('save', function (next) {
+routeSchema.pre('save', function(next) {
   this.updated_at = Date.now();
   next();
 });

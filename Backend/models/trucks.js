@@ -1,29 +1,11 @@
 const mongoose = require('mongoose');
 
 const truckSchema = new mongoose.Schema({
-  plate_number: {
-    type: String,
-    required: [true, 'Plate number is required'],
-    unique: true,
-    trim: true,
-    minlength: [3, 'Plate number must be at least 3 characters'],
-  },
-  truckModel: {
-    type: String,
-    required: [true, 'Truck model is required'],
-    trim: true,
-  },
-  truckCapacity: {
-    type: Number,
-    required: [true, 'Truck capacity is required'],
-    min: [0, 'Capacity must be non-negative'],
-  },
-  truckStatus: {
-    type: String,
-    enum: ['operational', 'maintenance', 'inactive'],
-    required: [true, 'Truck status is required'],
-  },
-  // Removed assigned_team - now handled through Routes
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', required: true },
+  plate_number: { type: String, required: true, trim: true },
+  truckModel: { type: String, required: true, trim: true },
+  truckCapacity: { type: Number, required: true, min: 0 },
+  truckStatus: { type: String, enum: ['operational', 'maintenance', 'inactive'], required: true },
   maintenance_history: [
     {
       maintenance_date: { type: Date, default: Date.now },
@@ -37,17 +19,14 @@ const truckSchema = new mongoose.Schema({
       logged_at: { type: Date, default: Date.now },
     },
   ],
-  created_at: {
-    type: Date,
-    default: Date.now,
-  },
-  updated_at: {
-    type: Date,
-    default: Date.now,
-  },
+  created_at: { type: Date, default: Date.now },
+  updated_at: { type: Date, default: Date.now },
 });
 
-truckSchema.pre('save', function (next) {
+// Unique plate number per company
+truckSchema.index({ companyId: 1, plate_number: 1 }, { unique: true });
+
+truckSchema.pre('save', function(next) {
   this.updated_at = Date.now();
   next();
 });
