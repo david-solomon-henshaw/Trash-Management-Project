@@ -84,7 +84,6 @@ const createStaff = async (req, res) => {
 const loginStaff = async (req, res) => {
     // accepting the user details 
     const { password, username } = req.body
-    console.log(req.body)
 
     const existingStaff = await Staff.findOne({ username: username })
 
