@@ -51,8 +51,8 @@ const getApartmentTypeById = async (req, res) => {
 
 // Create a new apartment type
 const createApartmentType = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can create apartment types' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can create apartment types' });
   }
 
   const { name, base_fee } = req.body;

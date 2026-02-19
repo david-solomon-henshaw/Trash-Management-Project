@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { API_BASE_URL } from '../../../config'
+// import { API_BASE_URL } from '../../../config'
 import axios from 'axios'
 import { useRouter } from 'expo-router';
 
@@ -38,7 +38,7 @@ const Staffs = () => {
 
     // Available roles list
     const roles = [
-        { label: 'Manager', value: 'manager' },
+        { label: 'Admin', value: 'admin' },
         { label: 'Customer Care', value: 'c_care' },
         { label: 'Supervisor', value: 'supervisor' },
         { label: 'Field Agent', value: 'field_agent' },
@@ -52,7 +52,7 @@ const Staffs = () => {
     };
 
     const roleDescriptions = {
-        manager: 'Full system access including all management functions and reports.',
+        admin: 'Full system access including all management functions and reports.',
         c_care: 'Access to customer management, payment tracking, and support functions.',
         supervisor: 'Access to fleet management, route assignments, and staff oversight.',
         driver: 'This role does not require app login access. Driver will follow truck assignments without needing username/password.',
@@ -153,7 +153,7 @@ const Staffs = () => {
 
     // Function to handle back navigation
     const handleBackPress = () => {
-    router.push('/manager/operations');    };
+    router.push('/admin/operations');    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -241,7 +241,7 @@ const Staffs = () => {
                         {formData.role && (
                             <View style={styles.roleInfo}>
                                 <Text style={styles.roleInfoTitle}>
-                                    {formData.role === 'manager' && 'Manager Role'}
+                                    {formData.role === 'admin' && 'Admin Role'}
                                     {formData.role === 'c_care' && 'Customer Care Role'}
                                     {formData.role === 'supervisor' && 'Supervisor Role'}
                                     {formData.role === 'driver' && 'Driver Role'}

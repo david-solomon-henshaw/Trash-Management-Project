@@ -13,7 +13,7 @@ const {
 } = require('../controllers/truckController');
 const auth = require('../middleware/auth');
 
-// Manager only routes
+// Admin only routes
 router.post('/create', auth, createTruck);
 router.post('/assign-route', auth, assignRouteToTruck);
 router.get('/', auth, getAllTrucks);

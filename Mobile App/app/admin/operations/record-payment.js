@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { jwtDecode } from 'jwt-decode';
-import { API_BASE_URL } from '../../../config';
+// import { API_BASE_URL } from '../../../config';
 import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');

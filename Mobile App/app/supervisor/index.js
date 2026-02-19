@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../../config';
+// import { API_BASE_URL } from '../../config';
 import AssignmentDetailsModal from '../../components/AssignmentDetailModal';
 import PaymentModal from '../../components/PaymentModal';
 import { useLocationPermission } from '../../hooks/useLocationPermission';

@@ -4,8 +4,8 @@ const Team = require('../models/teams');
 const Route = require('../models/routes');
 
 const createTruck = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can create trucks' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can create trucks' });
   }
 
   const { plate_number, truckModel, truckCapacity, truckStatus } = req.body; // Fixed field names
@@ -59,8 +59,8 @@ const createTruck = async (req, res) => {
 const assignRouteToTruck = async (req, res) => {
   const { truck_id, team_members, street_ids, scheduled_date } = req.body;
 
-  if (req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can assign routes' });
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can assign routes' });
   }
 
   // Validate inputs
@@ -83,9 +83,9 @@ const assignRouteToTruck = async (req, res) => {
   }
 
   // Find supervisor in team
-  const supervisor = team_members.find(member => member.role === 'supervisor' || member.role === 'manager');
+  const supervisor = team_members.find(member => member.role === 'supervisor' || member.role === 'admin');
   if (!supervisor) {
-    return res.status(400).json({ message: 'Team must have a supervisor or manager' });
+    return res.status(400).json({ message: 'Team must have a supervisor or admin' });
   }
 
   // Validate team members
@@ -93,7 +93,7 @@ const assignRouteToTruck = async (req, res) => {
     if (!member.user || !member.role) {
       return res.status(400).json({ message: 'Each team member must have a user ID and role' });
     }
-    if (!['supervisor', 'driver', 'field_agent', 'manager'].includes(member.role)) {
+    if (!['supervisor', 'driver', 'field_agent', 'admin'].includes(member.role)) {
       return res.status(400).json({ message: 'Invalid role. Must be supervisor, driver, or field_agent' });
     }
     const user = await Staff.findById(member.user);
@@ -153,8 +153,8 @@ const assignRouteToTruck = async (req, res) => {
 };
 
 const getAllTrucks = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can view trucks' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can view trucks' });
   }
 
   try {
@@ -182,10 +182,10 @@ const getAllTrucks = async (req, res) => {
 
 // Add this function to truckController.js
 const getActiveRoutes = async (req, res) => {
-  if (!req.user || req.user.role !== 'manager') {
+  if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ 
       success: false,
-      message: 'Only managers can view all active routes' 
+      message: 'Only admins can view all active routes' 
     });
   }
 
@@ -276,8 +276,8 @@ const getActiveRoutes = async (req, res) => {
 
 // Add maintenance history function
 const addMaintenanceRecord = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can add maintenance records' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can add maintenance records' });
   }
 
   const { truck_id, description } = req.body;
@@ -317,8 +317,8 @@ const addMaintenanceRecord = async (req, res) => {
 
 // Update truck status function
 const updateTruckStatus = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can update truck status' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can update truck status' });
   }
 
   const { truck_id, truckStatus } = req.body;
@@ -357,10 +357,10 @@ const updateTruckStatus = async (req, res) => {
 
 // Get ALL supervisor assignments (today and future)
 const getAllSupervisorAssignments = async (req, res) => {
-  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'manager')) {
+  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'admin')) {
     return res.status(403).json({ 
       success: false,
-      message: 'Only supervisors and managers can view their assignments' 
+      message: 'Only supervisors and admins can view their assignments' 
     });
   }
 
@@ -434,10 +434,10 @@ const getAllSupervisorAssignments = async (req, res) => {
 
 // Start assignment function
 const startAssignment = async (req, res) => {
-  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'manager')) {
+  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'admin')) {
     return res.status(403).json({ 
       success: false,
-      message: 'Only supervisors and managers can start assignments' 
+      message: 'Only supervisors and admins can start assignments' 
     });
   }
 
@@ -566,10 +566,10 @@ const startAssignment = async (req, res) => {
 
 // Add this function to truckController.js for background location updates
 const updateRouteLocation = async (req, res) => {
-  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'manager')) {
+  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'admin')) {
     return res.status(403).json({ 
       success: false,
-      message: 'Only supervisors and managers can update route locations' 
+      message: 'Only supervisors and admins can update route locations' 
     });
   }
 
@@ -670,10 +670,10 @@ const updateRouteLocation = async (req, res) => {
 
 // Get supervisor's in-progress assignment for today
 const getSupervisorInProgressAssignment = async (req, res) => {
-  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'manager')) {
+  if (!req.user || (req.user.role !== 'supervisor' && req.user.role !== 'admin')) {
     return res.status(403).json({ 
       success: false,
-      message: 'Only supervisors and managers can view assignments' 
+      message: 'Only supervisors and admins can view assignments' 
     });
   }
 

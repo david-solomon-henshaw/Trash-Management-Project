@@ -346,7 +346,7 @@ const getPaymentDetails = async (req, res) => {
   }
 };
 
-// Get billing overview for multiple customers (for manager dashboard)
+// Get billing overview for multiple customers (for admin dashboard)
 const getBillingOverview = async (req, res) => {
   try {
     const { page = 1, limit = 20, status, customer_type } = req.query;

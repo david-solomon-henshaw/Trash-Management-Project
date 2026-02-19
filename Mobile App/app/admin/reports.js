@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import axios from 'axios';
-import { API_BASE_URL } from '../../config';
+// import { API_BASE_URL } from '../../config';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 

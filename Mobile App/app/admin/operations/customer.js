@@ -35,7 +35,7 @@ export default function CustomerIndex() {
   };
 
   const handleBackPress = () => {
-  router.push('/manager/operations');  };
+  router.push('/admin/operations');  };
 
   const customerActions = [
     {
@@ -44,7 +44,7 @@ export default function CustomerIndex() {
       description: 'Register a new customer account',
       icon: 'person-add',
       color: '#10b981',
-      route: '/manager/operations/add-customer',
+      route: '/admin/operations/add-customer',
     },
     {
       id: 'view-customers',
@@ -52,7 +52,7 @@ export default function CustomerIndex() {
       description: 'Browse all registered customers',
       icon: 'people',
       color: '#3b82f6',
-      route: '/manager/operations/view-customers',
+      route: '/admin/operations/view-customers',
     },
     {
       id: 'record-payment',
@@ -60,7 +60,7 @@ export default function CustomerIndex() {
       description: 'Record customer payments',
       icon: 'card',
       color: '#f59e0b',
-      route: '/manager/operations/record-payment',
+      route: '/admin/operations/record-payment',
     },
     {
       id: 'customer-analytics',
@@ -68,7 +68,7 @@ export default function CustomerIndex() {
       description: 'View customer insights and reports',
       icon: 'stats-chart',
       color: '#8b5cf6',
-      route: '/manager/operations/customer-analytics',
+      route: '/admin/operations/customer-analytics',
     },
     {
       id: 'billing-history',
@@ -76,7 +76,7 @@ export default function CustomerIndex() {
       description: 'View payment records and history',
       icon: 'receipt',
       color: '#ef4444',
-      route: '/manager/operations/billing-history',
+      route: '/admin/operations/billing-history',
     },
   ];
 

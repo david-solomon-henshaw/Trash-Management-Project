@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
-const validRoles = ['supervisor', 'driver', 'field_agent', 'manager', 'c_care'];
+const validRoles = ['supervisor', 'driver', 'field_agent', 'admin', 'c_care'];
 
 const TeamMemberSelection = ({ formData, setFormData, staff }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,9 +52,9 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
       supervisor: 'person-circle',
       driver: 'car-sport',
       field_agent: 'walk',
-      manager: 'business',
+      admin: 'business',
       c_care: 'headset',
-      manager: 'person',
+      admin: 'person',
       other: 'people'
     };
     return icons[role] || 'person';
@@ -65,9 +65,9 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
       supervisor: '#8b5cf6',
       driver: '#10b981', 
       field_agent: '#f59e0b',
-      manager: '#ef4444',
+      admin: '#ef4444',
       c_care: '#6366f1',
-      manager: '#ec4899',
+      admin: '#ec4899',
       other: '#64748b'
     };
     return colors[role] || '#64748b';

@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
-import { API_BASE_URL } from '../../../config';
+// import { API_BASE_URL } from '../../../config';
 
 export default function RecordService() {
   const router = useRouter();
@@ -276,7 +276,7 @@ export default function RecordService() {
           <Text style={styles.noRouteTitle}>No Assignment Today</Text>
           <Text style={styles.noRouteText}>
             You don't have any assignments scheduled for today.{'\n'}
-            Please contact your manager.
+            Please contact your admin.
           </Text>
         </View>
       </SafeAreaView>

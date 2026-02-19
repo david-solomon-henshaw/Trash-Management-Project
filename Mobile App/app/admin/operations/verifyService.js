@@ -157,7 +157,7 @@ export default function VerifyServices() {
       service_status: 'serviced',
       verification: {
         status: 'verified',
-        verified_by: { _id: 'manager001', name: 'Admin User' },
+        verified_by: { _id: 'admin001', name: 'Admin User' },
         verified_date: new Date('2024-01-14T16:30:00Z'),
         notes: 'Service properly completed. Photos clearly show before and after state.'
       },
@@ -189,7 +189,7 @@ export default function VerifyServices() {
       service_status: 'serviced',
       verification: {
         status: 'rejected',
-        verified_by: { _id: 'manager001', name: 'Admin User' },
+        verified_by: { _id: 'admin001', name: 'Admin User' },
         verified_date: new Date('2024-01-13T17:45:00Z'),
         notes: 'After photo shows incomplete service. Area not properly cleaned. Requires re-service.'
       },

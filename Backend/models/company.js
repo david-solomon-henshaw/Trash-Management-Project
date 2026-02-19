@@ -11,7 +11,8 @@ const companySchema = new mongoose.Schema({
          enum: ['trial', 'active', 'expired'], 
          required: true,
         default: 'trial' },
-    subscription_end_date: { type: Date }, 
+    subscription_start_date: { type: Date , default: null}, 
+    subscription_end_date: { type: Date , default: null}, 
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now }
 })

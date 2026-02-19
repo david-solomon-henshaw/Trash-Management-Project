@@ -23,17 +23,17 @@ router.get('/:id', getInstitutionalSubtypeById);
 
 // @route   POST /api/institutional-subtypes
 // @desc    Create a new institutional subtype
-// @access  Private (Manager only)
+// @access  Private (Admin only)
 router.post('/', auth, createInstitutionalSubtype);
 
 // @route   PUT /api/institutional-subtypes/:id
 // @desc    Update an institutional subtype
-// @access  Private (Manager only)
+// @access  Private (Admin only)
 router.put('/:id', auth, updateInstitutionalSubtype);
 
 // @route   DELETE /api/institutional-subtypes/:id
 // @desc    Delete an institutional subtype
-// @access  Private (Manager only)
+// @access  Private (Admin only)
 router.delete('/:id', auth, deleteInstitutionalSubtype);
 
 module.exports = router;

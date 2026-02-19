@@ -21,7 +21,7 @@ export default function OperationsIndex() {
       description: 'Manage staff accounts and roles',
       icon: '👥',
       color: '#16A085',
-      route: '/manager/operations/staffs',
+      route: '/admin/operations/staffs',
     },
     {
       id: 'fleet',
@@ -29,7 +29,7 @@ export default function OperationsIndex() {
       description: 'Manage trucks, routes, and assignments',
       icon: '🚛',
       color: '#f59e0b',
-      route: '/manager/operations/fleet',
+      route: '/admin/operations/fleet',
     },
     {
       id: 'apartment-types',
@@ -37,7 +37,7 @@ export default function OperationsIndex() {
       description: 'Manage apartment types and base fees',
       icon: '🏠',
       color: '#10b981',
-      route: '/manager/operations/apartment-types',
+      route: '/admin/operations/apartment-types',
     },
     {
       id: 'commercial-subtypes',
@@ -45,14 +45,14 @@ export default function OperationsIndex() {
       description: 'Manage commercial subtypes and base fees',
       icon: '🏢',
       color: '#8b5cf6',
-      route: '/manager/operations/commercial-subtypes',
+      route: '/admin/operations/commercial-subtypes',
     },{
     id: 'institutional-subtypes',
   title: 'Institutional Subtypes',
   description: 'Manage institutional subtypes and base fees',
   icon: '🏛️',
   color: '#8B4513',
-  route: '/manager/operations/institutional-subtypes',
+  route: '/admin/operations/institutional-subtypes',
 },
     {
       id: 'streets',
@@ -60,7 +60,7 @@ export default function OperationsIndex() {
       description: 'Manage streets and locations',
       icon: '📍',
       color: '#ef4444',
-      route: '/manager/operations/streets',
+      route: '/admin/operations/streets',
     },
     {
       id: 'customer',
@@ -68,7 +68,7 @@ export default function OperationsIndex() {
       description: 'Manage and organize customer accounts',
       icon: '👤',
       color: '#ec4899',
-      route: '/manager/operations/customer',
+      route: '/admin/operations/customer',
     },
     {
       id: 'service-hub',
@@ -76,7 +76,7 @@ export default function OperationsIndex() {
       description: 'Manage services, pricing, and service categories',
       icon: '🛠️',
       color: '#06b6d4',
-      route: '/manager/operations/service-hub',
+      route: '/admin/operations/service-hub',
     },
     
   

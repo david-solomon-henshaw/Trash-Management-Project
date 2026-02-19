@@ -45,7 +45,7 @@ export default function ServiceHub() {
       description: 'Create new service records and entries',
       icon: 'add-circle',
       color: '#06b6d4',
-      route: '/manager/operations/recordService',
+      route: '/admin/operations/recordService',
     },
     {
       id: 'service-history',
@@ -53,7 +53,7 @@ export default function ServiceHub() {
       description: 'View all service records and history',
       icon: 'time',
       color: '#8b5cf6',
-      route: '/manager/operations/serviceHistory',
+      route: '/admin/operations/serviceHistory',
     },
     {
       id: 'verify-services',
@@ -61,7 +61,7 @@ export default function ServiceHub() {
       description: 'Review and validate completed services',
       icon: 'checkmark-done-circle',
       color: '#10b981',
-      route: '/manager/operations/verifyService',
+      route: '/admin/operations/verifyService',
     },
     {
       id: 'service-reports',
@@ -69,7 +69,7 @@ export default function ServiceHub() {
       description: 'Generate service analytics and reports',
       icon: 'document-text',
       color: '#f59e0b',
-      route: '/manager/operations/serviceReports',
+      route: '/admin/operations/serviceReports',
     },
   ];
 

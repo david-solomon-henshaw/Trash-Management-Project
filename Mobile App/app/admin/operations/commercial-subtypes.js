@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../../../config';
+// import { API_BASE_URL } from '../../../config';
 
 export default function CommercialSubtypesScreen() {
   const navigation = useNavigation();

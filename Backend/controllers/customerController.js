@@ -102,8 +102,8 @@ const getCustomerById = async (req, res) => {
 };
 // Create new customer
 const createCustomer = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can create customers' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can create customers' });
   }
   try {
     const {
@@ -325,8 +325,8 @@ const getCustomerAnalytics = async (req, res) => {
 
 // Update customer
 const updateCustomer = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can update customers' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can update customers' });
   }
 
   try {
@@ -399,8 +399,8 @@ const updateCustomer = async (req, res) => {
 
 // Delete customer
 const deleteCustomer = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can delete customers' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can delete customers' });
   }
 
   try {

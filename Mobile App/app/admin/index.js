@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../../config';
+// import { API_BASE_URL } from '../../config';
 import LiveOperationModal from '../../components/LiveOperationModal'; // Import the modal
 
 const { width } = Dimensions.get('window');
@@ -153,7 +153,7 @@ export default function HomeScreen() {
   const handleViewFullDetails = () => {
     handleCloseModal();
     // You can add navigation to detailed view here if needed
-    // router.push(`/manager/operations/route/${selectedOperation.id}`);
+    // router.push(`/admin/operations/route/${selectedOperation.id}`);
   };
 
   // Quick actions (unchanged)
@@ -163,7 +163,7 @@ export default function HomeScreen() {
       title: 'Live Operations',
       icon: 'map',
       color: '#ef4444',
-      route: '/manager/operations/live',
+      route: '/admin/operations/live',
       description: 'Real-time tracking',
     },
     {
@@ -171,7 +171,7 @@ export default function HomeScreen() {
       title: 'Fleet Management',
       icon: 'car-sport',
       color: '#10b981',
-      route: '/manager/operations/fleet',
+      route: '/admin/operations/fleet',
       description: 'Manage vehicles',
     },
     {
@@ -179,7 +179,7 @@ export default function HomeScreen() {
       title: 'Team Management',
       icon: 'people',
       color: '#8b5cf6',
-      route: '/manager/operations/staffs',
+      route: '/admin/operations/staffs',
       description: 'Staff & teams',
     },
     
@@ -409,7 +409,7 @@ const renderLiveOperation = ({ item }) => (
             </View>
             <TouchableOpacity 
               style={styles.viewAllButton}
-              onPress={() => router.push('/manager/operations/live')}
+              onPress={() => router.push('/admin/operations/live')}
             >
               <Text style={styles.viewAllText}>View All</Text>
               <Ionicons name="chevron-forward" size={16} color="#6366f1" />

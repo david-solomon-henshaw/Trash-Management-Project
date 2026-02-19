@@ -1,143 +1,176 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
-import axios from 'axios';
-import { API_BASE_URL } from '../config';
+import {
+    Alert, StyleSheet, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Dimensions
+} from 'react-native';
+import { BlurView } from 'expo-blur';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import appClient from '../hooks/services/client'
 import { jwtDecode } from 'jwt-decode';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function LoginScreen() {
-    const [username, setUsername] = useState('');
+
+const { width, height } = Dimensions.get('window');
+const isTablet = width >= 768;
+
+export default function Index() {
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
-    const handleLogin = async () => {
-        setIsLoading(true);
-        console.log('login button pressed', username, password);
-
-        try {
-            const response = await axios.post(`${API_BASE_URL}/api/staff/signin`, {
-                username: username,
-                password: password
-            });
-
-            if (response.status === 200) {
-                await AsyncStorage.setItem('token', response.data.token);
-                const decode = jwtDecode(response.data.token);
-                const role = decode.user.role;
-                router.replace(`/${role}`);
-            } else {
-                console.log(response);
-            }
-        } catch (error) {
-            console.log('Error status:', error.response?.status);
-            console.log('Error message:', error.response?.data);
-            console.log('Full error:', error.message);
-        } finally {
-            setIsLoading(false);
+   const handleLogin = async (email, password) => {
+    try {
+        if (!email || !password) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
         }
-    };
 
+        const response = await appClient.post('/staff/signin', { email, password });
+        
+        // Destructure token from response.data
+        const { token } = response.data;
+
+        // Decode token to get the role
+        const decoded = jwtDecode(token);
+        const userRole = decoded.user.role; 
+
+        // Store the token
+        await AsyncStorage.setItem('userToken', token);
+
+        // FIX: Use backticks and the correct variable name for navigation
+        router.replace(`/${userRole}`);
+
+    } catch (error) {
+        // --- DETAILED DEBUG LOGGING ---
+        console.log("--- LOGIN ERROR DEBUG ---");
+        
+        if (error.response) {
+            // The request was made and the server responded with a status code (400, 401, 500, etc.)
+            console.log("Status Data:", error.response.data); 
+            console.log("Status Code:", error.response.status);
+            
+            // This will show your custom 'User does not exist' or 'Incorrect Password' messages
+            Alert.alert('Login Failed', error.response.data.message || error.response.data);
+        } else if (error.request) {
+            // The request was made but no response was received (Server is down or Network error)
+            console.log("No response received:", error.request);
+            Alert.alert('Error', 'Server is unreachable. Check your connection.');
+        } else {
+            // Something else happened in setting up the request
+            console.log("Error Message:", error.message);
+        }
+        console.log("-------------------------");
+    }
+};
     return (
         <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView 
-                style={styles.keyboardView}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            >
-                <StatusBar barStyle="light-content" backgroundColor="#16A085" />
+            {/* --- BACKGROUND BLOBS (Replicating the CSS Blobs) --- */}
+            <View style={[styles.blob, styles.blob1]} />
+            <View style={[styles.blob, styles.blob2]} />
 
-                {/* Decorative Background Elements */}
-                <View style={styles.backgroundCircle1} />
-                <View style={styles.backgroundCircle2} />
+            <View style={styles.safeArea}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.keyboardView}
+                >
+                    {/* --- MAIN GLASS CARD --- */}
+                    <BlurView intensity={60} tint="light" style={styles.glassCard}>
 
-                {/* Header Section */}
-                <View style={styles.header}>
-                    <View style={styles.logoContainer}>
-                        <View style={styles.logoCircle}>
-                            <Text style={styles.logoEmoji}>♻️</Text>
-                        </View>
-                    </View>
-                    <Text style={styles.appName}>EcoHaul</Text>
-                    <Text style={styles.tagline}>Clean • Smart • Reliable</Text>
-                    <View style={styles.taglineUnderline} />
-                </View>
-
-                {/* Login Form */}
-                <View style={styles.loginForm}>
-                    <View style={styles.welcomeSection}>
-                        <Text style={styles.welcomeText}>Welcome back!</Text>
-                        <Text style={styles.welcomeSubtext}>Sign in to continue managing waste collection</Text>
-                    </View>
-
-                    <View style={styles.inputGroup}>
-                        <View style={styles.inputWrapper}>
-                            <View style={styles.inputIconContainer}>
-                                <Text style={styles.inputIcon}>👤</Text>
+                        {/* Header: Logo + Brand */}
+                        <View style={{ marginBottom: isTablet ? 24 : 20 }}>
+                            <View style={styles.headerRow}>
+                                <View style={styles.logoContainer}>
+                                    <View style={styles.logoCircle}>
+                                        <FontAwesome5 name="recycle" size={isTablet ? 22 : 18} color="white" />
+                                    </View>
+                                    <Text style={styles.brandName}>CleanHaul</Text>
+                                </View>
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>B2B • WASTE</Text>
+                                </View>
                             </View>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Username"
-                                placeholderTextColor="#94a3b8"
-                                value={username}
-                                onChangeText={setUsername}
-                                autoCapitalize="none"
-                                editable={!isLoading}
-                            />
                         </View>
 
-                        <View style={styles.inputWrapper}>
-                            <View style={styles.inputIconContainer}>
-                                <Text style={styles.inputIcon}>🔒</Text>
+                        {/* Welcome Text */}
+                        <View style={styles.welcomeSection}>
+                            <Text style={styles.title}>Welcome back</Text>
+                            <Text style={styles.subtitle}>Sign in to your company dashboard.</Text>
+                        </View>
+
+                        {/* Form Fields */}
+                        <View style={styles.form}>
+                            {/* Email Input */}
+                            <View style={styles.inputContainer}>
+                                <FontAwesome5 name="user" size={isTablet ? 18 : 14} color="#94a3b8" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Email or username"
+                                    placeholderTextColor="#94a3b8"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                />
                             </View>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Password"
-                                placeholderTextColor="#94a3b8"
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry
-                                editable={!isLoading}
-                            />
-                        </View>
-                    </View>
 
-                    <TouchableOpacity 
-                        style={[styles.loginBtn, isLoading && styles.loginBtnDisabled]} 
-                        onPress={handleLogin}
-                        disabled={isLoading}
-                        activeOpacity={0.8}
-                    >
-                        <View style={styles.loginBtnContent}>
-                            {isLoading ? (
-                                <Text style={styles.loginBtnText}>Signing in...</Text>
-                            ) : (
-                                <>
-                                    <Text style={styles.loginBtnText}>Sign In</Text>
-                                    <Text style={styles.loginBtnArrow}>→</Text>
-                                </>
-                            )}
-                        </View>
-                    </TouchableOpacity>
+                            {/* Password Input */}
+                            <View style={styles.inputContainer}>
+                                <FontAwesome5 name="lock" size={isTablet ? 18 : 14} color="#94a3b8" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Password"
+                                    placeholderTextColor="#94a3b8"
+                                    secureTextEntry={!showPassword}
+                                    value={password}
+                                    onChangeText={setPassword}
+                                />
+                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                    <FontAwesome5
+                                        name={showPassword ? "eye" : "eye-slash"}
+                                        size={isTablet ? 18 : 14}
+                                        color="#94a3b8"
+                                    />
+                                </TouchableOpacity>
+                            </View>
 
-                    {/* Feature Highlights */}
-                    <View style={styles.featuresContainer}>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>🚛</Text>
-                            <Text style={styles.featureText}>Real-time Tracking</Text>
+                            {/* Options: Remember & Forgot */}
+                            <View style={styles.optionsRow}>
+                                <TouchableOpacity style={styles.checkboxRow}>
+                                    <View style={[styles.checkbox, isTablet && { width: 20, height: 20 }]} />
+                                    <Text style={styles.optionText}>Remember me</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity>
+                                    <Text style={[styles.optionText, { color: '#16A085', fontWeight: '600' }]}>
+                                        Forgot password?
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Sign In Button */}
+                            <TouchableOpacity
+                                style={styles.signInButton}
+                                onPress={() => handleLogin(email, password)}
+                            >
+                                <Text style={styles.signInButtonText}>Sign In</Text>
+                                <FontAwesome5 name="arrow-right" size={isTablet ? 16 : 14} color="white" />
+                            </TouchableOpacity>
                         </View>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>📊</Text>
-                            <Text style={styles.featureText}>Analytics Dashboard</Text>
+
+                        {/* Create Account Link */}
+                        <View style={styles.footer}>
+                            <Text style={styles.footerText}>New to CleanHaul?</Text>
+                            <TouchableOpacity onPress={() => router.push('/register')}>
+                                <Text style={styles.linkText}> Create company account →</Text>
+                            </TouchableOpacity>
                         </View>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>⚡</Text>
-                            <Text style={styles.featureText}>Instant Updates</Text>
-                        </View>
-                    </View>
-                </View>
-            </KeyboardAvoidingView>
+
+                        {/* Tagline */}
+                        <Text style={styles.tagline}>CLEAN • SMART • RELIABLE</Text>
+                        <Text style={styles.copyright}>© 2026 CleanHaul • B2B Waste Operations</Text>
+
+                    </BlurView>
+                </KeyboardAvoidingView>
+            </View>
         </SafeAreaView>
     );
 }
@@ -145,200 +178,185 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#16A085',
+        backgroundColor: '#f8fafc',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    // Blobs to match your HTML floatBlob animation
+    blob: {
+        position: 'absolute',
+        width: isTablet ? 500 : 350,
+        height: isTablet ? 500 : 350,
+        borderRadius: isTablet ? 250 : 175,
+        opacity: 0.4,
+    },
+    blob1: {
+        top: isTablet ? -150 : -100,
+        left: isTablet ? -150 : -100,
+        backgroundColor: '#16A085', // Teal
+    },
+    blob2: {
+        bottom: isTablet ? -150 : -100,
+        right: isTablet ? -150 : -100,
+        backgroundColor: '#f59e0b', // Amber
+    },
+    safeArea: {
+        flex: 1,
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     keyboardView: {
-        flex: 1,
+        width: '90%',
+        maxWidth: isTablet ? 600 : 400,
     },
-    
-    // Background decorations
-    backgroundCircle1: {
-        position: 'absolute',
-        width: 300,
-        height: 300,
-        borderRadius: 150,
-        backgroundColor: 'rgba(16, 185, 129, 0.3)',
-        top: -100,
-        right: -100,
+    glassCard: {
+        padding: isTablet ? 32 : 24,
+        borderRadius: isTablet ? 40 : 32,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
+        overflow: 'hidden', // Required for border radius with BlurView
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
     },
-    backgroundCircle2: {
-        position: 'absolute',
-        width: 200,
-        height: 200,
-        borderRadius: 100,
-        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-        top: 100,
-        left: -50,
-    },
-
-    // Header styles
-    header: {
-        flex: 0.35,
-        justifyContent: 'center',
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: 40,
-        zIndex: 1,
     },
     logoContainer: {
-        marginBottom: 16,
-    },
-    logoCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 3,
-        borderColor: 'rgba(255, 255, 255, 0.4)',
-    },
-    logoEmoji: {
-        fontSize: 40,
-    },
-    appName: {
-        fontSize: 42,
-        fontWeight: '700',
-        color: '#FFFFFF',
-        marginBottom: 8,
-        letterSpacing: 1,
-    },
-    tagline: {
-        fontSize: 15,
-        color: '#E6FFFA',
-        fontWeight: '500',
-        letterSpacing: 2,
-    },
-    taglineUnderline: {
-        width: 60,
-        height: 3,
-        backgroundColor: '#f59e0b',
-        marginTop: 12,
-        borderRadius: 2,
-    },
-
-    // Login form styles
-    loginForm: {
-        flex: 0.65,
-        backgroundColor: '#f8fafc',
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        paddingHorizontal: 24,
-        paddingTop: 40,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 8,
-    },
-    welcomeSection: {
-        marginBottom: 32,
-    },
-    welcomeText: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#1e293b',
-        marginBottom: 8,
-    },
-    welcomeSubtext: {
-        fontSize: 14,
-        color: '#64748b',
-        fontWeight: '400',
-    },
-
-    // Input styles
-    inputGroup: {
-        marginBottom: 24,
-    },
-    inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#ffffff',
-        borderRadius: 16,
-        marginBottom: 16,
-        borderWidth: 2,
-        borderColor: '#e2e8f0',
-        shadowColor: '#16A085',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
     },
-    inputIconContainer: {
-        width: 50,
-        height: 50,
+    logoCircle: {
+        width: isTablet ? 44 : 36,
+        height: isTablet ? 44 : 36,
+        borderRadius: isTablet ? 22 : 18,
+        backgroundColor: '#16A085',
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f1f5f9',
-        borderTopLeftRadius: 14,
-        borderBottomLeftRadius: 14,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    brandName: {
+        fontSize: isTablet ? 24 : 20,
+        fontWeight: '700',
+        color: '#1e293b',
+        marginLeft: 8,
+    },
+    badge: {
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+        paddingHorizontal: isTablet ? 14 : 12,
+        paddingVertical: isTablet ? 6 : 4,
+        borderRadius: 20,
+    },
+    badgeText: {
+        fontSize: isTablet ? 12 : 10,
+        fontWeight: '800',
+        color: '#64748b',
+    },
+    welcomeSection: {
+        marginBottom: isTablet ? 32 : 24,
+    },
+    title: {
+        fontSize: isTablet ? 32 : 24,
+        fontWeight: 'bold',
+        color: '#1e293b',
+    },
+    subtitle: {
+        fontSize: isTablet ? 16 : 14,
+        color: '#64748b',
+        marginTop: 4,
+    },
+    form: {
+        gap: isTablet ? 20 : 16,
+    },
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+        borderRadius: isTablet ? 16 : 12,
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
+        paddingHorizontal: isTablet ? 20 : 16,
+        height: isTablet ? 64 : 56,
     },
     inputIcon: {
-        fontSize: 20,
+        marginRight: isTablet ? 14 : 12,
     },
     input: {
         flex: 1,
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-        fontSize: 16,
+        fontSize: isTablet ? 18 : 16,
         color: '#1e293b',
-        fontWeight: '500',
     },
-
-    // Button styles
-    loginBtn: {
-        backgroundColor: '#16A085',
-        borderRadius: 16,
-        paddingVertical: 18,
+    optionsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        shadowColor: '#16A085',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-        marginBottom: 32,
+        marginTop: isTablet ? 8 : 4,
     },
-    loginBtnDisabled: {
-        backgroundColor: '#94a3b8',
-        shadowOpacity: 0.1,
-    },
-    loginBtnContent: {
+    checkboxRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
     },
-    loginBtnText: {
-        color: '#FFFFFF',
-        fontSize: 18,
-        fontWeight: '700',
-        letterSpacing: 0.5,
+    checkbox: {
+        width: isTablet ? 18 : 16,
+        height: isTablet ? 18 : 16,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: '#cbd5e1',
+        marginRight: isTablet ? 10 : 8,
     },
-    loginBtnArrow: {
-        color: '#FFFFFF',
-        fontSize: 22,
-        fontWeight: '600',
-        marginLeft: 8,
-    },
-
-    // Features section
-    featuresContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#e2e8f0',
-    },
-    featureItem: {
-        alignItems: 'center',
-        flex: 1,
-    },
-    featureIcon: {
-        fontSize: 24,
-        marginBottom: 6,
-    },
-    featureText: {
-        fontSize: 11,
+    optionText: {
+        fontSize: isTablet ? 14 : 12,
         color: '#64748b',
-        fontWeight: '600',
+    },
+    signInButton: {
+        backgroundColor: '#16A085',
+        height: isTablet ? 64 : 56,
+        borderRadius: isTablet ? 32 : 28,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: isTablet ? 12 : 10,
+        marginTop: isTablet ? 15 : 10,
+        shadowColor: '#16A085',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    signInButtonText: {
+        color: 'white',
+        fontSize: isTablet ? 18 : 16,
+        fontWeight: 'bold',
+    },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: isTablet ? 30 : 24,
+    },
+    footerText: {
+        fontSize: isTablet ? 14 : 12,
+        color: '#64748b',
+    },
+    linkText: {
+        fontSize: isTablet ? 14 : 12,
+        color: '#16A085',
+        fontWeight: 'bold',
+    },
+    tagline: {
         textAlign: 'center',
+        fontSize: isTablet ? 12 : 10,
+        color: '#94a3b8',
+        letterSpacing: 2,
+        marginTop: isTablet ? 30 : 24,
+    },
+    copyright: {
+        textAlign: 'center',
+        fontSize: isTablet ? 10 : 9,
+        color: '#cbd5e1',
+        marginTop: 8,
     },
 });

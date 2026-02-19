@@ -473,7 +473,7 @@ const getPaymentSummary = async (req, res) => {
   }
 };
 
-// Delete/Cancel a payment (Manager only)
+// Delete/Cancel a payment (Admin only)
 const cancelPayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -669,8 +669,8 @@ const getPaymentsByMonth = async (req, res) => {
 
 // Update payment endpoint
 const updatePayment = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can update payments' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can update payments' });
   }
 
   const session = await mongoose.startSession();

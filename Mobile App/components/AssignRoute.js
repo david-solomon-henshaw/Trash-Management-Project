@@ -8,7 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { API_BASE_URL } from '../config';
+// import { API_BASE_URL } from '../config';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RouteAndTruckSelection from './RouteAndTruckSelection';
@@ -102,14 +102,14 @@ const AssignRoute = () => {
       Alert.alert('Error', 'At least one street must be selected');
       return false;
     }
-    const hasSupervisor = formData.team_members.some(member => member.role === 'supervisor' || member.role === 'manager');
+    const hasSupervisor = formData.team_members.some(member => member.role === 'supervisor' || member.role === 'admin');
     if (!hasSupervisor) {
-      Alert.alert('Error', 'Team must have a supervisor or manager');
+      Alert.alert('Error', 'Team must have a supervisor or admin');
       return false;
     }
     
     const invalidMembers = formData.team_members.some(
-      member => !member.user || !['supervisor', 'driver', 'field_agent', 'manager'].includes(member.role)
+      member => !member.user || !['supervisor', 'driver', 'field_agent', 'admin'].includes(member.role)
     );
     if (invalidMembers) {
       Alert.alert('Error', 'All team members must have a valid user and role');

@@ -437,8 +437,8 @@ const getServiceAnalytics = async (req, res) => {
 
 // Delete service record (admin only)
 const deleteService = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can delete service records' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can delete service records' });
   }
 
   try {

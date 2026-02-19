@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../../../config';
+// import { API_BASE_URL } from '../../../config';
 
 export default function InstitutionalSubtypesScreen() {
   const navigation = useNavigation();
@@ -108,7 +108,7 @@ export default function InstitutionalSubtypesScreen() {
       if (error.response?.status === 400) {
         Alert.alert('Error', errorMessage);
       } else if (error.response?.status === 403) {
-        Alert.alert('Permission Denied', 'Only managers can create institutional subtypes');
+        Alert.alert('Permission Denied', 'Only admins can create institutional subtypes');
       } else {
         Alert.alert('Error', errorMessage);
       }

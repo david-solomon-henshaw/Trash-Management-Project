@@ -15,7 +15,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../../config'; // Adjust path as needed
+// import { API_BASE_URL } from '../../config'; // Adjust path as needed
 
 const { width, height } = Dimensions.get('window');
 

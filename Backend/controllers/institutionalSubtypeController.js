@@ -51,8 +51,8 @@ const getInstitutionalSubtypeById = async (req, res) => {
 
 // Create a new institutional subtype
 const createInstitutionalSubtype = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can create institutional subtypes' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can create institutional subtypes' });
   }
 
   const { name, base_fee } = req.body;
@@ -91,8 +91,8 @@ const createInstitutionalSubtype = async (req, res) => {
 
 // Update an institutional subtype
 const updateInstitutionalSubtype = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can update institutional subtypes' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can update institutional subtypes' });
   }
 
   const { id } = req.params;
@@ -144,8 +144,8 @@ const updateInstitutionalSubtype = async (req, res) => {
 
 // Delete an institutional subtype
 const deleteInstitutionalSubtype = async (req, res) => {
-  if (req.user && req.user.role !== 'manager') {
-    return res.status(403).json({ message: 'Only Manager can delete institutional subtypes' });
+  if (req.user && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only Admin can delete institutional subtypes' });
   }
 
   const { id } = req.params;

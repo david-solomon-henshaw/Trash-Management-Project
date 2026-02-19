@@ -18,7 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { API_BASE_URL } from '../../../config';
+// import { API_BASE_URL } from '../../../config';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -489,7 +489,7 @@ export default function ViewCustomers() {
               ) : (
                 <TouchableOpacity
                   style={styles.emptyButton}
-                  onPress={() => router.push('/manager/operations/add-customer')}
+                  onPress={() => router.push('/admin/operations/add-customer')}
                 >
                   <Ionicons name="add" size={20} color="white" />
                   <Text style={styles.emptyButtonText}>Add Customer</Text>
@@ -584,7 +584,7 @@ export default function ViewCustomers() {
       {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/manager/customer/add-customer')}
+        onPress={() => router.push('/admin/customer/add-customer')}
       >
         <Ionicons name="add" size={24} color="white" />
       </TouchableOpacity>
