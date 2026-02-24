@@ -8,7 +8,7 @@ const Route = require('../models/routes');
 // Get all customers (with populated references)
 const getAllCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find()
+    const customers = await Customer.find({ companyId: req.user.companyId })
       .populate('street', 'name')
       .populate('apartment_type', 'name base_fee')
       .populate('commercial_subtype', 'name base_fee')
@@ -53,7 +53,7 @@ const getAllCustomers = async (req, res) => {
 const getCustomerById = async (req, res) => {
   try {
     const { id } = req.params;
-    const customer = await Customer.findById(id)
+    const customer = await Customer.findOne({ _id: id, companyId: req.user.companyId })
       .populate('street', 'name')
       .populate('apartment_type', 'name base_fee')
       .populate('commercial_subtype', 'name base_fee')
@@ -147,6 +147,7 @@ const createCustomer = async (req, res) => {
 
     // Check for duplicate (same street and house number)
     const existingCustomer = await Customer.findOne({
+      companyId: req.user.companyId,
       street,
       house_number: house_number.trim(),
     });
@@ -171,6 +172,7 @@ const createCustomer = async (req, res) => {
 
     // Create customer data
     const customerData = {
+      companyId: req.user.companyId,
       name: name.trim(),
       email: email?.trim() || '',
       phone: phone.trim(),
@@ -245,7 +247,7 @@ const createCustomer = async (req, res) => {
 const getCustomersByStreet = async (req, res) => {
   try {
     const { streetId } = req.params;
-    const customers = await Customer.find({ street: streetId })
+    const customers = await Customer.find({ companyId: req.user.companyId, street: streetId })
       .populate('street', 'name')
       .populate('apartment_type', 'name base_fee')
       .populate('commercial_subtype', 'name base_fee')
@@ -292,21 +294,25 @@ const getCustomersByStreet = async (req, res) => {
 
 const getCustomerAnalytics = async (req, res) => {
   try {
-    const totalCustomers = await Customer.countDocuments();
+    const companyId = req.user.companyId;
+    const totalCustomers = await Customer.countDocuments({ companyId });
     const newCustomersThisMonth = await Customer.countDocuments({
+      companyId,
       created_at: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)) }
     });
 
     const revenueThisMonth = await Payment.aggregate([
-      { $match: { payment_status: 'paid', month: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)) } } },
+      { $match: { companyId: companyId, payment_status: 'paid', month: { $gte: new Date(new Date().setMonth(new Date().getMonth() - 1)) } } },
       { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
     const customersBySegment = await Customer.aggregate([
+      { $match: { companyId } },
       { $group: { _id: '$customer_type', count: { $sum: 1 } } }
     ]);
 
     const customerGrowth = await Customer.aggregate([
+      { $match: { companyId } },
       { $group: { _id: { $dateToString: { format: '%Y-%m', date: '$created_at' } }, count: { $sum: 1 } } },
       { $sort: { '_id': 1 } }
     ]);
@@ -340,7 +346,7 @@ const updateCustomer = async (req, res) => {
       });
     }
 
-    const customer = await Customer.findById(id);
+    const customer = await Customer.findOne({ _id: id, companyId: req.user.companyId });
 
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
@@ -406,7 +412,7 @@ const deleteCustomer = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const customer = await Customer.findById(id);
+    const customer = await Customer.findOne({ _id: id, companyId: req.user.companyId });
 
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
@@ -433,15 +439,17 @@ const deleteCustomer = async (req, res) => {
 const getAssignedCustomers = async (req, res) => {
   try {
     const supervisorId = req.user.id;
-    
+    const companyId = req.user.companyId;
+
     // Get routes assigned to this supervisor
-    const routes = await Route.find({ supervisor: supervisorId })
+    const routes = await Route.find({ supervisor: supervisorId, companyId: companyId })
       .populate('streets');
-    
+
     const streetIds = routes.flatMap(route => route.streets.map(street => street._id));
-    
+
     // Get customers in these streets
-    const customers = await Customer.find({ 
+    const customers = await Customer.find({
+      companyId: companyId,
       street: { $in: streetIds },
       status: 'active'
     })

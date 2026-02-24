@@ -84,7 +84,7 @@ const createStaff = async (req, res) => {
 
   const loginStaff = async (req, res) => {
 
-    console.log('loginroute inititted from mobile app ')
+    console.log('login route inititted from mobile app ')
 
     try {
       // accepting the user details 
@@ -144,13 +144,13 @@ const createStaff = async (req, res) => {
     try {
       const companyId = req.user.companyId
 
-      const company = await Company.findById(company)
+      const company = await Company.findById(companyId)
 
    if (!company) {
         return res.status(404).json({ message: "Company not found" });
     }
 
-      const staffList = await Staff.find({companyId: company});
+      const staffList = await Staff.find({companyId: companyId});
       res.status(200).json(staffList);
     } catch (error) {
       console.error('Get all staff error:', error.message);

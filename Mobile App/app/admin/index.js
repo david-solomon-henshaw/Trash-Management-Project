@@ -15,11 +15,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { API_BASE_URL } from '../../config';
 import LiveOperationModal from '../../components/LiveOperationModal'; // Import the modal
-
+import appClient from '../../hooks/services/client'
 const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
@@ -74,13 +72,9 @@ export default function HomeScreen() {
       const isAuthenticated = await checkAuth();
       if (!isAuthenticated) return;
 
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
+    
       // Fetch active routes
-      const activeRoutesResponse = await axios.get(
-        `${API_BASE_URL}/api/trucks/active-routes`, 
-        { headers }
+      const activeRoutesResponse = await appClient.get(`/trucks/active-routes`
       );
 
       if (activeRoutesResponse.data.success) {

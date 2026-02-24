@@ -10,9 +10,10 @@ const Street = require('../models/street');
 
 const getDashboardData = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     const [metrics, liveOperations] = await Promise.all([
-      getPerformanceMetrics(),
-      getLiveOperations()
+      getPerformanceMetrics(companyId),
+      getLiveOperations(companyId)
     ]);
 
     res.json({
@@ -31,7 +32,7 @@ const getDashboardData = async (req, res) => {
 
 // ==================== PERFORMANCE METRICS ====================
 
-const getPerformanceMetrics = async () => {
+const getPerformanceMetrics = async (companyId) => {
   const currentDate = new Date();
   const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const previousMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
@@ -51,6 +52,7 @@ const getPerformanceMetrics = async () => {
     Payment.aggregate([
       {
         $match: {
+          companyId: companyId,
           payment_status: 'paid',
           payment_date: { $gte: currentMonthStart }
         }
@@ -66,8 +68,9 @@ const getPerformanceMetrics = async () => {
     Payment.aggregate([
       {
         $match: {
+          companyId: companyId,
           payment_status: 'paid',
-          payment_date: { 
+          payment_date: {
             $gte: previousMonthStart,
             $lte: previousMonthEnd
           }
@@ -81,14 +84,18 @@ const getPerformanceMetrics = async () => {
       }
     ]),
     // Active customers count
-    Customer.countDocuments({ status: 'active' }),
+    Customer.countDocuments({ companyId: companyId, status: 'active' }),
     // Previous month active customers (customers created before previous month end)
-    Customer.countDocuments({ 
+    Customer.countDocuments({
+      companyId: companyId,
       status: 'active',
       created_at: { $lte: previousMonthEnd }
     }),
     // Route completion rate
     Route.aggregate([
+      {
+        $match: { companyId: companyId }
+      },
       {
         $group: {
           _id: '$status',
@@ -100,7 +107,8 @@ const getPerformanceMetrics = async () => {
     Route.aggregate([
       {
         $match: {
-          scheduled_date: { 
+          companyId: companyId,
+          scheduled_date: {
             $gte: previousMonthStart,
             $lte: previousMonthEnd
           }
@@ -115,6 +123,7 @@ const getPerformanceMetrics = async () => {
     ]),
     // Unpaid balance
     Customer.aggregate([
+      { $match: { companyId: companyId } },
       { $unwind: '$monthly_fees' },
       {
         $group: {
@@ -125,10 +134,11 @@ const getPerformanceMetrics = async () => {
     ]),
     // Previous month unpaid balance (simplified - using current data structure)
     Customer.aggregate([
+      { $match: { companyId: companyId } },
       { $unwind: '$monthly_fees' },
       {
         $match: {
-          'monthly_fees.month': { 
+          'monthly_fees.month': {
             $lt: currentMonthStart,
             $gte: previousMonthStart
           }
@@ -187,9 +197,9 @@ const getPerformanceMetrics = async () => {
 
 // ==================== LIVE OPERATIONS ====================
 
-const getLiveOperations = async () => {
+const getLiveOperations = async (companyId) => {
   const [routes, trucks] = await Promise.all([
-    Route.find()
+    Route.find({ companyId: companyId })
       .populate('assigned_truck', 'plate_number truckModel truckStatus')
       .populate('supervisor', 'full_name')
       .populate('streets', 'name')
@@ -202,9 +212,10 @@ const getLiveOperations = async () => {
       })
       .sort({ scheduled_date: -1 })
       .limit(10),
-    
-    Truck.find({ 
-      truckStatus: { $in: ['operational', 'maintenance', 'inactive'] } 
+
+    Truck.find({
+      companyId: companyId,
+      truckStatus: { $in: ['operational', 'maintenance', 'inactive'] }
     })
       .populate('assignment_history.route')
       .populate('assignment_history.team')
@@ -226,7 +237,7 @@ const getLiveOperations = async () => {
       const timeOnDuty = calculateTimeOnDuty(route.scheduled_date);
       
       // Calculate collections (mock data - replace with actual payment aggregation)
-      const collectionAmount = await calculateRouteCollections(route._id);
+      const collectionAmount = await calculateRouteCollections(route._id, companyId);
       
       operations.push({
         id: route._id.toString(),
@@ -320,10 +331,28 @@ const calculateTimeOnDuty = (scheduledDate) => {
   return `On duty ${diffMinutes}m`;
 };
 
-const calculateRouteCollections = async (routeId) => {
+const calculateRouteCollections = async (routeId, companyId) => {
   // This would aggregate payments from customers on the route's streets
-  // For now, return mock data
-  return Math.random() * 50000;
+  // For now, return mock data - in production calculate actual collections
+  try {
+    const collections = await Payment.aggregate([
+      {
+        $match: {
+          companyId: companyId,
+          route_id: routeId
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+    return collections[0]?.total || 0;
+  } catch (error) {
+    return 0;
+  }
 };
 
 const mapRouteStatus = (status) => {

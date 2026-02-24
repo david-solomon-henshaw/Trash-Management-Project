@@ -27,12 +27,13 @@ const createTruck = async (req, res) => {
   }
 
   try {
-    const existingTruck = await Truck.findOne({ plate_number: cleanPlate });
+    const existingTruck = await Truck.findOne({ plate_number: cleanPlate, companyId: req.user.companyId });
     if (existingTruck) {
       return res.status(409).json({ message: `Truck with plate number ${cleanPlate} already exists` });
     }
 
     const newTruck = new Truck({
+      companyId: req.user.companyId,
       plate_number: cleanPlate,
       truckModel: cleanModel,
       truckCapacity: cleanCapacity,
@@ -104,13 +105,14 @@ const assignRouteToTruck = async (req, res) => {
 
   try {
     // Check if truck exists
-    const truck = await Truck.findById(truck_id);
+    const truck = await Truck.findOne({ _id: truck_id, companyId: req.user.companyId });
     if (!truck) {
       return res.status(404).json({ message: 'Truck not found' });
     }
 
     // Create team
     const team = new Team({
+      companyId: req.user.companyId,
       team_members: team_members,
       assignment_date: parsedDate,
       created_by: req.user.id
@@ -119,6 +121,7 @@ const assignRouteToTruck = async (req, res) => {
 
     // Create route
     const route = new Route({
+      companyId: req.user.companyId,
       streets: street_ids,
       assigned_team: team._id,
       assigned_truck: truck_id,
@@ -158,7 +161,7 @@ const getAllTrucks = async (req, res) => {
   }
 
   try {
-    const trucks = await Truck.find()
+    const trucks = await Truck.find({ companyId: req.user.companyId })
       .select('plate_number truckModel truckCapacity truckStatus assignment_history');
 
     if (trucks.length === 0) {
@@ -191,9 +194,10 @@ const getActiveRoutes = async (req, res) => {
 
   try {
     // Find routes with active statuses
-    const activeRoutes = await Route.find({ 
-      status: { 
-        $in: ['in_progress', 'at_dumpsite', 'paused'] 
+    const activeRoutes = await Route.find({
+      companyId: req.user.companyId,
+      status: {
+        $in: ['in_progress', 'at_dumpsite', 'paused']
       }
     })
     .populate('assigned_truck', 'plate_number truckModel truckCapacity truckStatus')
@@ -287,7 +291,7 @@ const addMaintenanceRecord = async (req, res) => {
   }
 
   try {
-    const truck = await Truck.findById(truck_id);
+    const truck = await Truck.findOne({ _id: truck_id, companyId: req.user.companyId });
     if (!truck) {
       return res.status(404).json({ message: 'Truck not found' });
     }
@@ -332,7 +336,7 @@ const updateTruckStatus = async (req, res) => {
   }
 
   try {
-    const truck = await Truck.findById(truck_id);
+    const truck = await Truck.findOne({ _id: truck_id, companyId: req.user.companyId });
     if (!truck) {
       return res.status(404).json({ message: 'Truck not found' });
     }
@@ -372,7 +376,8 @@ const getAllSupervisorAssignments = async (req, res) => {
     currentDate.setHours(0, 0, 0, 0);
 
     // Find ALL assignments for this supervisor (today and future)
-    const assignments = await Route.find({ 
+    const assignments = await Route.find({
+      companyId: req.user.companyId,
       supervisor: supervisorId,
       scheduled_date: {
         $gte: currentDate // Get today and future assignments
@@ -451,7 +456,7 @@ const startAssignment = async (req, res) => {
   }
 
   try {
-    const assignment = await Route.findById(assignment_id);
+    const assignment = await Route.findOne({ _id: assignment_id, companyId: req.user.companyId });
     
     if (!assignment) {
       return res.status(404).json({ 
@@ -590,7 +595,7 @@ const updateRouteLocation = async (req, res) => {
   }
 
   try {
-    const route = await Route.findById(route_id);
+    const route = await Route.findOne({ _id: route_id, companyId: req.user.companyId });
     
     if (!route) {
       return res.status(404).json({ 
@@ -683,7 +688,8 @@ const getSupervisorInProgressAssignment = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     // Find today's in-progress assignment for this supervisor
-    const assignment = await Route.findOne({ 
+    const assignment = await Route.findOne({
+      companyId: req.user.companyId,
       supervisor: supervisorId,
       scheduled_date: {
         $gte: today,

@@ -11,11 +11,12 @@ const addStreet = async (req, res) => {
     return res.status(400).json({ message: 'Street name is required' });
   }
   try {
-    const existingStreet = await Street.findOne({ name: streetName.trim() });
+    const existingStreet = await Street.findOne({ name: streetName.trim(), companyId: req.user.companyId });
     if (existingStreet) {
       return res.status(400).json({ message: 'Street name already exists' });
     }
     const street = new Street({
+      companyId: req.user.companyId,
       name: streetName.trim(),
       details: details?.trim() || '',
     });
@@ -39,7 +40,7 @@ const addStreet = async (req, res) => {
 // Existing function - Updated to match frontend expectations
 const getAllStreets = async (req, res) => {
   try {
-    const streets = await Street.find().sort({ createdAt: -1 }); // Sort by newest first
+    const streets = await Street.find({ companyId: req.user.companyId }).sort({ createdAt: -1 }); // Sort by newest first
     
     // Transform data to match frontend expectations
     const transformedStreets = streets.map(street => ({
@@ -64,8 +65,8 @@ const getAllStreets = async (req, res) => {
 const getStreetById = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const street = await Street.findById(id);
+
+    const street = await Street.findOne({ _id: id, companyId: req.user.companyId });
     
     if (!street) {
       return res.status(404).json({ message: 'Street not found' });
@@ -112,15 +113,16 @@ const updateStreet = async (req, res) => {
     }
     
     // Check if street exists
-    const street = await Street.findById(id);
+    const street = await Street.findOne({ _id: id, companyId: req.user.companyId });
     if (!street) {
       return res.status(404).json({ message: 'Street not found' });
     }
-    
+
     // Check if new name already exists (if name is being changed)
     if (streetName.trim().toLowerCase() !== street.name.toLowerCase()) {
-      const existingStreet = await Street.findOne({ 
+      const existingStreet = await Street.findOne({
         name: streetName.trim(),
+        companyId: req.user.companyId,
         _id: { $ne: id } // Exclude current street from check
       });
       
@@ -167,8 +169,8 @@ const deleteStreet = async (req, res) => {
   
   try {
     const { id } = req.params;
-    
-    const street = await Street.findById(id);
+
+    const street = await Street.findOne({ _id: id, companyId: req.user.companyId });
     
     if (!street) {
       return res.status(404).json({ message: 'Street not found' });

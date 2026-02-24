@@ -41,7 +41,7 @@ const createPayment = async (req, res) => {
     }
 
     // Verify customer exists
-    const customer = await Customer.findById(customer_id)
+    const customer = await Customer.findOne({ _id: customer_id, companyId: req.user.companyId })
       .populate('apartment_type commercial_subtype institutional_subtype') // Add institutional_subtype
       .session(session);
 
@@ -77,6 +77,7 @@ const createPayment = async (req, res) => {
     }
     // CHECK 1: Prevent duplicate payments (same customer, same month, same amount, within 5 minutes)
     const recentDuplicate = await Payment.findOne({
+      companyId: req.user.companyId,
       customer_id,
       month: paymentMonth,
       amount: paymentAmount,
@@ -139,6 +140,7 @@ const createPayment = async (req, res) => {
 
     // Create the payment object
     const paymentData = {
+      companyId: req.user.companyId,
       customer_id,
       amount: paymentAmount,
       payment_status,
@@ -549,7 +551,7 @@ const getAllPayments = async (req, res) => {
       verified
     } = req.query;
 
-    const filter = {};
+    const filter = { companyId: req.user.companyId };
 
     // Build filter object
     if (customer_id) filter.customer_id = customer_id;
@@ -602,12 +604,14 @@ const getPaymentsByMonth = async (req, res) => {
   try {
     const { month } = req.params; // Format: YYYY-MM
     const { page = 1, limit = 50 } = req.query;
+    const companyId = req.user.companyId;
 
     const [year, monthNum] = month.split('-').map(Number);
     const monthStart = new Date(year, monthNum - 1, 1);
     const monthEnd = new Date(year, monthNum, 1);
 
     const payments = await Payment.find({
+      companyId: companyId,
       month: { $gte: monthStart, $lt: monthEnd }
     })
       .populate('customer_id', 'name phone address house_number')
@@ -618,6 +622,7 @@ const getPaymentsByMonth = async (req, res) => {
       .skip((page - 1) * limit);
 
     const total = await Payment.countDocuments({
+      companyId: companyId,
       month: { $gte: monthStart, $lt: monthEnd }
     });
 
@@ -625,6 +630,7 @@ const getPaymentsByMonth = async (req, res) => {
     const summary = await Payment.aggregate([
       {
         $match: {
+          companyId: companyId,
           month: { $gte: monthStart, $lt: monthEnd },
           payment_status: 'paid'
         }
@@ -763,12 +769,14 @@ const updatePayment = async (req, res) => {
 const getTodayCollections = async (req, res) => {
   try {
     const supervisorId = req.user.id;
+    const companyId = req.user.companyId;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const collections = await Payment.aggregate([
       {
         $match: {
+          companyId: companyId,
           agent_id: new mongoose.Types.ObjectId(supervisorId),
           payment_date: { $gte: today },
           payment_status: 'paid'

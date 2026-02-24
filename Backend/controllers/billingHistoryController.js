@@ -6,19 +6,20 @@ const mongoose = require('mongoose');
 const searchCustomers = async (req, res) => {
   try {
     const { query } = req.query;
+    const companyId = req.user.companyId;
 
     if (query === undefined || query === null) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Search query parameter is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Search query parameter is required'
       });
     }
 
     let customers;
-    
+
     if (query.trim() === '') {
-      // If query is empty string, return all customers
-      customers = await Customer.find()
+      // If query is empty string, return all customers for this company
+      customers = await Customer.find({ companyId: companyId })
         .populate('street', 'name')
         .populate('apartment_type', 'name base_fee')
         .populate('commercial_subtype', 'name base_fee')
@@ -30,6 +31,7 @@ const searchCustomers = async (req, res) => {
       const searchRegex = new RegExp(query, 'i');
 
       customers = await Customer.find({
+        companyId: companyId,
         $or: [
           { name: searchRegex },
           { phone: searchRegex },
@@ -90,9 +92,13 @@ const getCustomerBillingHistory = async (req, res) => {
   try {
     const { customerId } = req.params;
     const { months = 12 } = req.query; // Default to last 12 months
+    const companyId = req.user.companyId;
 
-    // Get customer details
-    const customer = await Customer.findById(customerId)
+    // Get customer details and verify ownership
+    const customer = await Customer.findOne({
+      _id: customerId,
+      companyId: companyId
+    })
       .populate('street', 'name')
       .populate('apartment_type', 'name base_fee')
       .populate('commercial_subtype', 'name base_fee')
@@ -111,7 +117,8 @@ const getCustomerBillingHistory = async (req, res) => {
     startDate.setMonth(startDate.getMonth() - parseInt(months));
 
     // Get all payments for this customer within date range
-    const payments = await Payment.find({ 
+    const payments = await Payment.find({
+      companyId: companyId,
       customer_id: customerId,
       payment_date: { $gte: startDate, $lte: endDate }
     })
@@ -121,12 +128,13 @@ const getCustomerBillingHistory = async (req, res) => {
 
     // Calculate summary statistics
     const totalPaidResult = await Payment.aggregate([
-      { 
-        $match: { 
-          customer_id: new mongoose.Types.ObjectId(customerId), 
+      {
+        $match: {
+          companyId: companyId,
+          customer_id: new mongoose.Types.ObjectId(customerId),
           payment_status: 'paid',
           payment_date: { $gte: startDate, $lte: endDate }
-        } 
+        }
       },
       { 
         $group: { 
@@ -137,12 +145,13 @@ const getCustomerBillingHistory = async (req, res) => {
     ]);
 
     const pendingPaymentsResult = await Payment.aggregate([
-      { 
-        $match: { 
-          customer_id: new mongoose.Types.ObjectId(customerId), 
+      {
+        $match: {
+          companyId: companyId,
+          customer_id: new mongoose.Types.ObjectId(customerId),
           payment_status: 'pending',
           payment_date: { $gte: startDate, $lte: endDate }
-        } 
+        }
       },
       { 
         $group: { 
@@ -199,6 +208,7 @@ const getCustomerBillingHistory = async (req, res) => {
     const paymentMethodBreakdown = await Payment.aggregate([
       {
         $match: {
+          companyId: companyId,
           customer_id: new mongoose.Types.ObjectId(customerId),
           payment_status: 'paid',
           payment_date: { $gte: startDate, $lte: endDate }
@@ -217,6 +227,7 @@ const getCustomerBillingHistory = async (req, res) => {
     const monthlyTrend = await Payment.aggregate([
       {
         $match: {
+          companyId: companyId,
           customer_id: new mongoose.Types.ObjectId(customerId),
           payment_status: 'paid',
           payment_date: { $gte: startDate, $lte: endDate }
@@ -309,8 +320,12 @@ const getCustomerBillingHistory = async (req, res) => {
 const getPaymentDetails = async (req, res) => {
   try {
     const { paymentId } = req.params;
+    const companyId = req.user.companyId;
 
-    const payment = await Payment.findById(paymentId)
+    const payment = await Payment.findOne({
+      _id: paymentId,
+      companyId: companyId
+    })
       .populate('customer_id', 'name phone email address house_number')
       .populate('agent_id', 'full_name username tel')
       .populate('verified_by', 'full_name username')
@@ -350,8 +365,9 @@ const getPaymentDetails = async (req, res) => {
 const getBillingOverview = async (req, res) => {
   try {
     const { page = 1, limit = 20, status, customer_type } = req.query;
+    const companyId = req.user.companyId;
 
-    const filter = {};
+    const filter = { companyId: companyId };
     if (status) filter.status = status;
     if (customer_type) filter.customer_type = customer_type;
 
@@ -381,6 +397,7 @@ const getBillingOverview = async (req, res) => {
         threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
         const recentPayments = await Payment.find({
+          companyId: companyId,
           customer_id: customer._id,
           payment_date: { $gte: threeMonthsAgo },
           payment_status: 'paid'
@@ -391,6 +408,7 @@ const getBillingOverview = async (req, res) => {
         const totalPaid = await Payment.aggregate([
           {
             $match: {
+              companyId: companyId,
               customer_id: customer._id,
               payment_status: 'paid'
             }
@@ -465,6 +483,7 @@ const getBillingOverview = async (req, res) => {
 const getOverdueAccounts = async (req, res) => {
   try {
     const { months = 3 } = req.query; // Default to 3 months overdue
+    const companyId = req.user.companyId;
 
     const cutoffDate = new Date();
     cutoffDate.setMonth(cutoffDate.getMonth() - parseInt(months));
@@ -472,7 +491,10 @@ const getOverdueAccounts = async (req, res) => {
     // Find customers with unpaid balances from previous months
     const overdueCustomers = await Customer.aggregate([
       {
-        $match: { status: 'active' }
+        $match: {
+          companyId: companyId,
+          status: 'active'
+        }
       },
       {
         $unwind: '$monthly_fees'
@@ -535,14 +557,21 @@ const getOverdueAccounts = async (req, res) => {
 const generateBillingReport = async (req, res) => {
   try {
     const { start_date, end_date, customer_type, format = 'json' } = req.query;
+    const companyId = req.user.companyId;
 
     const startDate = start_date ? new Date(start_date) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const endDate = end_date ? new Date(end_date) : new Date();
 
-    const filter = { payment_date: { $gte: startDate, $lte: endDate } };
+    const filter = {
+      companyId: companyId,
+      payment_date: { $gte: startDate, $lte: endDate }
+    };
     if (customer_type) {
       // Get customers of specified type first
-      const customers = await Customer.find({ customer_type }).select('_id');
+      const customers = await Customer.find({
+        companyId: companyId,
+        customer_type
+      }).select('_id');
       filter.customer_id = { $in: customers.map(c => c._id) };
     }
 

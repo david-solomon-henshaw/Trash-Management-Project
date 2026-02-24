@@ -3,7 +3,7 @@ const CommercialSubtype = require('../models/commercial');
 // Fetch all commercial subtypes
 const getAllCommercialSubtypes = async (req, res) => {
   try {
-    const commercialSubtypes = await CommercialSubtype.find().sort({ created_at: -1 });
+    const commercialSubtypes = await CommercialSubtype.find({ companyId: req.user.companyId }).sort({ created_at: -1 });
 
     const transformedSubtypes = commercialSubtypes.map(subtype => ({
       _id: subtype._id,
@@ -27,7 +27,7 @@ const getAllCommercialSubtypes = async (req, res) => {
 const getCommercialSubtypeById = async (req, res) => {
   try {
     const { id } = req.params;
-    const commercialSubtype = await CommercialSubtype.findById(id);
+    const commercialSubtype = await CommercialSubtype.findOne({ _id: id, companyId: req.user.companyId });
 
     if (!commercialSubtype) {
       return res.status(404).json({ message: 'Commercial subtype not found' });
@@ -66,12 +66,13 @@ const createCommercialSubtype = async (req, res) => {
   }
 
   try {
-    const existingSubtype = await CommercialSubtype.findOne({ name: name.trim() });
+    const existingSubtype = await CommercialSubtype.findOne({ name: name.trim(), companyId: req.user.companyId });
     if (existingSubtype) {
       return res.status(400).json({ message: 'Commercial subtype name already exists' });
     }
 
     const commercialSubtype = new CommercialSubtype({
+      companyId: req.user.companyId,
       name: name.trim(),
       base_fee,
     });

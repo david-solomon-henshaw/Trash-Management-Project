@@ -3,7 +3,7 @@ const ApartmentType = require('../models/apartment');
 // Fetch all apartment types
 const getAllApartmentTypes = async (req, res) => {
   try {
-    const apartmentTypes = await ApartmentType.find().sort({ created_at: -1 });
+    const apartmentTypes = await ApartmentType.find({ companyId: req.user.companyId }).sort({ created_at: -1 });
     const transformedApartmentTypes = apartmentTypes.map(apartmentType => ({
       _id: apartmentType._id,
       name: apartmentType.name,
@@ -25,7 +25,7 @@ const getAllApartmentTypes = async (req, res) => {
 const getApartmentTypeById = async (req, res) => {
   try {
     const { id } = req.params;
-    const apartmentType = await ApartmentType.findById(id);
+    const apartmentType = await ApartmentType.findOne({ _id: id, companyId: req.user.companyId });
     if (!apartmentType) {
       return res.status(404).json({ message: 'Apartment type not found' });
     }
@@ -61,7 +61,7 @@ const createApartmentType = async (req, res) => {
   }
 
   try {
-    const existingApartmentType = await ApartmentType.findOne({ name: name.trim() });
+    const existingApartmentType = await ApartmentType.findOne({ name: name.trim(), companyId: req.user.companyId });
     if (existingApartmentType) {
       return res.status(400).json({ message: 'Apartment type name already exists' });
     }
@@ -69,6 +69,7 @@ const createApartmentType = async (req, res) => {
     const apartmentType = new ApartmentType({
       name: name.trim(),
       base_fee,
+      companyId: req.user.companyId
     });
 
     await apartmentType.save();

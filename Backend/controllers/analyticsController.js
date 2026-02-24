@@ -8,6 +8,7 @@ const Staff = require('../models/staff');
 
 const getDashboardMetrics = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     // Get current month dates
     const currentMonth = new Date();
     const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -25,6 +26,7 @@ const getDashboardMetrics = async (req, res) => {
       Payment.aggregate([
         {
           $match: {
+            companyId: companyId,
             payment_status: 'paid',
             payment_date: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
           }
@@ -38,12 +40,13 @@ const getDashboardMetrics = async (req, res) => {
       ]),
 
       // 2. Active Customers Count
-      Customer.countDocuments({ status: 'active' }),
+      Customer.countDocuments({ companyId: companyId, status: 'active' }),
 
       // 3. Route Completion Rate (from Routes)
       Route.aggregate([
         {
           $match: {
+            companyId: companyId,
             scheduled_date: { $gte: firstDayOfMonth, $lte: lastDayOfMonth }
           }
         },
@@ -60,7 +63,7 @@ const getDashboardMetrics = async (req, res) => {
 
       Customer.aggregate([
         {
-          $match: { status: 'active' }
+          $match: { companyId: companyId, status: 'active' }
         },
         {
           $unwind: { path: '$monthly_fees', preserveNullAndEmptyArrays: true }
@@ -83,6 +86,7 @@ const getDashboardMetrics = async (req, res) => {
 
       // 5. Active Routes Count
       Route.countDocuments({
+        companyId: companyId,
         status: { $in: ['in_progress', 'paused', 'at_dumpsite'] }
       })
     ]);
@@ -120,7 +124,9 @@ const getDashboardMetrics = async (req, res) => {
 
 const getLiveOperations = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     const liveOperations = await Route.find({
+      companyId: companyId,
       status: { $in: ['in_progress', 'paused', 'at_dumpsite', 'scheduled'] }
     })
       .populate('assigned_truck')
@@ -134,6 +140,7 @@ const getLiveOperations = async (req, res) => {
       liveOperations.map(async (route) => {
         // Calculate completed services for this route
         const completedServices = await Service.countDocuments({
+          companyId: companyId,
           route: route._id,
           service_status: 'serviced'
         });
@@ -156,6 +163,11 @@ const getLiveOperations = async (req, res) => {
 
         // Calculate collections for this route
         const routeCollections = await Payment.aggregate([
+          {
+            $match: {
+              companyId: companyId
+            }
+          },
           {
             $lookup: {
               from: 'services',
@@ -217,6 +229,7 @@ const getLiveOperations = async (req, res) => {
 
 const getCustomerOverview = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     const [
       totalCustomers,
       activeCustomers,
@@ -225,12 +238,12 @@ const getCustomerOverview = async (req, res) => {
       commercialCount,
       institutionalCount
     ] = await Promise.all([
-      Customer.countDocuments(),
-      Customer.countDocuments({ status: 'active' }),
-      Customer.countDocuments({ status: 'non-active' }),
-      Customer.countDocuments({ customer_type: 'residential' }),
-      Customer.countDocuments({ customer_type: 'commercial' }),
-      Customer.countDocuments({ customer_type: 'institutional' })
+      Customer.countDocuments({ companyId: companyId }),
+      Customer.countDocuments({ companyId: companyId, status: 'active' }),
+      Customer.countDocuments({ companyId: companyId, status: 'non-active' }),
+      Customer.countDocuments({ companyId: companyId, customer_type: 'residential' }),
+      Customer.countDocuments({ companyId: companyId, customer_type: 'commercial' }),
+      Customer.countDocuments({ companyId: companyId, customer_type: 'institutional' })
     ]);
 
     res.json({
@@ -251,12 +264,14 @@ const getCustomerOverview = async (req, res) => {
 
 const getRevenueTrend = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
     const revenueTrend = await Payment.aggregate([
       {
         $match: {
+          companyId: companyId,
           payment_status: 'paid',
           payment_date: { $gte: sixMonthsAgo }
         }
@@ -304,9 +319,13 @@ const getRevenueTrend = async (req, res) => {
 
 const getAgentPerformance = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     const agentPerformance = await Payment.aggregate([
       {
-        $match: { payment_status: 'paid' }
+        $match: {
+          companyId: companyId,
+          payment_status: 'paid'
+        }
       },
       {
         $group: {
@@ -356,12 +375,14 @@ const getAgentPerformance = async (req, res) => {
 
 const getRouteAnalytics = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     const currentMonth = new Date();
     const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
 
     const routeStats = await Route.aggregate([
       {
         $match: {
+          companyId: companyId,
           scheduled_date: { $gte: firstDayOfMonth }
         }
       },
@@ -405,12 +426,14 @@ const getRouteAnalytics = async (req, res) => {
 
 const getCustomerGrowth = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
     const customers = await Customer.aggregate([
       {
         $match: {
+          companyId: companyId,
           created_at: { $gte: sixMonthsAgo }
         }
       },

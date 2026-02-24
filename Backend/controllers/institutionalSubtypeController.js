@@ -3,7 +3,7 @@ const InstitutionalSubtype = require('../models/institutional');
 // Fetch all institutional subtypes
 const getAllInstitutionalSubtypes = async (req, res) => {
   try {
-    const institutionalSubtypes = await InstitutionalSubtype.find().sort({ created_at: -1 });
+    const institutionalSubtypes = await InstitutionalSubtype.find({ companyId: req.user.companyId }).sort({ created_at: -1 });
     const transformedInstitutionalSubtypes = institutionalSubtypes.map(institutionalSubtype => ({
       _id: institutionalSubtype._id,
       name: institutionalSubtype.name,
@@ -25,7 +25,7 @@ const getAllInstitutionalSubtypes = async (req, res) => {
 const getInstitutionalSubtypeById = async (req, res) => {
   try {
     const { id } = req.params;
-    const institutionalSubtype = await InstitutionalSubtype.findById(id);
+    const institutionalSubtype = await InstitutionalSubtype.findOne({ _id: id, companyId: req.user.companyId });
     if (!institutionalSubtype) {
       return res.status(404).json({ message: 'Institutional subtype not found' });
     }
@@ -61,12 +61,13 @@ const createInstitutionalSubtype = async (req, res) => {
   }
 
   try {
-    const existingInstitutionalSubtype = await InstitutionalSubtype.findOne({ name: name.trim() });
+    const existingInstitutionalSubtype = await InstitutionalSubtype.findOne({ name: name.trim(), companyId: req.user.companyId });
     if (existingInstitutionalSubtype) {
       return res.status(400).json({ message: 'Institutional subtype name already exists' });
     }
 
     const institutionalSubtype = new InstitutionalSubtype({
+      companyId: req.user.companyId,
       name: name.trim(),
       base_fee,
     });
@@ -103,15 +104,16 @@ const updateInstitutionalSubtype = async (req, res) => {
   }
 
   try {
-    const institutionalSubtype = await InstitutionalSubtype.findById(id);
+    const institutionalSubtype = await InstitutionalSubtype.findOne({ _id: id, companyId: req.user.companyId });
     if (!institutionalSubtype) {
       return res.status(404).json({ message: 'Institutional subtype not found' });
     }
 
     // Check if name already exists (excluding current document)
-    const existingInstitutionalSubtype = await InstitutionalSubtype.findOne({ 
-      name: name.trim(), 
-      _id: { $ne: id } 
+    const existingInstitutionalSubtype = await InstitutionalSubtype.findOne({
+      name: name.trim(),
+      companyId: req.user.companyId,
+      _id: { $ne: id }
     });
     if (existingInstitutionalSubtype) {
       return res.status(400).json({ message: 'Institutional subtype name already exists' });
@@ -151,7 +153,7 @@ const deleteInstitutionalSubtype = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const institutionalSubtype = await InstitutionalSubtype.findByIdAndDelete(id);
+    const institutionalSubtype = await InstitutionalSubtype.findOneAndDelete({ _id: id, companyId: req.user.companyId });
     if (!institutionalSubtype) {
       return res.status(404).json({ message: 'Institutional subtype not found' });
     }

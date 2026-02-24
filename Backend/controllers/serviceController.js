@@ -40,25 +40,26 @@ const createService = async (req, res) => {
     }
 
     // Check if customer exists
-    const customerExists = await Customer.findById(customer);
+    const customerExists = await Customer.findOne({ _id: customer, companyId: req.user.companyId });
     if (!customerExists) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
     // Check if route exists
-    const routeExists = await Route.findById(route);
+    const routeExists = await Route.findOne({ _id: route, companyId: req.user.companyId });
     if (!routeExists) {
       return res.status(404).json({ message: 'Route not found' });
     }
 
     // Check if supervisor exists and has correct role
-    const supervisorExists = await Staff.findById(supervisor);
+    const supervisorExists = await Staff.findOne({ _id: supervisor, companyId: req.user.companyId });
     if (!supervisorExists) {
       return res.status(404).json({ message: 'Supervisor not found' });
     }
 
     // Check for duplicate service (same customer, same month)
     const existingService = await Service.findOne({
+      companyId: req.user.companyId,
       customer,
       service_month: new Date(service_month)
     });
@@ -71,6 +72,7 @@ const createService = async (req, res) => {
 
     // Create service record
     const service = new Service({
+      companyId: req.user.companyId,
       customer,
       route,
       supervisor,
@@ -161,6 +163,8 @@ const getAllServices = async (req, res) => {
       if (end_date) filter.service_date.$lte = new Date(end_date);
     }
 
+    filter.companyId = req.user.companyId;
+
     const services = await Service.find(filter)
       .populate('customer', 'name phone address house_number')
       .populate('route', 'name')
@@ -194,7 +198,7 @@ const getServiceById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const service = await Service.findById(id)
+    const service = await Service.findOne({ _id: id, companyId: req.user.companyId })
       .populate('customer', 'name phone address house_number')
       .populate('route', 'name')
       .populate('supervisor', 'full_name');
@@ -224,19 +228,19 @@ const getServicesByCustomer = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
 
     // Check if customer exists
-    const customer = await Customer.findById(customerId);
+    const customer = await Customer.findOne({ _id: customerId, companyId: req.user.companyId });
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    const services = await Service.find({ customer: customerId })
+    const services = await Service.find({ companyId: req.user.companyId, customer: customerId })
       .populate('route', 'name')
       .populate('supervisor', 'full_name')
       .sort({ service_date: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const total = await Service.countDocuments({ customer: customerId });
+    const total = await Service.countDocuments({ companyId: req.user.companyId, customer: customerId });
 
     return res.status(200).json({
       message: services.length === 0 ? 'No services found for this customer' : 'Customer services retrieved successfully',
@@ -269,7 +273,7 @@ const getServicesByRoute = async (req, res) => {
     const { routeId } = req.params;
     const { service_date, page = 1, limit = 50 } = req.query;
 
-    const filter = { route: routeId };
+    const filter = { companyId: req.user.companyId, route: routeId };
     if (service_date) {
       filter.service_date = new Date(service_date);
     }
@@ -312,7 +316,7 @@ const updateService = async (req, res) => {
       service_status
     } = req.body;
 
-    const service = await Service.findById(id);
+    const service = await Service.findOne({ _id: id, companyId: req.user.companyId });
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
     }
@@ -444,12 +448,12 @@ const deleteService = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const service = await Service.findById(id);
+    const service = await Service.findOne({ _id: id, companyId: req.user.companyId });
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
     }
 
-    await Service.findByIdAndDelete(id);
+    await Service.findOneAndDelete({ _id: id, companyId: req.user.companyId });
 
     return res.status(200).json({
       message: 'Service deleted successfully',
