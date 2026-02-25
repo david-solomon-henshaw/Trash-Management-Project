@@ -44,7 +44,7 @@ export default function Index() {
                     role: decoded.user.role,
                     full_name: decoded.user.full_name,
                     companyId: decoded.user.companyId,
-                    companyName: decoded.user.CompanyName
+                    companyName: decoded.user.companyName
                 }));
 
             } catch (decodeError) {

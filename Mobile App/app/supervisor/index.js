@@ -310,12 +310,12 @@ export default function SupervisorHome() {
       assignmentDate.setHours(0, 0, 0, 0);
       
       // console.log(`Assignment ${index + 1}:`, {
-        date: assignment.scheduled_date,
-        formattedDate: formatDate(assignment.scheduled_date),
-        status: assignment.status,
-        isToday: assignmentDate.getTime() === today.getTime(),
-        canStart: assignment.status === 'scheduled' && assignmentDate.getTime() === today.getTime()
-      });
+      //   date: assignment.scheduled_date,
+      //   formattedDate: formatDate(assignment.scheduled_date),
+      //   status: assignment.status,
+      //   isToday: assignmentDate.getTime() === today.getTime(),
+      //   canStart: assignment.status === 'scheduled' && assignmentDate.getTime() === today.getTime()
+      // });
     });
   }
 

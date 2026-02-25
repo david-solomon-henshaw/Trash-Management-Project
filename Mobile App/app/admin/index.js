@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSelector } from 'react-redux';
 import LiveOperationModal from '../../components/LiveOperationModal';
 import appClient from '../../hooks/services/client';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -28,13 +29,16 @@ const cardWidth = (width - 32 - 40 - cardGap) / 2; // 32px scrollContent padding
 
 export default function HomeScreen() {
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
   const [metrics, setMetrics] = useState(null);
   const [liveOperations, setLiveOperations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState(null);
   const [showOperationModal, setShowOperationModal] = useState(false);
-
+ 
+  console.log(user);
+  
   const getStatusColor = (status) => {
     switch (status) {
       case 'in_progress': return '#10b981';
@@ -336,8 +340,12 @@ export default function HomeScreen() {
                 </LinearGradient>
                 <Text style={styles.logoText}>CleanHaul</Text>
               </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>DASHBOARD</Text>
+              <View style={styles.userInfoRight}>
+                {user?.companyName && (
+                  <Text style={styles.companyName}>{user.companyName}</Text>
+                )}
+                <Text style={styles.roleText}>{user?.role?.toUpperCase() || 'ADMIN'}</Text>
+                <Text style={styles.staffName}>{user?.full_name || 'User'}</Text>
               </View>
             </View>
 
@@ -500,17 +508,45 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(22,160,133,0.2)',
   },
+  badge: {
+    backgroundColor: 'rgba(22,160,133,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(22,160,133,0.2)',
+  },
   badgeText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#16A085',
     letterSpacing: 0.5,
   },
+  companyName: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#16A085',
+  },
+  staffName: {
+    fontSize: 11,
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+  userInfoRight: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
   headline: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1f2937',
     letterSpacing: -0.3,
+    marginTop: 12,
   },
   sectionCard: {
     backgroundColor: 'white',

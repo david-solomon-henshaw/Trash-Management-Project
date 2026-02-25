@@ -119,6 +119,8 @@ const createStaff = async (req, res) => {
             companyName: existingCompany.name
           }
         }
+
+     
  
         jwt.sign(
           payload,
