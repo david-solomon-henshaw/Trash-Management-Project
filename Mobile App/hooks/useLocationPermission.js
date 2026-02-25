@@ -57,7 +57,7 @@ export const useLocationPermission = () => {
             accuracy: Location.Accuracy.Balanced,
           });
         } catch (locationError) {
-          console.log('Location fetch test:', locationError);
+          // console.log('Location fetch test:', locationError);
         }
       }
       

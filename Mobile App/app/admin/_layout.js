@@ -5,7 +5,7 @@ export default function CeoTabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#16A085', // EcoHaul green
+        tabBarActiveTintColor: '#16A085', // Clean Haul green
         tabBarInactiveTintColor: '#4B5563',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',

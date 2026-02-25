@@ -325,6 +325,7 @@ const updateTruckStatus = async (req, res) => {
     return res.status(403).json({ message: 'Only Admin can update truck status' });
   }
 
+  // console.log('Received update request:', req.body);
   const { truck_id, truckStatus } = req.body;
 
   if (!truck_id || !truckStatus) {
@@ -735,7 +736,7 @@ const getSupervisorInProgressAssignment = async (req, res) => {
 // Add this function to your truckController.js
 // In truckController.js - Fix the updateAssignmentStatus function
 const updateAssignmentStatus = async (req, res) => {
-  console.log('Received update request:', req.body);
+  // console.log('Received update request:', req.body);
   
   try {
     const { assignment_id, status, notes, location } = req.body;
@@ -776,8 +777,8 @@ const updateAssignmentStatus = async (req, res) => {
       });
     }
 
-    console.log('Current assignment status:', assignment.status);
-    console.log('Requested status:', status);
+    // console.log('Current assignment status:', assignment.status);
+    // console.log('Requested status:', status);
 
     // Check authorization
     if (assignment.supervisor.toString() !== supervisor_id) {
@@ -804,7 +805,7 @@ const updateAssignmentStatus = async (req, res) => {
 
     // CORRECTED: Checkpoint type function
     const getCheckpointType = (currentStatus, newStatus) => {
-      console.log('Determining checkpoint type:', { currentStatus, newStatus });
+      // console.log('Determining checkpoint type:', { currentStatus, newStatus });
       
       // Resume from paused
       if (currentStatus === 'paused' && newStatus === 'in_progress') {
@@ -842,7 +843,7 @@ const updateAssignmentStatus = async (req, res) => {
       location: location || null
     };
 
-    console.log('Created checkpoint:', checkpoint);
+    // console.log('Created checkpoint:', checkpoint);
 
     // Initialize assignment_lifecycle if needed
     if (!assignment.assignment_lifecycle) {
@@ -863,7 +864,7 @@ const updateAssignmentStatus = async (req, res) => {
     if (status === 'in_progress' && oldStatus === 'paused') {
       // Resuming from pause
       assignment.assignment_lifecycle.resumed_at = new Date();
-      console.log('Setting resumed_at timestamp');
+      // console.log('Setting resumed_at timestamp');
     } else if (status === 'in_progress' && oldStatus === 'scheduled') {
       // Starting fresh
       assignment.assignment_lifecycle.started_at = new Date();
@@ -888,7 +889,7 @@ const updateAssignmentStatus = async (req, res) => {
     }
 
     await assignment.save();
-    console.log('Assignment saved successfully');
+    // console.log('Assignment saved successfully');
 
     // Return updated assignment
     const updatedAssignment = await Route.findById(assignment_id)

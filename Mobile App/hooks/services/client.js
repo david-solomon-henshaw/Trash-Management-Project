@@ -1,10 +1,14 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
+
+// Safely pull the value from your app config
+const API_URL = Constants.expoConfig?.extra?.API_URL;
+
 
 const apiClient = axios.create({
-  // REPLACE 192.168.1.XX with your computer's actual IP address
-  // Use 'http' not 'https' for local dev unless you have a certificate
-  baseURL: process.env.EXPO_PUBLIC_API_URL, 
+ 
+  baseURL: API_URL, 
   timeout: 10000,
 });
 
@@ -30,7 +34,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response && error.response.status === 401) {
       // Logic to redirect to Login or Refresh Token lives here
-      console.log("Token expired or unauthorized");
+      // console.log("Token expired or unauthorized");
     }
     return Promise.reject(error);
   }

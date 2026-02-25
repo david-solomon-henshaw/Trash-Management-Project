@@ -84,7 +84,7 @@ const createStaff = async (req, res) => {
 
   const loginStaff = async (req, res) => {
 
-    console.log('login route inititted from mobile app ')
+    // console.log('login route inititted from mobile app ')
 
     try {
       // accepting the user details 
@@ -103,6 +103,8 @@ const createStaff = async (req, res) => {
         return res.status(401).send('User does not exist or email is Incorrect')
       }
 
+      const existingCompany = await Company.findById(existingStaff.companyId)
+
       const compare = await bcrypt.compare(password, existingStaff.password)
 
       if (compare === true) {
@@ -112,20 +114,24 @@ const createStaff = async (req, res) => {
             id: existingStaff.id,
             role: existingStaff.role,
             full_name: existingStaff.full_name,
-            companyId: existingStaff.companyId
+            companyId: existingStaff.companyId,
+            companySubStatus: existingCompany.subscription_status,
+            companyName: existingCompany.name
           }
         }
-
+ 
         jwt.sign(
           payload,
           process.env.JWT_SECRET,
           { expiresIn: '1d' },
           (error, token) => {
-            if (error) { return res.status(400).send(error) }
+            if (error) { return res.status(400).json(error) }
             return res.status(200).json({ token, role: existingStaff.role })
           }
 
         )
+
+   
 
       } else {
         return res.status(400).send('Incorrect Password')

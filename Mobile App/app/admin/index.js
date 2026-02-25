@@ -11,14 +11,20 @@ import {
   Dimensions,
   RefreshControl,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import LiveOperationModal from '../../components/LiveOperationModal'; // Import the modal
-import appClient from '../../hooks/services/client'
+import LiveOperationModal from '../../components/LiveOperationModal';
+import appClient from '../../hooks/services/client';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+
 const { width } = Dimensions.get('window');
+const cardGap = 12;
+const cardWidth = (width - 32 - 40 - cardGap) / 2; // 32px scrollContent padding + 40px sectionCard padding (20 * 2)
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -29,7 +35,6 @@ export default function HomeScreen() {
   const [selectedOperation, setSelectedOperation] = useState(null);
   const [showOperationModal, setShowOperationModal] = useState(false);
 
-  // Simple status formatting
   const getStatusColor = (status) => {
     switch (status) {
       case 'in_progress': return '#10b981';
@@ -48,37 +53,30 @@ export default function HomeScreen() {
     }
   };
 
-  // Check authentication
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
         return false;
       }
       return true;
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
       return false;
     }
   };
 
-  // Fetch real data from backend
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
       const isAuthenticated = await checkAuth();
       if (!isAuthenticated) return;
 
-    
-      // Fetch active routes
-      const activeRoutesResponse = await appClient.get(`/trucks/active-routes`
-      );
+      const activeRoutesResponse = await appClient.get(`/trucks/active-routes`);
 
       if (activeRoutesResponse.data.success) {
-        // Add status colors and icons to the backend data
         const formattedRoutes = activeRoutesResponse.data.routes.map(route => ({
           ...route,
           statusColor: getStatusColor(route.status),
@@ -86,11 +84,9 @@ export default function HomeScreen() {
         }));
         setLiveOperations(formattedRoutes);
       } else {
-        console.error('Failed to fetch active routes:', activeRoutesResponse.data.message);
         setLiveOperations([]);
       }
 
-      // Set metrics to zero values for now
       setMetrics({
         monthlyRevenue: '₦0',
         activeCustomers: 0,
@@ -102,11 +98,9 @@ export default function HomeScreen() {
         balanceChange: '+0%',
         activeRoutes: activeRoutesResponse.data.routes?.length || 0
       });
-      
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       Alert.alert('Error', 'Failed to load dashboard data');
-      // Fallback to empty data
       setLiveOperations([]);
       setMetrics({
         monthlyRevenue: '₦0',
@@ -146,11 +140,8 @@ export default function HomeScreen() {
 
   const handleViewFullDetails = () => {
     handleCloseModal();
-    // You can add navigation to detailed view here if needed
-    // router.push(`/admin/operations/route/${selectedOperation.id}`);
   };
 
-  // Quick actions (unchanged)
   const quickActions = [
     {
       id: 'live-operations',
@@ -176,137 +167,128 @@ export default function HomeScreen() {
       route: '/admin/operations/staffs',
       description: 'Staff & teams',
     },
-    
-  
   ];
 
   const handleQuickActionPress = (route) => {
     router.push(route);
   };
 
-  // In your HomeScreen.js - Update the renderLiveOperation function
-const renderLiveOperation = ({ item }) => (
-  <TouchableOpacity 
-    style={styles.operationCard}
-    onPress={() => handleOperationPress(item)}
-  >
-    <View style={styles.operationHeader}>
-      <View style={styles.operationTitleContainer}>
-        <View style={[styles.operationIcon, { backgroundColor: `${item.statusColor}15` }]}>
-          <Ionicons name={item.icon} size={20} color={item.statusColor} />
+  const renderLiveOperation = ({ item }) => (
+    <TouchableOpacity
+      style={styles.operationCard}
+      onPress={() => handleOperationPress(item)}
+      activeOpacity={0.8}
+    >
+      <View style={styles.operationHeader}>
+        <View style={styles.operationTitleContainer}>
+          <View style={[styles.operationIcon, { backgroundColor: `${item.statusColor}15` }]}>
+            <Ionicons name={item.icon} size={20} color={item.statusColor} />
+          </View>
+          <View style={styles.operationTextContainer}>
+            <Text style={styles.operationTitle}>{item.title}</Text>
+            <Text style={styles.operationSubtitle}>
+              {item.supervisor ? `Supervisor: ${item.supervisor}` : 'No supervisor'}
+            </Text>
+          </View>
         </View>
-        <View style={styles.operationTextContainer}>
-          <Text style={styles.operationTitle}>{item.title}</Text>
-          <Text style={styles.operationSubtitle}>
-            {item.supervisor ? `Supervisor: ${item.supervisor}` : 'No supervisor'}
+        <View style={[styles.statusBadge, { backgroundColor: `${item.statusColor}15` }]}>
+          <View style={[styles.statusDot, { backgroundColor: item.statusColor }]} />
+          <Text style={[styles.statusText, { color: item.statusColor }]}>
+            {item.status.replace('_', ' ')}
           </Text>
         </View>
       </View>
-      <View style={[styles.statusBadge, { backgroundColor: `${item.statusColor}15` }]}>
-        <View style={[styles.statusDot, { backgroundColor: item.statusColor }]} />
-        <Text style={[styles.statusText, { color: item.statusColor }]}>
-          {item.status.replace('_', ' ')}
-        </Text>
+
+      <View style={styles.operationDetails}>
+        {item.truck && (
+          <View style={styles.detailItem}>
+            <Ionicons name="speedometer" size={14} color="#64748b" />
+            <Text style={styles.detailText}>
+              {item.truck.truckModel} • {item.truck.truckCapacity}kg capacity
+            </Text>
+          </View>
+        )}
+        <View style={styles.detailItem}>
+          <Ionicons name="map" size={14} color="#64748b" />
+          <Text style={styles.detailText}>
+            {item.streets?.length || 0} streets assigned
+          </Text>
+        </View>
+        {item.assignment_lifecycle?.current_location && (
+          <View style={styles.detailItem}>
+            <Ionicons name="location" size={14} color="#6366f1" />
+            <Text style={styles.detailText}>
+              Live Location: {item.assignment_lifecycle.current_location.latitude.toFixed(4)}, {item.assignment_lifecycle.current_location.longitude.toFixed(4)}
+            </Text>
+          </View>
+        )}
+        {item.assignment_lifecycle?.started_at && (
+          <View style={styles.detailItem}>
+            <Ionicons name="time" size={14} color="#f59e0b" />
+            <Text style={styles.detailText}>
+              Started: {new Date(item.assignment_lifecycle.started_at).toLocaleTimeString()}
+            </Text>
+          </View>
+        )}
+        {item.assignment_lifecycle?.checkpoints && item.assignment_lifecycle.checkpoints.length > 0 && (
+          <View style={styles.detailItem}>
+            <Ionicons name="flag" size={14} color="#8b5cf6" />
+            <Text style={styles.detailText}>
+              {item.assignment_lifecycle.checkpoints.length} checkpoints completed
+            </Text>
+          </View>
+        )}
+        {item.updated_at && (
+          <View style={styles.detailItem}>
+            <Ionicons name="refresh" size={14} color="#10b981" />
+            <Text style={styles.detailText}>
+              Updated: {new Date(item.updated_at).toLocaleTimeString()}
+            </Text>
+          </View>
+        )}
       </View>
-    </View>
-
-    <View style={styles.operationDetails}>
-      {/* Show truck capacity */}
-      {item.truck && (
-        <View style={styles.detailItem}>
-          <Ionicons name="speedometer" size={14} color="#64748b" />
-          <Text style={styles.detailText}>
-            {item.truck.truckModel} • {item.truck.truckCapacity}kg capacity
-          </Text>
-        </View>
-      )}
-
-      {/* Show streets count */}
-      <View style={styles.detailItem}>
-        <Ionicons name="map" size={14} color="#64748b" />
-        <Text style={styles.detailText}>
-          {item.streets?.length || 0} streets assigned
-        </Text>
-      </View>
-
-      {/* Show current location if available - UPDATED */}
-      {item.assignment_lifecycle?.current_location && (
-        <View style={styles.detailItem}>
-          <Ionicons name="location" size={14} color="#6366f1" />
-          <Text style={styles.detailText}>
-            Live Location: {item.assignment_lifecycle.current_location.latitude.toFixed(4)}, {item.assignment_lifecycle.current_location.longitude.toFixed(4)}
-          </Text>
-        </View>
-      )}
-
-      {/* Show start time if available - UPDATED */}
-      {item.assignment_lifecycle?.started_at && (
-        <View style={styles.detailItem}>
-          <Ionicons name="time" size={14} color="#f59e0b" />
-          <Text style={styles.detailText}>
-            Started: {new Date(item.assignment_lifecycle.started_at).toLocaleTimeString()}
-          </Text>
-        </View>
-      )}
-
-      {/* NEW: Show checkpoints count */}
-      {item.assignment_lifecycle?.checkpoints && item.assignment_lifecycle.checkpoints.length > 0 && (
-        <View style={styles.detailItem}>
-          <Ionicons name="flag" size={14} color="#8b5cf6" />
-          <Text style={styles.detailText}>
-            {item.assignment_lifecycle.checkpoints.length} checkpoints completed
-          </Text>
-        </View>
-      )}
-
-      {/* NEW: Show last update time */}
-      {item.updated_at && (
-        <View style={styles.detailItem}>
-          <Ionicons name="refresh" size={14} color="#10b981" />
-          <Text style={styles.detailText}>
-            Updated: {new Date(item.updated_at).toLocaleTimeString()}
-          </Text>
-        </View>
-      )}
-    </View>
-  </TouchableOpacity>
-);
-
-  const renderMetricCard = (title, value, change, isPositive, icon) => (
-    <View style={styles.metricCard}>
-      <View style={styles.metricHeader}>
-        <View style={[styles.metricIcon, { backgroundColor: `${getMetricColor(title)}15` }]}>
-          <Ionicons name={icon} size={20} color={getMetricColor(title)} />
-        </View>
-        <Text style={styles.metricTitle}>{title}</Text>
-      </View>
-      <Text style={styles.metricValue}>{value}</Text>
-      <View style={styles.metricFooter}>
-        <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }]}>
-          <Ionicons 
-            name={isPositive ? "trending-up" : "trending-down"} 
-            size={12} 
-            color={isPositive ? "#10b981" : "#ef4444"} 
-          />
-          <Text style={[styles.metricChange, { color: isPositive ? "#10b981" : "#ef4444" }]}>
-            {change}
-          </Text>
-        </View>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 
-  const getMetricColor = (title) => {
-    switch (title) {
-      case 'Monthly Revenue': return '#6366f1';
-      case 'Active Customers': return '#10b981';
-      case 'Route Completion': return '#f59e0b';
-      case 'Unpaid Balance': return '#ef4444';
-      default: return '#64748b';
-    }
+  const renderMetricCard = (title, value, change, isPositive, icon) => {
+    const colorMap = {
+      'Monthly Revenue': '#6366f1',
+      'Active Customers': '#10b981',
+      'Route Completion': '#f59e0b',
+      'Unpaid Balance': '#ef4444',
+    };
+    const iconColor = colorMap[title] || '#64748b';
+
+    return (
+      <View style={[styles.metricCard, { width: cardWidth }]}>
+        <View style={styles.metricHeader}>
+          <LinearGradient
+            colors={[iconColor, iconColor + '80']}
+            style={styles.metricIconGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name={icon} size={20} color="white" />
+          </LinearGradient>
+          <Text style={styles.metricTitle} numberOfLines={1}>{title}</Text>
+        </View>
+        <Text style={styles.metricValue}>{value}</Text>
+        <View style={styles.metricFooter}>
+          <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)' }]}>
+            <Ionicons
+              name={isPositive ? "trending-up" : "trending-down"}
+              size={12}
+              color={isPositive ? "#10b981" : "#ef4444"}
+            />
+            <Text style={[styles.metricChange, { color: isPositive ? "#10b981" : "#ef4444" }]}>
+              {change}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
   };
 
-  // Use actual metrics or fallback to zero data
   const displayMetrics = metrics || {
     monthlyRevenue: '₦0',
     activeCustomers: 0,
@@ -321,122 +303,131 @@ const renderLiveOperation = ({ item }) => (
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
-
-      {/* Enhanced Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerIcon}>
-            <Ionicons name="business" size={32} color="white" />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>Operations Dashboard</Text>
-            <Text style={styles.headerSubtitle}>Live fleet tracking & management</Text>
-          </View>
-        </View>
-        <View style={styles.headerStats}>
-          <View style={styles.statPill}>
-            <Ionicons name="car-sport" size={12} color="white" />
-            <Text style={styles.statPillText}>
-              {liveOperations.length} Active Routes
-            </Text>
-          </View>
-        </View>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      
+      {/* Floating background blobs */}
+      <View style={styles.backgroundBlobs}>
+        <View style={[styles.blob, styles.blob1]} />
+        <View style={[styles.blob, styles.blob2]} />
       </View>
 
-      {/* Content */}
-      <ScrollView 
-        style={styles.content} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#6366f1']}
-            tintColor="#6366f1"
-          />
-        }
-      >
-        {/* Quick Actions Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <Text style={styles.sectionSubtitle}>Essential tools & features</Text>
-          </View>
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action) => (
-              <TouchableOpacity
-                key={action.id}
-                style={styles.quickActionCard}
-                onPress={() => handleQuickActionPress(action.route)}
-              >
-                <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}15` }]}>
-                  <Ionicons name={action.icon} size={24} color={action.color} />
-                </View>
-                <Text style={styles.quickActionTitle}>{action.title}</Text>
-                <Text style={styles.quickActionDescription}>{action.description}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Key Metrics Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Performance Metrics</Text>
-            <Text style={styles.sectionSubtitle}>This month's performance</Text>
-          </View>
-          <View style={styles.metricsGrid}>
-            {renderMetricCard('Monthly Revenue', displayMetrics.monthlyRevenue, displayMetrics.revenueChange, true, 'cash')}
-            {renderMetricCard('Active Customers', displayMetrics.activeCustomers, displayMetrics.customerChange, true, 'people')}
-            {renderMetricCard('Route Completion', displayMetrics.routeCompletion, displayMetrics.completionChange, true, 'checkmark-done')}
-            {renderMetricCard('Unpaid Balance', displayMetrics.unpaidBalance, displayMetrics.balanceChange, false, 'alert-circle')}
-          </View>
-        </View>
-
-        {/* Live Operations Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Live Operations</Text>
-              <Text style={styles.sectionSubtitle}>Real-time fleet activity</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.viewAllButton}
-              onPress={() => router.push('/admin/operations/live')}
-            >
-              <Text style={styles.viewAllText}>View All</Text>
-              <Ionicons name="chevron-forward" size={16} color="#6366f1" />
-            </TouchableOpacity>
-          </View>
-
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#6366f1" />
-              <Text style={styles.loadingText}>Loading operations data...</Text>
-            </View>
-          ) : liveOperations.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="car-outline" size={48} color="#cbd5e1" />
-              <Text style={styles.emptyTitle}>No Active Operations</Text>
-              <Text style={styles.emptyText}>All vehicles are currently offline or in maintenance</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={liveOperations}
-              renderItem={renderLiveOperation}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#16A085']}
+              tintColor="#16A085"
             />
-          )}
-        </View>
+          }
+        >
+          {/* Header with Headline */}
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <View style={styles.logoRow}>
+                <LinearGradient
+                  colors={['#16A085', '#f59e0b']}
+                  style={styles.logoGradient}
+                >
+                  <FontAwesome name="recycle" size={18} color="white" />
+                </LinearGradient>
+                <Text style={styles.logoText}>CleanHaul</Text>
+              </View>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>DASHBOARD</Text>
+              </View>
+            </View>
 
-        {/* Additional Space */}
-        <View style={styles.bottomSpace} />
-      </ScrollView>
+            <Text style={styles.headline}>
+              Real‑time operations dashboard
+            </Text>
+          </View>
 
-      {/* Live Operation Modal */}
+          {/* Quick Actions Section */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsGrid}>
+              {quickActions.map((action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  style={styles.quickActionCard}
+                  onPress={() => handleQuickActionPress(action.route)}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={[action.color, action.color + '80']}
+                    style={styles.quickActionIcon}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons name={action.icon} size={24} color="white" />
+                  </LinearGradient>
+                  <Text style={styles.quickActionTitle}>{action.title}</Text>
+                  <Text style={styles.quickActionDescription}>{action.description}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Metrics Section */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Performance Metrics</Text>
+            <View style={styles.metricsGrid}>
+              {renderMetricCard('Monthly Revenue', displayMetrics.monthlyRevenue, displayMetrics.revenueChange, true, 'cash')}
+              {renderMetricCard('Active Customers', displayMetrics.activeCustomers, displayMetrics.customerChange, true, 'people')}
+            </View>
+            <View style={[styles.metricsGrid, { marginTop: cardGap }]}>
+              {renderMetricCard('Route Completion', displayMetrics.routeCompletion, displayMetrics.completionChange, true, 'checkmark-done')}
+              {renderMetricCard('Unpaid Balance', displayMetrics.unpaidBalance, displayMetrics.balanceChange, false, 'alert-circle')}
+            </View>
+          </View>
+
+          {/* Live Operations Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Live Operations</Text>
+              <TouchableOpacity
+                style={styles.viewAllButton}
+                onPress={() => router.push('/admin/operations/live')}
+              >
+                <Text style={styles.viewAllText}>View All</Text>
+                <Ionicons name="chevron-forward" size={14} color="#16A085" />
+              </TouchableOpacity>
+            </View>
+
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#16A085" />
+                <Text style={styles.loadingText}>Loading operations...</Text>
+              </View>
+            ) : liveOperations.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="car-outline" size={48} color="#cbd5e1" />
+                <Text style={styles.emptyTitle}>No Active Operations</Text>
+                <Text style={styles.emptyText}>All vehicles are currently offline</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={liveOperations}
+                renderItem={renderLiveOperation}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.tagline}>Clean • Smart • Reliable</Text>
+            <Text style={styles.copyright}>© 2026 CleanHaul • Global Waste Ops</Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+
       <LiveOperationModal
         visible={showOperationModal}
         operation={selectedOperation}
@@ -447,167 +438,191 @@ const renderLiveOperation = ({ item }) => (
   );
 }
 
-// ... keep all your existing styles exactly as they were ...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
-  header: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 2,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '400',
-  },
-  headerStats: {
-    flexDirection: 'row',
-  },
-  statPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statPillText: {
-    fontSize: 12,
-    color: 'white',
-    fontWeight: '600',
-  },
-  content: {
+  safeArea: {
     flex: 1,
   },
-  section: {
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 20,
+  },
+  header: {
+    flexDirection: 'column',
+    marginBottom: 24,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginLeft: 10,
+  },
+  badge: {
+    backgroundColor: 'rgba(22,160,133,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(22,160,133,0.2)',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16A085',
+    letterSpacing: 0.5,
+  },
+  headline: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    letterSpacing: -0.3,
+  },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
     padding: 20,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '400',
+    color: '#1f2937',
+    marginBottom: 16,
   },
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
   },
   viewAllText: {
-    color: '#6366f1',
     fontSize: 14,
+    color: '#16A085',
     fontWeight: '600',
   },
+
   quickActionsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 12,
   },
   quickActionCard: {
-    width: (width - 52) / 2,
-    backgroundColor: 'white',
+    flex: 1,
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   quickActionIcon: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   quickActionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
-    textAlign: 'center',
+    color: '#1f2937',
     marginBottom: 4,
+    textAlign: 'center',
   },
   quickActionDescription: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 10,
+    color: '#6b7280',
     textAlign: 'center',
-    lineHeight: 16,
   },
+
   metricsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: cardGap,
   },
   metricCard: {
-    width: (width - 52) / 2,
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   metricHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
   },
-  metricIcon: {
+  metricIconGradient: {
     width: 32,
     height: 32,
     borderRadius: 8,
@@ -616,14 +631,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   metricTitle: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 12,
+    color: '#4b5563',
     fontWeight: '500',
+    flex: 1,
   },
   metricValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#1f2937',
     marginBottom: 8,
   },
   metricFooter: {
@@ -638,21 +654,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   metricChange: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
   },
+
   operationCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   operationHeader: {
     flexDirection: 'row',
@@ -677,14 +698,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   operationTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#1f2937',
     marginBottom: 2,
   },
   operationSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 12,
+    color: '#6b7280',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -700,16 +721,12 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   operationDetails: {
     gap: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
   },
   detailItem: {
     flexDirection: 'row',
@@ -717,38 +734,48 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   detailText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '400',
+    fontSize: 12,
+    color: '#4b5563',
   },
+
   loadingContainer: {
     alignItems: 'center',
     paddingVertical: 40,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 12,
+    color: '#6b7280',
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#374151',
     marginTop: 12,
     marginBottom: 4,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 12,
+    color: '#6b7280',
     textAlign: 'center',
-    lineHeight: 20,
   },
-  bottomSpace: {
-    height: 20,
+
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  tagline: {
+    fontSize: 10,
+    color: '#6b7280',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  copyright: {
+    fontSize: 8,
+    color: '#9ca3af',
   },
 });

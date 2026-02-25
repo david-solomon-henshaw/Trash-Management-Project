@@ -82,7 +82,7 @@ const CreateTruck = () => {
   };
 
   const handleSubmit = async () => {
-    console.log('Submitting form data:', formData);
+    // console.log('Submitting form data:', formData);
     if (!validateForm()) return;
     
     setSubmitting(true);

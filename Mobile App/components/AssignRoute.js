@@ -46,7 +46,7 @@ const AssignRoute = () => {
         axios.get(`${API_BASE_URL}/api/street/all`, { headers })
       ]);
 
-      console.log(streetsRes)
+      // console.log(streetsRes)
 
       if (trucksRes.status === 'fulfilled') {
         setTrucks(trucksRes.value.data.trucks || []);

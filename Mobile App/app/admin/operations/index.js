@@ -148,7 +148,7 @@ export default function OperationsIndex() {
             <View style={styles.infoContent}>
               <Text style={styles.infoTitle}>Operations Center</Text>
               <Text style={styles.infoText}>
-                Manage all operational aspects of EcoHaul from this centralized hub. Changes sync in real-time across the platform.
+                Manage all operational aspects of Clean Haul from this centralized hub. Changes sync in real-time across the platform.
               </Text>
             </View>
           </View>

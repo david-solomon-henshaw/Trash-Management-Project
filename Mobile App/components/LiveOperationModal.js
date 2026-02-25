@@ -9,9 +9,11 @@ import {
   Dimensions,
   Animated,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
@@ -77,25 +79,25 @@ const LiveOperationModal = ({
     const configs = {
       in_progress: { 
         color: '#10B981', 
-        bg: '#D1FAE5', 
+        bg: 'rgba(16,185,129,0.15)', 
         icon: 'play-circle',
         label: 'In Progress' 
       },
       paused: { 
-        color: '#F59E0B', 
-        bg: '#FEF3C7', 
+        color: '#f59e0b', 
+        bg: 'rgba(245,158,11,0.15)', 
         icon: 'pause-circle',
         label: 'Paused' 
       },
       at_dumpsite: { 
         color: '#8B5CF6', 
-        bg: '#EDE9FE', 
+        bg: 'rgba(139,92,246,0.15)', 
         icon: 'location',
         label: 'At Dumpsite' 
       },
       completed: { 
-        color: '#6366F1', 
-        bg: '#E0E7FF', 
+        color: '#16A085', 
+        bg: 'rgba(22,160,133,0.15)', 
         icon: 'checkmark-circle',
         label: 'Completed' 
       },
@@ -123,314 +125,336 @@ const LiveOperationModal = ({
       transparent={true}
       onRequestClose={onClose}
     >
-      {/* Backdrop */}
+      {/* Backdrop – dark blur */}
       <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]}>
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.backdropTouchable} />
-        </TouchableWithoutFeedback>
+        <BlurView intensity={Platform.OS === 'ios' ? 50 : 80} tint="dark" style={StyleSheet.absoluteFill}>
+          <TouchableWithoutFeedback onPress={onClose}>
+            <View style={{ flex: 1 }} />
+          </TouchableWithoutFeedback>
+        </BlurView>
       </Animated.View>
 
-      {/* Modal Content */}
+      {/* Modal Content – glass card */}
       <Animated.View 
         style={[
           styles.modalContainer,
           { transform: [{ translateY: slideAnim }] }
         ]}
       >
-        <View style={styles.modalContent}>
-          {/* Drag Handle */}
-          <View style={styles.dragHandle} />
+        <BlurView intensity={Platform.OS === 'ios' ? 40 : 60} tint="light" style={styles.modalBlur}>
+          <View style={styles.modalContent}>
+            {/* Drag Handle */}
+            <View style={styles.dragHandle} />
 
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerTop}>
-              <View style={styles.headerLeft}>
-                <LinearGradient
-                  colors={[statusConfig.color, statusConfig.color + 'DD']}
-                  style={styles.headerIconGradient}
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.headerTop}>
+                <View style={styles.headerLeft}>
+                  <LinearGradient
+                    colors={[statusConfig.color, statusConfig.color + 'DD']}
+                    style={styles.headerIconGradient}
+                  >
+                    <Ionicons name={statusConfig.icon} size={28} color="white" />
+                  </LinearGradient>
+                  <View style={styles.headerText}>
+                    <Text style={styles.headerTitle}>Live Operation</Text>
+                    <Text style={styles.headerSubtitle}>{operation.title}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={onClose}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name={statusConfig.icon} size={28} color="white" />
-                </LinearGradient>
-                <View style={styles.headerText}>
-                  <Text style={styles.headerTitle}>Live Operation</Text>
-                  <Text style={styles.headerSubtitle}>{operation.title}</Text>
-                </View>
-              </View>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={onClose}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="close-circle" size={32} color="#94A3B8" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Status Badge */}
-            <View style={[styles.statusBadgeLarge, { backgroundColor: statusConfig.bg }]}>
-              <View style={[styles.statusDotLarge, { backgroundColor: statusConfig.color }]} />
-              <Text style={[styles.statusTextLarge, { color: statusConfig.color }]}>
-                {statusConfig.label}
-              </Text>
-            </View>
-          </View>
-
-          {/* Scrollable Content */}
-          <ScrollView 
-            style={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContentContainer}
-          >
-            {/* Quick Stats */}
-            <View style={styles.quickStatsContainer}>
-              <View style={styles.quickStat}>
-                <View style={styles.quickStatIcon}>
-                  <Ionicons name="map" size={20} color="#3B82F6" />
-                </View>
-                <Text style={styles.quickStatValue}>
-                  {operation.streets?.length || 0}
-                </Text>
-                <Text style={styles.quickStatLabel}>Streets</Text>
+                  <Ionicons name="close-circle" size={32} color="rgba(255,255,255,0.6)" />
+                </TouchableOpacity>
               </View>
               
+              {/* Status Badge */}
+              <View style={[styles.statusBadgeLarge, { backgroundColor: statusConfig.bg }]}>
+                <View style={[styles.statusDotLarge, { backgroundColor: statusConfig.color }]} />
+                <Text style={[styles.statusTextLarge, { color: statusConfig.color }]}>
+                  {statusConfig.label}
+                </Text>
+              </View>
+            </View>
+
+            {/* Scrollable Content */}
+            <ScrollView 
+              style={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.scrollContentContainer}
+            >
+              {/* Quick Stats */}
+              <View style={styles.quickStatsContainer}>
+                <View style={styles.quickStat}>
+                  <LinearGradient
+                    colors={['#3B82F6', '#2563EB']}
+                    style={styles.quickStatIconGradient}
+                  >
+                    <Ionicons name="map" size={20} color="white" />
+                  </LinearGradient>
+                  <Text style={styles.quickStatValue}>
+                    {operation.streets?.length || 0}
+                  </Text>
+                  <Text style={styles.quickStatLabel}>Streets</Text>
+                </View>
+                
+                {operation.truck && (
+                  <View style={styles.quickStat}>
+                    <LinearGradient
+                      colors={['#10B981', '#059669']}
+                      style={styles.quickStatIconGradient}
+                    >
+                      <Ionicons name="speedometer" size={20} color="white" />
+                    </LinearGradient>
+                    <Text style={styles.quickStatValue}>
+                      {operation.truck.truckCapacity}
+                    </Text>
+                    <Text style={styles.quickStatLabel}>Capacity (kg)</Text>
+                  </View>
+                )}
+
+                {operation.assignment_lifecycle?.checkpoints && (
+                  <View style={styles.quickStat}>
+                    <LinearGradient
+                      colors={['#8B5CF6', '#7C3AED']}
+                      style={styles.quickStatIconGradient}
+                    >
+                      <Ionicons name="flag" size={20} color="white" />
+                    </LinearGradient>
+                    <Text style={styles.quickStatValue}>
+                      {operation.assignment_lifecycle.checkpoints.length}
+                    </Text>
+                    <Text style={styles.quickStatLabel}>Checkpoints</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Supervisor Info */}
+              <View style={styles.glassCard}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="person-circle-outline" size={22} color="#fff" />
+                  <Text style={styles.cardTitle}>Supervisor</Text>
+                </View>
+                <View style={styles.cardContent}>
+                  <View style={styles.supervisorCard}>
+                    <LinearGradient
+                      colors={['#16A085', '#f59e0b']}
+                      style={styles.supervisorAvatar}
+                    >
+                      <Text style={styles.supervisorInitial}>
+                        {(operation.supervisor || 'N')[0].toUpperCase()}
+                      </Text>
+                    </LinearGradient>
+                    <View style={styles.supervisorInfo}>
+                      <Text style={styles.supervisorName}>
+                        {operation.supervisor || 'No supervisor assigned'}
+                      </Text>
+                      <Text style={styles.supervisorRole}>Team Lead</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Truck Details */}
               {operation.truck && (
-                <View style={styles.quickStat}>
-                  <View style={styles.quickStatIcon}>
-                    <Ionicons name="speedometer" size={20} color="#10B981" />
+                <View style={styles.glassCard}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="car-sport-outline" size={22} color="#fff" />
+                    <Text style={styles.cardTitle}>Vehicle Information</Text>
                   </View>
-                  <Text style={styles.quickStatValue}>
-                    {operation.truck.truckCapacity}
-                  </Text>
-                  <Text style={styles.quickStatLabel}>Capacity (kg)</Text>
+                  <View style={styles.cardContent}>
+                    <DetailRow 
+                      icon="car-sport" 
+                      label="Model" 
+                      value={operation.truck.truckModel}
+                    />
+                    <DetailRow 
+                      icon="finger-print" 
+                      label="Plate Number" 
+                      value={operation.truck.plate_number}
+                    />
+                    <DetailRow 
+                      icon="speedometer" 
+                      label="Capacity" 
+                      value={`${operation.truck.truckCapacity} kg`}
+                    />
+                    <DetailRow 
+                      icon="hardware-chip" 
+                      label="Status" 
+                      value={operation.truck.truckStatus}
+                      valueColor={
+                        operation.truck.truckStatus === 'operational' ? '#10B981' : 
+                        operation.truck.truckStatus === 'maintenance' ? '#F59E0B' : '#EF4444'
+                      }
+                    />
+                  </View>
                 </View>
               )}
 
-              {operation.assignment_lifecycle?.checkpoints && (
-                <View style={styles.quickStat}>
-                  <View style={styles.quickStatIcon}>
-                    <Ionicons name="flag" size={20} color="#8B5CF6" />
+              {/* Route Information */}
+              {operation.streets && operation.streets.length > 0 && (
+                <View style={styles.glassCard}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="map-outline" size={22} color="#fff" />
+                    <Text style={styles.cardTitle}>Route Information</Text>
                   </View>
-                  <Text style={styles.quickStatValue}>
-                    {operation.assignment_lifecycle.checkpoints.length}
-                  </Text>
-                  <Text style={styles.quickStatLabel}>Checkpoints</Text>
+                  <View style={styles.cardContent}>
+                    <Text style={styles.routeCount}>
+                      {operation.streets.length} {operation.streets.length === 1 ? 'street' : 'streets'} assigned
+                    </Text>
+                    <View style={styles.streetsList}>
+                      {operation.streets.slice(0, 5).map((street, index) => (
+                        <View key={index} style={styles.streetItem}>
+                          <LinearGradient
+                            colors={['#16A085', '#138a72']}
+                            style={styles.streetNumber}
+                          >
+                            <Text style={styles.streetNumberText}>{index + 1}</Text>
+                          </LinearGradient>
+                          <View style={styles.streetInfo}>
+                            <Text style={styles.streetName}>{street.name}</Text>
+                            {street.location && (
+                              <Text style={styles.streetLocation}>{street.location}</Text>
+                            )}
+                          </View>
+                          <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.5)" />
+                        </View>
+                      ))}
+                      {operation.streets.length > 5 && (
+                        <View style={styles.moreStreetsCard}>
+                          <Ionicons name="add-circle-outline" size={20} color="#16A085" />
+                          <Text style={styles.moreStreetsText}>
+                            +{operation.streets.length - 5} more streets
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
                 </View>
               )}
-            </View>
 
-            {/* Supervisor Info */}
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="person-circle-outline" size={22} color="#0F172A" />
-                <Text style={styles.cardTitle}>Supervisor</Text>
-              </View>
-              <View style={styles.cardContent}>
-                <View style={styles.supervisorCard}>
-                  <View style={styles.supervisorAvatar}>
-                    <Text style={styles.supervisorInitial}>
-                      {(operation.supervisor || 'N')[0].toUpperCase()}
-                    </Text>
+              {/* Location & Timing */}
+              {operation.assignment_lifecycle && (
+                <View style={styles.glassCard}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="time-outline" size={22} color="#fff" />
+                    <Text style={styles.cardTitle}>Location & Timing</Text>
                   </View>
-                  <View style={styles.supervisorInfo}>
-                    <Text style={styles.supervisorName}>
-                      {operation.supervisor || 'No supervisor assigned'}
-                    </Text>
-                    <Text style={styles.supervisorRole}>Team Lead</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Truck Details */}
-            {operation.truck && (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Ionicons name="car-sport-outline" size={22} color="#0F172A" />
-                  <Text style={styles.cardTitle}>Vehicle Information</Text>
-                </View>
-                <View style={styles.cardContent}>
-                  <DetailRow 
-                    icon="car-sport" 
-                    label="Model" 
-                    value={operation.truck.truckModel}
-                  />
-                  <DetailRow 
-                    icon="finger-print" 
-                    label="Plate Number" 
-                    value={operation.truck.plate_number}
-                  />
-                  <DetailRow 
-                    icon="speedometer" 
-                    label="Capacity" 
-                    value={`${operation.truck.truckCapacity} kg`}
-                  />
-                  <DetailRow 
-                    icon="hardware-chip" 
-                    label="Status" 
-                    value={operation.truck.truckStatus}
-                    valueColor={
-                      operation.truck.truckStatus === 'operational' ? '#10B981' : 
-                      operation.truck.truckStatus === 'maintenance' ? '#F59E0B' : '#EF4444'
-                    }
-                  />
-                </View>
-              </View>
-            )}
-
-            {/* Route Information */}
-            {operation.streets && operation.streets.length > 0 && (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Ionicons name="map-outline" size={22} color="#0F172A" />
-                  <Text style={styles.cardTitle}>Route Information</Text>
-                </View>
-                <View style={styles.cardContent}>
-                  <Text style={styles.routeCount}>
-                    {operation.streets.length} {operation.streets.length === 1 ? 'street' : 'streets'} assigned
-                  </Text>
-                  <View style={styles.streetsList}>
-                    {operation.streets.slice(0, 5).map((street, index) => (
-                      <View key={index} style={styles.streetItem}>
-                        <View style={styles.streetNumber}>
-                          <Text style={styles.streetNumberText}>{index + 1}</Text>
-                        </View>
-                        <View style={styles.streetInfo}>
-                          <Text style={styles.streetName}>{street.name}</Text>
-                          {street.location && (
-                            <Text style={styles.streetLocation}>{street.location}</Text>
-                          )}
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
-                      </View>
-                    ))}
-                    {operation.streets.length > 5 && (
-                      <View style={styles.moreStreetsCard}>
-                        <Ionicons name="add-circle-outline" size={20} color="#64748B" />
-                        <Text style={styles.moreStreetsText}>
-                          +{operation.streets.length - 5} more streets
-                        </Text>
-                      </View>
+                  <View style={styles.cardContent}>
+                    {operation.assignment_lifecycle.started_at && (
+                      <DetailRow 
+                        icon="play-circle" 
+                        label="Started At" 
+                        value={formatDateTime(operation.assignment_lifecycle.started_at)}
+                      />
+                    )}
+                    {operation.assignment_lifecycle.current_location && (
+                      <>
+                        <DetailRow 
+                          icon="navigate" 
+                          label="Current Location" 
+                          value={`${operation.assignment_lifecycle.current_location.latitude.toFixed(4)}, ${operation.assignment_lifecycle.current_location.longitude.toFixed(4)}`}
+                        />
+                        {operation.assignment_lifecycle.current_location.speed !== undefined && (
+                          <DetailRow 
+                            icon="speedometer" 
+                            label="Speed" 
+                            value={`${operation.assignment_lifecycle.current_location.speed} km/h`}
+                          />
+                        )}
+                      </>
                     )}
                   </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            {/* Location & Timing */}
-            {operation.assignment_lifecycle && (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Ionicons name="time-outline" size={22} color="#0F172A" />
-                  <Text style={styles.cardTitle}>Location & Timing</Text>
-                </View>
-                <View style={styles.cardContent}>
-                  {operation.assignment_lifecycle.started_at && (
-                    <DetailRow 
-                      icon="play-circle" 
-                      label="Started At" 
-                      value={formatDateTime(operation.assignment_lifecycle.started_at)}
-                    />
-                  )}
-                  {operation.assignment_lifecycle.current_location && (
-                    <>
-                      <DetailRow 
-                        icon="navigate" 
-                        label="Current Location" 
-                        value={`${operation.assignment_lifecycle.current_location.latitude.toFixed(4)}, ${operation.assignment_lifecycle.current_location.longitude.toFixed(4)}`}
-                      />
-                      {operation.assignment_lifecycle.current_location.speed !== undefined && (
-                        <DetailRow 
-                          icon="speedometer" 
-                          label="Speed" 
-                          value={`${operation.assignment_lifecycle.current_location.speed} km/h`}
-                        />
-                      )}
-                    </>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {/* Activity Timeline */}
-            {operation.assignment_lifecycle?.checkpoints && 
-             operation.assignment_lifecycle.checkpoints.length > 0 && (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Ionicons name="timer-outline" size={22} color="#0F172A" />
-                  <Text style={styles.cardTitle}>Activity Timeline</Text>
-                </View>
-                <View style={styles.cardContent}>
-                  <View style={styles.timeline}>
-                    {operation.assignment_lifecycle.checkpoints.map((checkpoint, index) => (
-                      <View key={index} style={styles.timelineItem}>
-                        <View style={styles.timelineLeft}>
-                          <View style={styles.timelineDot}>
-                            <Ionicons 
-                              name={getCheckpointIcon(checkpoint.type)} 
-                              size={14} 
-                              color="white" 
-                            />
+              {/* Activity Timeline */}
+              {operation.assignment_lifecycle?.checkpoints && 
+               operation.assignment_lifecycle.checkpoints.length > 0 && (
+                <View style={styles.glassCard}>
+                  <View style={styles.cardHeader}>
+                    <Ionicons name="timer-outline" size={22} color="#fff" />
+                    <Text style={styles.cardTitle}>Activity Timeline</Text>
+                  </View>
+                  <View style={styles.cardContent}>
+                    <View style={styles.timeline}>
+                      {operation.assignment_lifecycle.checkpoints.map((checkpoint, index) => (
+                        <View key={index} style={styles.timelineItem}>
+                          <View style={styles.timelineLeft}>
+                            <LinearGradient
+                              colors={['#16A085', '#f59e0b']}
+                              style={styles.timelineDot}
+                            >
+                              <Ionicons 
+                                name={getCheckpointIcon(checkpoint.type)} 
+                                size={12} 
+                                color="white" 
+                              />
+                            </LinearGradient>
+                            {index < operation.assignment_lifecycle.checkpoints.length - 1 && (
+                              <View style={styles.timelineLine} />
+                            )}
                           </View>
-                          {index < operation.assignment_lifecycle.checkpoints.length - 1 && (
-                            <View style={styles.timelineLine} />
-                          )}
-                        </View>
-                        <View style={styles.timelineContent}>
-                          <View style={styles.timelineHeader}>
-                            <Text style={styles.timelineType}>
-                              {checkpoint.type.charAt(0).toUpperCase() + checkpoint.type.slice(1)}
-                            </Text>
-                            <Text style={styles.timelineTime}>
-                              {formatTime(checkpoint.timestamp)}
-                            </Text>
-                          </View>
-                          {checkpoint.notes && (
-                            <Text style={styles.timelineNotes}>{checkpoint.notes}</Text>
-                          )}
-                          {checkpoint.location && (
-                            <View style={styles.timelineLocation}>
-                              <Ionicons name="location" size={12} color="#94A3B8" />
-                              <Text style={styles.timelineLocationText}>
-                                {checkpoint.location.latitude?.toFixed(4)}, {checkpoint.location.longitude?.toFixed(4)}
+                          <View style={styles.timelineContent}>
+                            <View style={styles.timelineHeader}>
+                              <Text style={styles.timelineType}>
+                                {checkpoint.type.charAt(0).toUpperCase() + checkpoint.type.slice(1)}
+                              </Text>
+                              <Text style={styles.timelineTime}>
+                                {formatTime(checkpoint.timestamp)}
                               </Text>
                             </View>
-                          )}
+                            {checkpoint.notes && (
+                              <Text style={styles.timelineNotes}>{checkpoint.notes}</Text>
+                            )}
+                            {checkpoint.location && (
+                              <View style={styles.timelineLocation}>
+                                <Ionicons name="location" size={12} color="rgba(255,255,255,0.5)" />
+                                <Text style={styles.timelineLocationText}>
+                                  {checkpoint.location.latitude?.toFixed(4)}, {checkpoint.location.longitude?.toFixed(4)}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
                         </View>
-                      </View>
-                    ))}
+                      ))}
+                    </View>
                   </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            <View style={styles.bottomSpacer} />
-          </ScrollView>
+              <View style={styles.bottomSpacer} />
+            </ScrollView>
 
-          {/* Footer Actions */}
-          <View style={styles.footer}>
-            <TouchableOpacity 
-              style={styles.secondaryButton}
-              onPress={onClose}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.secondaryButtonText}>Close</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.primaryButton}
-              onPress={onViewFullDetails}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#6366F1', '#4F46E5']}
-                style={styles.primaryButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            {/* Footer Actions */}
+            <View style={styles.footer}>
+              <TouchableOpacity 
+                style={styles.secondaryButton}
+                onPress={onClose}
+                activeOpacity={0.8}
               >
-                <Ionicons name="open-outline" size={20} color="white" />
-                <Text style={styles.primaryButtonText}>View Full Details</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+                <Text style={styles.secondaryButtonText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.primaryButton}
+                onPress={onViewFullDetails}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#16A085', '#138a72']}
+                  style={styles.primaryButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="open-outline" size={20} color="white" />
+                  <Text style={styles.primaryButtonText}>View Full Details</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </BlurView>
       </Animated.View>
     </Modal>
   );
@@ -440,7 +464,7 @@ const LiveOperationModal = ({
 const DetailRow = ({ icon, label, value, valueColor }) => (
   <View style={styles.detailRow}>
     <View style={styles.detailLeft}>
-      <Ionicons name={icon} size={18} color="#94A3B8" />
+      <Ionicons name={icon} size={18} color="rgba(255,255,255,0.7)" />
       <Text style={styles.detailLabel}>{label}</Text>
     </View>
     <Text style={[styles.detailValue, valueColor && { color: valueColor }]}>
@@ -456,10 +480,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  backdropTouchable: {
-    flex: 1,
   },
   modalContainer: {
     position: 'absolute',
@@ -468,33 +488,31 @@ const styles = StyleSheet.create({
     right: 0,
     height: height * 0.92,
   },
-  modalContent: {
+  modalBlur: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 20,
+    overflow: 'hidden',
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   dragHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#CBD5E1',
+    backgroundColor: 'rgba(255,255,255,0.4)',
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 12,
     marginBottom: 8,
   },
   header: {
-    backgroundColor: 'white',
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: 'rgba(255,255,255,0.2)',
   },
   headerTop: {
     flexDirection: 'row',
@@ -520,14 +538,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '600',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#fff',
   },
   closeButton: {
     padding: 4,
@@ -565,21 +583,28 @@ const styles = StyleSheet.create({
   },
   quickStat: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
-  quickStatIcon: {
+  quickStatIconGradient: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -587,24 +612,32 @@ const styles = StyleSheet.create({
   quickStatValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#fff',
     marginBottom: 4,
   },
   quickStatLabel: {
     fontSize: 11,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '600',
     textAlign: 'center',
   },
-  card: {
-    backgroundColor: 'white',
+  glassCard: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   cardHeader: {
     flexDirection: 'row',
@@ -616,7 +649,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#fff',
   },
   cardContent: {
     paddingHorizontal: 20,
@@ -626,14 +659,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
   },
   supervisorAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -649,12 +681,12 @@ const styles = StyleSheet.create({
   supervisorName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#fff',
     marginBottom: 2,
   },
   supervisorRole: {
     fontSize: 13,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
   },
   detailRow: {
@@ -663,7 +695,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   detailLeft: {
     flexDirection: 'row',
@@ -673,19 +705,19 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 15,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
   },
   detailValue: {
     fontSize: 15,
-    color: '#0F172A',
+    color: '#fff',
     fontWeight: '600',
     textAlign: 'right',
     flexShrink: 1,
   },
   routeCount: {
     fontSize: 14,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '600',
     marginBottom: 12,
   },
@@ -696,14 +728,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
   },
   streetNumber: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -719,28 +750,28 @@ const styles = StyleSheet.create({
   streetName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#fff',
     marginBottom: 2,
   },
   streetLocation: {
     fontSize: 12,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.6)',
   },
   moreStreetsCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(255,255,255,0.2)',
     borderStyle: 'dashed',
     gap: 8,
   },
   moreStreetsText: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#16A085',
     fontWeight: '600',
   },
   timeline: {
@@ -758,7 +789,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#6366F1',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
@@ -766,7 +796,7 @@ const styles = StyleSheet.create({
   timelineLine: {
     width: 2,
     flex: 1,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     marginTop: 4,
   },
   timelineContent: {
@@ -782,16 +812,16 @@ const styles = StyleSheet.create({
   timelineType: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#fff',
   },
   timelineTime: {
     fontSize: 13,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '600',
   },
   timelineNotes: {
     fontSize: 14,
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.8)',
     lineHeight: 20,
     marginBottom: 6,
   },
@@ -802,7 +832,7 @@ const styles = StyleSheet.create({
   },
   timelineLocationText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: 'rgba(255,255,255,0.5)',
     fontWeight: '500',
   },
   bottomSpacer: {
@@ -813,20 +843,21 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 32,
     gap: 12,
-    backgroundColor: 'white',
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: 'rgba(255,255,255,0.2)',
   },
   secondaryButton: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   secondaryButtonText: {
-    color: '#64748B',
+    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -834,9 +865,9 @@ const styles = StyleSheet.create({
     flex: 2,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#6366F1',
+    shadowColor: '#16A085',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 6,
   },

@@ -20,7 +20,7 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
   const [containerWidth, setContainerWidth] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
 
-  console.log(staff, 'staff');
+  // console.log(staff, 'staff');
   
   useEffect(() => {
     if (containerWidth > 0) {

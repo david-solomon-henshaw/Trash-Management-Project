@@ -9,6 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import appClient from '../hooks/services/client'
 import { jwtDecode } from 'jwt-decode';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch } from 'react-redux';
+import { setUser } from '@/hooks/store/slices/authSlice';
 
 
 const { width, height } = Dimensions.get('window');
@@ -19,51 +21,82 @@ export default function Index() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
+    const dispatch = useDispatch()
 
-   const handleLogin = async (email, password) => {
-    try {
-        if (!email || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
-            return;
+    const handleLogin = async (email, password) => {
+        try {
+            if (!email || !password) {
+                Alert.alert('Error', 'Please fill in all fields');
+                return;
+            }
+
+            const response = await appClient.post('/staff/signin', { email, password });
+
+            const { token } = response.data;
+
+            // Decode token to get the role
+            let userRole;
+            try {
+                const decoded = jwtDecode(token);
+                userRole = decoded.user?.role;
+                dispatch(setUser({
+                    id: decoded.user.id,
+                    role: decoded.user.role,
+                    full_name: decoded.user.full_name,
+                    companyId: decoded.user.companyId,
+                    companyName: decoded.user.CompanyName
+                }));
+
+            } catch (decodeError) {
+                // console.log('Token decode error:', decodeError);
+                Alert.alert('Error', 'Failed to read login token');
+                return;
+            }
+
+            if (!userRole) {
+                // console.log('Role is missing from token');
+                Alert.alert('Error', 'User role not found in token');
+                return;
+            }
+
+            // Store the token
+            await AsyncStorage.setItem('userToken', token);
+
+
+            // Map only valid login roles to routes
+            const roleRouteMap = {
+                'admin': '/admin',
+                'supervisor': '/supervisor',
+                'csr': '/csr'
+            };
+
+            const route = roleRouteMap[userRole];
+
+            if (!route) {
+                Alert.alert('Access Denied', `Role "${userRole}" is not authorized to access this app`);
+                return;
+            }
+
+            // console.log('Navigating to:', route);
+            router.replace(route);
+
+        } catch (error) {
+            // console.log("--- LOGIN ERROR DEBUG --");
+            // console.log("Full error:", error);
+
+            if (error.response) {
+                // console.log("Status Data:", error.response.data);
+                // console.log("Status Code:", error.response.status);
+                Alert.alert('Login Failed', error.response.data.message || error.response.data);
+            } else if (error.request) {
+                // console.log("No response received:", error.request);
+                Alert.alert('Error', 'Server is unreachable. Check your connection.');
+            } else {
+                // console.log("Error Message:", error.message);
+            }
+            // console.log("---------"
         }
-
-        const response = await appClient.post('/staff/signin', { email, password });
-        
-        // Destructure token from response.data
-        const { token } = response.data;
-
-        // Decode token to get the role
-        const decoded = jwtDecode(token);
-        const userRole = decoded.user.role; 
-
-        // Store the token
-        await AsyncStorage.setItem('userToken', token);
-
-        // FIX: Use backticks and the correct variable name for navigation
-        router.replace(`/${userRole}`);
-
-    } catch (error) {
-        // --- DETAILED DEBUG LOGGING ---
-        console.log("--- LOGIN ERROR DEBUG ---");
-        
-        if (error.response) {
-            // The request was made and the server responded with a status code (400, 401, 500, etc.)
-            console.log("Status Data:", error.response.data); 
-            console.log("Status Code:", error.response.status);
-            
-            // This will show your custom 'User does not exist' or 'Incorrect Password' messages
-            Alert.alert('Login Failed', error.response.data.message || error.response.data);
-        } else if (error.request) {
-            // The request was made but no response was received (Server is down or Network error)
-            console.log("No response received:", error.request);
-            Alert.alert('Error', 'Server is unreachable. Check your connection.');
-        } else {
-            // Something else happened in setting up the request
-            console.log("Error Message:", error.message);
-        }
-        console.log("-------------------------");
-    }
-};
+    };
     return (
         <SafeAreaView style={styles.container}>
             {/* --- BACKGROUND BLOBS (Replicating the CSS Blobs) --- */}

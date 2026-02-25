@@ -18,7 +18,7 @@ transporter.verify((error, success) => {
   if (error) {
     console.error('Email transporter error:', error);
   } else {
-    console.log('Email server is ready to send messages');
+    // console.log('Email server is ready to send messages');
   }
 });
 
@@ -311,7 +311,7 @@ const sendPaymentReceipt = async (options) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log('Receipt email sent:', info.messageId);
+    // console.log('Receipt email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending receipt email:', error);

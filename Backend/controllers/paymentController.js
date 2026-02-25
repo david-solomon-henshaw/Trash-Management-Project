@@ -243,14 +243,14 @@ const createPayment = async (req, res) => {
         });
 
         receiptSent = true;
-        console.log(`✓ Receipt sent successfully to ${customer.email}`);
+        // console.log(`✓ Receipt sent successfully to ${customer.email}`);
       } catch (error) {
         console.error('✗ Error sending receipt email:', error.message);
         emailError = error.message;
         // Don't fail the payment if email fails
       }
     } else {
-      console.log('ℹ No email address for customer, skipping receipt email');
+      // console.log('ℹ No email address for customer, skipping receipt email');
     }
 
     return res.status(201).json({

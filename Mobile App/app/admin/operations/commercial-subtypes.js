@@ -46,7 +46,7 @@ export default function CommercialSubtypesScreen() {
       );
 
       setCommercialSubtypes(response.data.commercialSubtypes || []);
-      console.log(response)
+      // console.log(response)
     } catch (error) {
       console.error('Error fetching commercial subtypes:', error);
       Alert.alert('Error', 'Failed to fetch commercial subtypes. Please try again.');

@@ -73,20 +73,20 @@ export default function SupervisorHome() {
 
   const fetchDashboardData = async () => {
     try {
-      console.log('Starting to fetch dashboard data...');
+      // console.log('Starting to fetch dashboard data...');
       const token = await AsyncStorage.getItem('token');
-      console.log('Token retrieved:', token ? 'Token exists' : 'No token found');
+      // console.log('Token retrieved:', token ? 'Token exists' : 'No token found');
       const headers = { Authorization: `Bearer ${token}` };
 
       // Fetch supervisor-specific data
-      console.log('Making API calls to fetch supervisor data...');
+      // console.log('Making API calls to fetch supervisor data...');
       const [allAssignments, paymentsToday] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/trucks/all-assignments`, { headers }),
         axios.get(`${API_BASE_URL}/api/payments/today-collections`, { headers })
       ]);
 
-      console.log('All Assignments Response:', allAssignments.data);
-      console.log('Today Collections Response:', paymentsToday.data);
+      // console.log('All Assignments Response:', allAssignments.data);
+      // console.log('Today Collections Response:', paymentsToday.data);
 
       // Set supervisor-specific stats
       setSupervisorStats({
@@ -113,7 +113,7 @@ export default function SupervisorHome() {
     } finally {
       setLoading(false);
       setRefreshing(false);
-      console.log('Dashboard data fetch completed');
+      // console.log('Dashboard data fetch completed');
     }
   };
 
@@ -162,9 +162,9 @@ export default function SupervisorHome() {
             longitude: location.coords.longitude,
             accuracy: location.coords.accuracy,
           };
-          console.log(locationData, 'location DATA ')
+          // console.log(locationData, 'location DATA ')
         } catch (locationError) {
-          console.log('Could not get location:', locationError);
+          // console.log('Could not get location:', locationError);
         }
       }
 
@@ -218,7 +218,7 @@ export default function SupervisorHome() {
             accuracy: location.coords.accuracy,
           };
         } catch (locationError) {
-          console.log('Could not get location:', locationError);
+          // console.log('Could not get location:', locationError);
         }
       }
 
@@ -297,10 +297,10 @@ export default function SupervisorHome() {
   const groupedAssignments = getGroupedAssignments();
 
   // TEMPORARY DEBUG - Remove after testing
-  console.log('=== ASSIGNMENT DEBUG INFO ===');
-  console.log('All assignments:', dashboardData?.assignments?.length || 0);
-  console.log('Today assignments:', groupedAssignments.today.length);
-  console.log('Upcoming assignments:', groupedAssignments.upcoming.length);
+  // console.log('=== ASSIGNMENT DEBUG INFO ===');
+  // console.log('All assignments:', dashboardData?.assignments?.length || 0);
+  // console.log('Today assignments:', groupedAssignments.today.length);
+  // console.log('Upcoming assignments:', groupedAssignments.upcoming.length);
 
   if (dashboardData?.assignments) {
     dashboardData.assignments.forEach((assignment, index) => {
@@ -309,7 +309,7 @@ export default function SupervisorHome() {
       today.setHours(0, 0, 0, 0);
       assignmentDate.setHours(0, 0, 0, 0);
       
-      console.log(`Assignment ${index + 1}:`, {
+      // console.log(`Assignment ${index + 1}:`, {
         date: assignment.scheduled_date,
         formattedDate: formatDate(assignment.scheduled_date),
         status: assignment.status,

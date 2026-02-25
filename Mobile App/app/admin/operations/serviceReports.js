@@ -85,7 +85,7 @@ export default function ServiceReports() {
     // Simulate data refresh when date range changes
     if (reports.overview) {
       // In real app, this would fetch new data based on dateRange
-      console.log('Fetching data for:', dateRange);
+      // console.log('Fetching data for:', dateRange);
     }
   }, [dateRange]);
 

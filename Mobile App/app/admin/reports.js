@@ -32,7 +32,7 @@ const Reports = () => {
 
   const fetchData = async () => {
     try {
-      console.log('Starting to fetch financial reports data...');
+      // console.log('Starting to fetch financial reports data...');
       
       const endpoints = [
         '/api/analytics/reports/revenue-overview',

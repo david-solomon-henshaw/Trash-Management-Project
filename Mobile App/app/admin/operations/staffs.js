@@ -12,8 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-// import { API_BASE_URL } from '../../../config'
-import axios from 'axios'
+import appClient from '../../../hooks/services/client'
 import { useRouter } from 'expo-router';
 
 const Staffs = () => {
@@ -39,7 +38,7 @@ const Staffs = () => {
     // Available roles list
     const roles = [
         { label: 'Admin', value: 'admin' },
-        { label: 'Customer Care', value: 'c_care' },
+        { label: 'Customer Care', value: 'customer care' },
         { label: 'Supervisor', value: 'supervisor' },
         { label: 'Field Agent', value: 'field_agent' },
         { label: 'Driver', value: 'driver' },
@@ -53,7 +52,7 @@ const Staffs = () => {
 
     const roleDescriptions = {
         admin: 'Full system access including all management functions and reports.',
-        c_care: 'Access to customer management, payment tracking, and support functions.',
+        customer_care: 'Access to customer management, payment tracking, and support functions.',
         supervisor: 'Access to fleet management, route assignments, and staff oversight.',
         driver: 'This role does not require app login access. Driver will follow truck assignments without needing username/password.',
         field_agent: 'This role does not require app login access. Field agent will work in the field without needing username/password.',
@@ -120,18 +119,18 @@ const Staffs = () => {
         }
 
         try {
-            const response = await axios.post(`${API_BASE_URL}/api/staff/signup`,
+            const response = await appClient.post(`/staff/signup`,
                 formData
             )
             if (response.status === 201) {
-                console.log(response)
+                // console.log(response)
                 Alert.alert('Success', response.data.message || 'Staff account created successfully!', [
                     { text: 'OK', onPress: () => resetForm() }
                 ]);
             }
         } 
         catch (error) {
-            console.log(error)
+            // console.log(error)
             const errorMessage = error.response?.data?.message || error.message || 'Network error';
             Alert.alert('Error', errorMessage);
         }
