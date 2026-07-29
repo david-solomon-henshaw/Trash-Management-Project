@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,16 +18,20 @@ const RouteAndTruckSelection = ({
   setShowTruckOptions,
 }) => {
   const getTruckLabel = (truckId) => {
-    const truck = trucks.find(t => t._id === truckId);
+    const truck = trucks.find((t) => t._id === truckId);
     return truck ? `${truck.plate_number} - ${truck.truckModel}` : 'Select Truck';
   };
 
   const getTruckStatusIcon = (status) => {
     switch (status) {
-      case 'operational': return { icon: 'checkmark-circle', color: '#10b981' };
-      case 'maintenance': return { icon: 'build', color: '#f59e0b' };
-      case 'inactive': return { icon: 'close-circle', color: '#ef4444' };
-      default: return { icon: 'help-circle', color: '#6b7280' };
+      case 'operational':
+        return { icon: 'checkmark-circle', color: '#10b981' };
+      case 'maintenance':
+        return { icon: 'build', color: '#f59e0b' };
+      case 'inactive':
+        return { icon: 'close-circle', color: '#ef4444' };
+      default:
+        return { icon: 'help-circle', color: '#6b7280' };
     }
   };
 
@@ -35,8 +40,8 @@ const RouteAndTruckSelection = ({
       {/* ROUTE DETAILS */}
       <View style={styles.sectionContainer}>
         <View style={styles.sectionHeader}>
-          <View style={styles.sectionIcon}>
-            <Ionicons name="calendar" size={20} color="#6366f1" />
+          <View style={[styles.sectionIcon, { backgroundColor: 'rgba(22, 160, 133, 0.1)' }]}>
+            <Ionicons name="calendar" size={20} color="#16A085" />
           </View>
           <View>
             <Text style={styles.sectionTitle}>Route Schedule</Text>
@@ -53,8 +58,6 @@ const RouteAndTruckSelection = ({
               placeholderTextColor="#94a3b8"
               value={formData.scheduled_date}
               onChangeText={(text) => handleInputChange('scheduled_date', text)}
-              accessible={true}
-              accessibilityLabel="Scheduled Date"
             />
           </View>
           <Text style={styles.helperText}>Format: Year-Month-Day (2024-12-31)</Text>
@@ -64,7 +67,7 @@ const RouteAndTruckSelection = ({
       {/* TRUCK SELECTION */}
       <View style={styles.sectionContainer}>
         <View style={styles.sectionHeader}>
-          <View style={styles.sectionIcon}>
+          <View style={[styles.sectionIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
             <Ionicons name="car-sport" size={20} color="#10b981" />
           </View>
           <View>
@@ -75,29 +78,18 @@ const RouteAndTruckSelection = ({
             <Text style={styles.truckCountText}>{trucks.length} available</Text>
           </View>
         </View>
-        
+
         <View style={styles.formGroup}>
           <Text style={styles.label}>Select Truck *</Text>
           <TouchableOpacity
             style={styles.dropdownTrigger}
             onPress={() => setShowTruckOptions(!showTruckOptions)}
-            accessible={true}
-            accessibilityLabel="Select Truck"
           >
             <Ionicons name="car-outline" size={20} color="#94a3b8" style={styles.inputIcon} />
-            <Text
-              style={[
-                styles.inputText,
-                !formData.truck_id && styles.placeholderText,
-              ]}
-            >
+            <Text style={[styles.inputText, !formData.truck_id && styles.placeholderText]}>
               {getTruckLabel(formData.truck_id)}
             </Text>
-            <Ionicons 
-              name={showTruckOptions ? "chevron-up" : "chevron-down"} 
-              size={16} 
-              color="#64748B" 
-            />
+            <Ionicons name={showTruckOptions ? 'chevron-up' : 'chevron-down'} size={16} color="#64748B" />
           </TouchableOpacity>
 
           {showTruckOptions && (
@@ -108,16 +100,11 @@ const RouteAndTruckSelection = ({
                   return (
                     <TouchableOpacity
                       key={truck._id}
-                      style={[
-                        styles.optionItem,
-                        formData.truck_id === truck._id && styles.selectedOption,
-                      ]}
+                      style={[styles.optionItem, formData.truck_id === truck._id && styles.selectedOption]}
                       onPress={() => {
                         handleInputChange('truck_id', truck._id);
                         setShowTruckOptions(false);
                       }}
-                      accessible={true}
-                      accessibilityLabel={`Select ${truck.plate_number} - ${truck.truckModel}`}
                     >
                       <View style={styles.optionContent}>
                         <View style={styles.truckInfo}>
@@ -148,16 +135,13 @@ const RouteAndTruckSelection = ({
           )}
         </View>
 
-        {/* Selected Truck Preview */}
         {formData.truck_id && (
           <View style={styles.selectedTruckPreview}>
             <View style={styles.previewHeader}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
               <Text style={styles.previewTitle}>Selected Vehicle</Text>
             </View>
-            <Text style={styles.previewText}>
-              {getTruckLabel(formData.truck_id)}
-            </Text>
+            <Text style={styles.previewText}>{getTruckLabel(formData.truck_id)}</Text>
           </View>
         )}
       </View>
@@ -171,11 +155,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -189,7 +179,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -277,11 +266,17 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     borderRadius: 12,
     backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
     maxHeight: 300,
   },
   dropdownScroll: {

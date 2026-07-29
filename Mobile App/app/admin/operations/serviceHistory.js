@@ -10,6 +10,7 @@ import {
   Image,
   Modal,
   FlatList,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,17 +20,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function ServiceHistory() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  
-  // Data states
+
   const [streets, setStreets] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState([]);
-  
-  // Selection states
+
   const [selectedStreet, setSelectedStreet] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  
-  // Dropdown states
+
   const [showStreetDropdown, setShowStreetDropdown] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [showServiceDetails, setShowServiceDetails] = useState(false);
@@ -45,32 +43,32 @@ export default function ServiceHistory() {
 
   const dummyCustomers = [
     {
-      _id: 'cust001', name: 'John Smith', phone: '08012345678', 
-      address: '12A Lagos Street', house_number: '12A', 
+      _id: 'cust001', name: 'John Smith', phone: '08012345678',
+      address: '12A Lagos Street', house_number: '12A',
       customer_type: 'residential', street: 'street001',
       status: 'active'
     },
     {
-      _id: 'cust002', name: 'Sarah Johnson', phone: '08087654321', 
-      address: '15B Lagos Street', house_number: '15B', 
+      _id: 'cust002', name: 'Sarah Johnson', phone: '08087654321',
+      address: '15B Lagos Street', house_number: '15B',
       customer_type: 'commercial', street: 'street001',
       status: 'active'
     },
     {
-      _id: 'cust003', name: 'Mike Wilson', phone: '08011111111', 
-      address: '20 Ikeja Avenue', house_number: '20', 
+      _id: 'cust003', name: 'Mike Wilson', phone: '08011111111',
+      address: '20 Ikeja Avenue', house_number: '20',
       customer_type: 'residential', street: 'street002',
       status: 'active'
     },
     {
-      _id: 'cust004', name: 'Emily Davis', phone: '08022222222', 
-      address: '25C Ikeja Avenue', house_number: '25C', 
+      _id: 'cust004', name: 'Emily Davis', phone: '08022222222',
+      address: '25C Ikeja Avenue', house_number: '25C',
       customer_type: 'commercial', street: 'street002',
       status: 'active'
     },
     {
-      _id: 'cust005', name: 'David Brown', phone: '08033333333', 
-      address: '30 Victoria Island Road', house_number: '30', 
+      _id: 'cust005', name: 'David Brown', phone: '08033333333',
+      address: '30 Victoria Island Road', house_number: '30',
       customer_type: 'institutional', street: 'street003',
       status: 'active'
     },
@@ -78,12 +76,12 @@ export default function ServiceHistory() {
 
   const dummyServices = [
     {
-      _id: 'service001', customer: 'cust001', 
+      _id: 'service001', customer: 'cust001',
       route: { _id: 'route001', name: 'Central Route' },
       supervisor: { _id: 'super001', name: 'James Wilson' },
       service_date: new Date('2024-01-15T09:30:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/300x200/06b6d4/ffffff?text=Before',
+      before_photo: 'https://via.placeholder.com/300x200/16A085/ffffff?text=Before',
       after_photo: 'https://via.placeholder.com/300x200/10b981/ffffff?text=After',
       service_notes: 'Regular service completed. Area was clean before service.',
       service_status: 'serviced'
@@ -94,7 +92,7 @@ export default function ServiceHistory() {
       supervisor: { _id: 'super001', name: 'James Wilson' },
       service_date: new Date('2024-01-08T10:15:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/300x200/06b6d4/ffffff?text=Before',
+      before_photo: 'https://via.placeholder.com/300x200/16A085/ffffff?text=Before',
       after_photo: null,
       service_notes: 'Customer was not available at time of service.',
       service_status: 'not_home'
@@ -105,7 +103,7 @@ export default function ServiceHistory() {
       supervisor: { _id: 'super002', name: 'Maria Garcia' },
       service_date: new Date('2024-01-15T11:00:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/300x200/06b6d4/ffffff?text=Before',
+      before_photo: 'https://via.placeholder.com/300x200/16A085/ffffff?text=Before',
       after_photo: 'https://via.placeholder.com/300x200/10b981/ffffff?text=After',
       service_notes: 'Business premises serviced efficiently.',
       service_status: 'serviced'
@@ -116,7 +114,7 @@ export default function ServiceHistory() {
       supervisor: { _id: 'super001', name: 'James Wilson' },
       service_date: new Date('2024-01-14T14:20:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/300x200/06b6d4/ffffff?text=Before',
+      before_photo: 'https://via.placeholder.com/300x200/16A085/ffffff?text=Before',
       after_photo: null,
       service_notes: 'Customer refused service.',
       service_status: 'refused'
@@ -129,19 +127,18 @@ export default function ServiceHistory() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
         return;
       }
-      // Simulate API calls
       setTimeout(() => {
         setStreets(dummyStreets);
         setLoading(false);
       }, 1000);
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
@@ -150,9 +147,8 @@ export default function ServiceHistory() {
     setSelectedCustomer(null);
     setServices([]);
     setShowStreetDropdown(false);
-    
-    // Filter customers for selected street
-    const streetCustomers = dummyCustomers.filter(customer => 
+
+    const streetCustomers = dummyCustomers.filter(customer =>
       customer.street === street._id
     );
     setCustomers(streetCustomers);
@@ -161,8 +157,7 @@ export default function ServiceHistory() {
   const handleCustomerSelect = (customer) => {
     setSelectedCustomer(customer);
     setShowCustomerDropdown(false);
-    
-    // Filter services for selected customer
+
     const customerServices = dummyServices.filter(service =>
       service.customer === customer._id
     );
@@ -334,9 +329,8 @@ export default function ServiceHistory() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#06b6d4" />
+          <ActivityIndicator size="large" color="#16A085" />
           <Text style={styles.loadingText}>Loading service history...</Text>
         </View>
       </SafeAreaView>
@@ -345,149 +339,154 @@ export default function ServiceHistory() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
+        <View style={styles.headerTop}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Service History</Text>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Service History</Text>
+          </View>
+          <View style={styles.headerPlaceholder} />
         </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.formContainer}>
-          
+
           {/* Selection Instructions */}
           <View style={styles.instructions}>
-            <Ionicons name="information-circle" size={20} color="#06b6d4" />
+            <Ionicons name="information-circle" size={20} color="#16A085" />
             <Text style={styles.instructionsText}>
               Select a street and customer to view their service history
             </Text>
           </View>
 
           {/* Street Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Select Street</Text>
-            <TouchableOpacity 
-              style={styles.dropdownButton}
-              onPress={() => setShowStreetDropdown(true)}
-            >
-              <Text style={selectedStreet ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
-                {selectedStreet ? selectedStreet.name : 'Choose a street'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#64748b" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Customer Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Select Customer</Text>
-            <TouchableOpacity 
-              style={[styles.dropdownButton, !selectedStreet && styles.dropdownDisabled]}
-              onPress={() => selectedStreet && setShowCustomerDropdown(true)}
-              disabled={!selectedStreet}
-            >
-              <Text style={selectedCustomer ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
-                {selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.house_number})` : 'Choose a customer'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={selectedStreet ? "#64748b" : "#cbd5e1"} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Selected Customer Info */}
-          {selectedCustomer && (
-            <View style={styles.customerInfoCard}>
-              <View style={styles.customerHeader}>
-                <Ionicons name="person-circle" size={24} color="#06b6d4" />
-                <Text style={styles.customerName}>{selectedCustomer.name}</Text>
-                <View style={[styles.typeBadge, { backgroundColor: getCustomerTypeColor(selectedCustomer.customer_type) }]}>
-                  <Text style={styles.typeBadgeText}>{selectedCustomer.customer_type}</Text>
-                </View>
-              </View>
-              <View style={styles.customerDetails}>
-                <Text style={styles.customerDetail}>📞 {selectedCustomer.phone}</Text>
-                <Text style={styles.customerDetail}>🏠 {selectedCustomer.address}</Text>
-                <Text style={styles.customerDetail}>📅 Active Customer</Text>
-              </View>
+          <View style={styles.sectionCard}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Select Street</Text>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setShowStreetDropdown(true)}
+              >
+                <Text style={selectedStreet ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
+                  {selectedStreet ? selectedStreet.name : 'Choose a street'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#64748b" />
+              </TouchableOpacity>
             </View>
-          )}
 
-          {/* Service History List */}
-          {selectedCustomer && (
-            <View style={styles.servicesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Service History</Text>
-                <Text style={styles.serviceCount}>{services.length} services found</Text>
-              </View>
+            {/* Customer Dropdown */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Select Customer</Text>
+              <TouchableOpacity
+                style={[styles.dropdownButton, !selectedStreet && styles.dropdownDisabled]}
+                onPress={() => selectedStreet && setShowCustomerDropdown(true)}
+                disabled={!selectedStreet}
+              >
+                <Text style={selectedCustomer ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
+                  {selectedCustomer ? `${selectedCustomer.name} (${selectedCustomer.house_number})` : 'Choose a customer'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={selectedStreet ? "#64748b" : "#cbd5e1"} />
+              </TouchableOpacity>
+            </View>
 
-              {services.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="time-outline" size={48} color="#cbd5e1" />
-                  <Text style={styles.emptyStateText}>No service history found</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    This customer hasn't had any services recorded yet.
-                  </Text>
+            {/* Selected Customer Info */}
+            {selectedCustomer && (
+              <View style={styles.customerInfoCard}>
+                <View style={styles.customerHeader}>
+                  <Ionicons name="person-circle" size={24} color="#16A085" />
+                  <Text style={styles.customerName}>{selectedCustomer.name}</Text>
+                  <View style={[styles.typeBadge, { backgroundColor: getCustomerTypeColor(selectedCustomer.customer_type) }]}>
+                    <Text style={styles.typeBadgeText}>{selectedCustomer.customer_type}</Text>
+                  </View>
                 </View>
-              ) : (
-                <View style={styles.servicesList}>
-                  {services.map((service) => (
-                    <TouchableOpacity
-                      key={service._id}
-                      style={styles.serviceCard}
-                      onPress={() => handleServiceSelect(service)}
-                    >
-                      <View style={styles.serviceHeader}>
-                        <View style={styles.serviceDate}>
-                          <Text style={styles.serviceDay}>
-                            {new Date(service.service_date).getDate()}
-                          </Text>
-                          <Text style={styles.serviceMonth}>
-                            {new Date(service.service_date).toLocaleDateString('en', { month: 'short' })}
-                          </Text>
-                        </View>
-                        <View style={styles.serviceInfo}>
-                          <Text style={styles.serviceTime}>
-                            {new Date(service.service_date).toLocaleTimeString()}
-                          </Text>
-                          <Text style={styles.serviceSupervisor}>
-                            By {service.supervisor.name}
-                          </Text>
-                        </View>
-                        <View style={[styles.serviceStatus, { backgroundColor: getStatusColor(service.service_status) }]}>
-                          <Ionicons name={getStatusIcon(service.service_status)} size={16} color="white" />
-                        </View>
-                      </View>
-                      
-                      <View style={styles.serviceDetails}>
-                        <Text style={styles.serviceRoute}>{service.route.name}</Text>
-                        {service.service_notes && (
-                          <Text style={styles.serviceNotes} numberOfLines={2}>
-                            {service.service_notes}
-                          </Text>
-                        )}
-                      </View>
+                <View style={styles.customerDetails}>
+                  <Text style={styles.customerDetail}>📞 {selectedCustomer.phone}</Text>
+                  <Text style={styles.customerDetail}>🏠 {selectedCustomer.address}</Text>
+                  <Text style={styles.customerDetail}>📅 Active Customer</Text>
+                </View>
+              </View>
+            )}
 
-                      <View style={styles.servicePhotos}>
-                        <View style={styles.photoBadge}>
-                          <Ionicons name="camera" size={12} color="#64748b" />
-                          <Text style={styles.photoBadgeText}>Before</Text>
+            {/* Service History List */}
+            {selectedCustomer && (
+              <View style={styles.servicesSection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Service History</Text>
+                  <Text style={styles.serviceCount}>{services.length} services found</Text>
+                </View>
+
+                {services.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="time-outline" size={48} color="#cbd5e1" />
+                    <Text style={styles.emptyStateText}>No service history found</Text>
+                    <Text style={styles.emptyStateSubtext}>
+                      This customer hasn't had any services recorded yet.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.servicesList}>
+                    {services.map((service) => (
+                      <TouchableOpacity
+                        key={service._id}
+                        style={styles.serviceCard}
+                        onPress={() => handleServiceSelect(service)}
+                      >
+                        <View style={styles.serviceHeader}>
+                          <View style={styles.serviceDate}>
+                            <Text style={styles.serviceDay}>
+                              {new Date(service.service_date).getDate()}
+                            </Text>
+                            <Text style={styles.serviceMonth}>
+                              {new Date(service.service_date).toLocaleDateString('en', { month: 'short' })}
+                            </Text>
+                          </View>
+                          <View style={styles.serviceInfo}>
+                            <Text style={styles.serviceTime}>
+                              {new Date(service.service_date).toLocaleTimeString()}
+                            </Text>
+                            <Text style={styles.serviceSupervisor}>
+                              By {service.supervisor.name}
+                            </Text>
+                          </View>
+                          <View style={[styles.serviceStatus, { backgroundColor: getStatusColor(service.service_status) }]}>
+                            <Ionicons name={getStatusIcon(service.service_status)} size={16} color="white" />
+                          </View>
                         </View>
-                        {service.after_photo && (
+
+                        <View style={styles.serviceDetails}>
+                          <Text style={styles.serviceRoute}>{service.route.name}</Text>
+                          {service.service_notes && (
+                            <Text style={styles.serviceNotes} numberOfLines={2}>
+                              {service.service_notes}
+                            </Text>
+                          )}
+                        </View>
+
+                        <View style={styles.servicePhotos}>
                           <View style={styles.photoBadge}>
                             <Ionicons name="camera" size={12} color="#64748b" />
-                            <Text style={styles.photoBadgeText}>After</Text>
+                            <Text style={styles.photoBadgeText}>Before</Text>
                           </View>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
+                          {service.after_photo && (
+                            <View style={styles.photoBadge}>
+                              <Ionicons name="camera" size={12} color="#64748b" />
+                              <Text style={styles.photoBadgeText}>After</Text>
+                            </View>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -504,14 +503,14 @@ export default function ServiceHistory() {
             onPress={() => handleStreetSelect(street)}
           >
             <View style={styles.streetItem}>
-              <Ionicons name="location" size={20} color="#06b6d4" />
+              <Ionicons name="location" size={20} color="#16A085" />
               <View style={styles.streetInfo}>
                 <Text style={styles.modalItemText}>{street.name}</Text>
                 <Text style={styles.modalItemSubtext}>{street.details}</Text>
               </View>
             </View>
             {selectedStreet?._id === street._id && (
-              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+              <Ionicons name="checkmark-circle" size={20} color="#16A085" />
             )}
           </TouchableOpacity>
         ))}
@@ -529,10 +528,10 @@ export default function ServiceHistory() {
             onPress={() => handleCustomerSelect(customer)}
           >
             <View style={styles.customerModalItem}>
-              <Ionicons 
-                name={customer.customer_type === 'commercial' ? 'business' : 'home'} 
-                size={20} 
-                color="#06b6d4" 
+              <Ionicons
+                name={customer.customer_type === 'commercial' ? 'business' : 'home'}
+                size={20}
+                color="#16A085"
               />
               <View style={styles.customerModalInfo}>
                 <Text style={styles.modalItemText}>
@@ -544,7 +543,7 @@ export default function ServiceHistory() {
               </View>
             </View>
             {selectedCustomer?._id === customer._id && (
-              <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+              <Ionicons name="checkmark-circle" size={20} color="#16A085" />
             )}
           </TouchableOpacity>
         ))}
@@ -560,36 +559,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  header: {
-    backgroundColor: '#06b6d4',
-    paddingBottom: 12,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  content: {
-    flex: 1,
-  },
-  formContainer: {
-    padding: 20,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -600,13 +569,60 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 16,
   },
+  // Header
+  header: {
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  formContainer: {
+    paddingBottom: 20,
+  },
   instructions: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f9ff',
     padding: 16,
     borderRadius: 12,
-    marginBottom: 20,
+    marginBottom: 16,
     gap: 12,
   },
   instructionsText: {
@@ -614,6 +630,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0369a1',
     fontWeight: '500',
+  },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
   },
   inputGroup: {
     marginBottom: 20,
@@ -625,7 +652,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dropdownButton: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 12,
@@ -633,15 +660,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
   },
   dropdownDisabled: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#e2e8f0',
+    opacity: 0.6,
   },
   dropdownTextSelected: {
     fontSize: 16,
@@ -653,15 +674,12 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   customerInfoCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   customerHeader: {
     flexDirection: 'row',
@@ -670,7 +688,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   customerName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1e293b',
     flex: 1,
@@ -703,8 +721,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1e293b',
   },
   serviceCount: {
@@ -743,6 +761,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   serviceHeader: {
     flexDirection: 'row',
@@ -760,11 +780,11 @@ const styles = StyleSheet.create({
   serviceDay: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#06b6d4',
+    color: '#16A085',
   },
   serviceMonth: {
     fontSize: 12,
-    color: '#06b6d4',
+    color: '#16A085',
     fontWeight: '600',
     textTransform: 'uppercase',
   },
@@ -793,7 +813,7 @@ const styles = StyleSheet.create({
   },
   serviceRoute: {
     fontSize: 14,
-    color: '#06b6d4',
+    color: '#16A085',
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -970,3 +990,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 });
+
+
+// fix with real actual data 

@@ -5,31 +5,43 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  StatusBar,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSelector } from 'react-redux';
+import { useRouter } from 'expo-router';
+
+// Theme constants
+const COLORS = {
+  primary: '#16A085',
+  secondary: '#f59e0b',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  purple: '#8b5cf6',
+  gray: {
+    50: '#f8fafc',
+    100: '#f1f5f9',
+    200: '#e2e8f0',
+    300: '#cbd5e1',
+    400: '#94a3b8',
+    500: '#64748b',
+    600: '#475569',
+    700: '#334155',
+    800: '#1e293b',
+    900: '#0f172a',
+  },
+};
 
 export default function StreetsIndex() {
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
-    checkAuth();
+    // Auth check is handled by the layout, but we can keep it for safety
   }, []);
-
-  const checkAuth = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        router.replace('/Login');
-      }
-    } catch (error) {
-      console.error('Auth check error:', error);
-      router.replace('/Login');
-    }
-  };
 
   const handleBackPress = () => {
     router.back();
@@ -41,16 +53,15 @@ export default function StreetsIndex() {
       title: 'Add Street',
       description: 'Register a new street location',
       icon: 'add-circle',
-      color: '#2E8B57',
+      color: COLORS.primary,
       route: '/admin/operations/add-street',
     },
-    // Future actions can be added here
     {
       id: 'view-streets',
       title: 'View Streets',
       description: 'Browse all registered streets',
       icon: 'list',
-      color: '#3B82F6',
+      color: COLORS.secondary,
       route: '/admin/operations/view-streets',
     },
   ];
@@ -61,35 +72,58 @@ export default function StreetsIndex() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      {/* Background blobs */}
+      <View style={[styles.blob, styles.blob1]} />
+      <View style={[styles.blob, styles.blob2]} />
 
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackPress}
-            accessible={true}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Street Management</Text>
-            <Text style={styles.headerSubtitle}>
-              Manage and organize street locations
-            </Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBackPress}
+              accessible
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+            >
+              <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+            </TouchableOpacity>
+            <View style={styles.logoRow}>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.secondary]}
+                style={styles.logoGradient}
+              >
+                <Ionicons name="map" size={18} color="white" />
+              </LinearGradient>
+              <Text style={styles.logoText}>CleanHaul</Text>
+            </View>
+            <View style={styles.userInfoRight}>
+              {user?.companyName && (
+                <Text style={styles.companyName}>{user.companyName}</Text>
+              )}
+              <Text style={styles.roleText}>
+                {user?.role?.toUpperCase() || 'ADMIN'}
+              </Text>
+              <Text style={styles.staffName}>{user?.full_name || 'User'}</Text>
+            </View>
           </View>
+          <Text style={styles.headline}>Street Management</Text>
+          <Text style={styles.subheadline}>
+            Manage and organize street locations
+          </Text>
         </View>
-      </View>
 
-      {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.cardsContainer}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          
+        {/* Quick Actions Cards */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="apps" size={20} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+          </View>
+
           {streetActions.map((action) => (
             <TouchableOpacity
               key={action.id}
@@ -98,30 +132,43 @@ export default function StreetsIndex() {
               activeOpacity={0.7}
             >
               <View style={styles.cardContent}>
-                <View style={[styles.iconContainer, { backgroundColor: `${action.color}15` }]}>
-                  <Ionicons name={action.icon} size={32} color={action.color} />
-                </View>
-                
+                <LinearGradient
+                  colors={[action.color, `${action.color}80`]}
+                  style={styles.iconGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name={action.icon} size={24} color="white" />
+                </LinearGradient>
                 <View style={styles.cardTextContainer}>
                   <Text style={styles.cardTitle}>{action.title}</Text>
                   <Text style={styles.cardDescription}>{action.description}</Text>
                 </View>
-
-                <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+                <Ionicons name="chevron-forward" size={20} color={COLORS.gray[400]} />
               </View>
             </TouchableOpacity>
           ))}
-
         </View>
 
         {/* Info Section */}
-        <View style={styles.infoSection}>
-          <View style={styles.infoCard}>
-            <Ionicons name="information-circle" size={20} color="#2E8B57" />
+        <View style={styles.infoCard}>
+          <View style={styles.infoIconContainer}>
+            <Ionicons name="information-circle" size={24} color={COLORS.primary} />
+          </View>
+          <View style={styles.infoContent}>
+            <Text style={styles.infoTitle}>Street Operations</Text>
             <Text style={styles.infoText}>
               Use this section to manage all street-related operations. More features are coming soon!
             </Text>
           </View>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.tagline}>CLEAN • SMART • RELIABLE</Text>
+          <Text style={styles.copyright}>
+            © 2026 CleanHaul • B2B Waste Operations
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -131,71 +178,155 @@ export default function StreetsIndex() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#ffffff',
+  },
+  blob: {
+    position: 'absolute',
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    opacity: 0.15,
+  },
+  blob1: {
+    top: -150,
+    left: -150,
+    backgroundColor: COLORS.primary,
+  },
+  blob2: {
+    bottom: -150,
+    right: -150,
+    backgroundColor: COLORS.secondary,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   header: {
-    backgroundColor: '#2E8B57',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    flexDirection: 'column',
+    marginBottom: 24,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  headerTopRow: {
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.gray[100],
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    marginTop: 4,
   },
-  headerContent: {
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
+    marginLeft: 8,
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 4,
+  logoGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '400',
-  },
-  content: {
-    flex: 1,
-  },
-  cardsContainer: {
-    padding: 20,
-  },
-  sectionTitle: {
+  logoText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: COLORS.gray[800],
+    marginLeft: 10,
+  },
+  companyName: {
+    fontSize: 11,
+    color: COLORS.gray[500],
+    fontWeight: '500',
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  staffName: {
+    fontSize: 11,
+    color: COLORS.gray[800],
+    fontWeight: '600',
+  },
+  userInfoRight: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  headline: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.gray[800],
+    letterSpacing: -0.3,
+    marginTop: 12,
+  },
+  subheadline: {
+    fontSize: 14,
+    color: COLORS.gray[500],
+    marginTop: 2,
+  },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.gray[700],
+    marginLeft: 8,
+  },
   actionCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: 12,
+    backgroundColor: COLORS.gray[50],
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.gray[100],
   },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
-  iconContainer: {
-    width: 56,
-    height: 56,
+  iconGradient: {
+    width: 48,
+    height: 48,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -207,41 +338,60 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: COLORS.gray[800],
     marginBottom: 4,
   },
   cardDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: COLORS.gray[500],
     lineHeight: 18,
   },
-  comingSoonSection: {
-    marginTop: 24,
-  },
-  comingSoonTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 16,
-  },
-  infoSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
   infoCard: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
+    backgroundColor: '#ecfdf5',
+    borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#a7f3d0',
+    marginBottom: 20,
+  },
+  infoIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(22, 160, 133, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#065f46',
+    marginBottom: 4,
   },
   infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#166534',
-    lineHeight: 20,
-    marginLeft: 12,
+    fontSize: 13,
+    color: '#047857',
+    lineHeight: 18,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  tagline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.gray[400],
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  copyright: {
+    fontSize: 9,
+    color: COLORS.gray[300],
   },
 });

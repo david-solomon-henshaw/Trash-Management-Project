@@ -9,18 +9,45 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  StatusBar,
+  Platform,
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSelector } from 'react-redux';
+import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { API_BASE_URL } from '../../../config';
+import appClient from '../../../hooks/services/client';
+
+// Theme constants
+const COLORS = {
+  primary: '#16A085',
+  secondary: '#f59e0b',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  purple: '#8b5cf6',
+  pink: '#ec4899',
+  cyan: '#06b6d4',
+  gray: {
+    50: '#f8fafc',
+    100: '#f1f5f9',
+    200: '#e2e8f0',
+    300: '#cbd5e1',
+    400: '#94a3b8',
+    500: '#64748b',
+    600: '#475569',
+    700: '#334155',
+    800: '#1e293b',
+    900: '#0f172a',
+  },
+};
 
 export default function ApartmentTypesScreen() {
-  const navigation = useNavigation();
+  const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
+
   const [showApartmentModal, setShowApartmentModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apartmentTypes, setApartmentTypes] = useState([]);
@@ -30,21 +57,13 @@ export default function ApartmentTypesScreen() {
     base_fee: '',
   });
 
-  // Fetch apartment types on screen load
   useEffect(() => {
     fetchApartmentTypes();
   }, []);
 
   const fetchApartmentTypes = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const response = await axios.get(
-        `${API_BASE_URL}/api/apartment-types`,
-        { headers }
-      );
-
+      const response = await appClient.get('/apartment-types');
       setApartmentTypes(response.data.apartmentTypes || []);
     } catch (error) {
       console.error('Error fetching apartment types:', error);
@@ -63,19 +82,11 @@ export default function ApartmentTypesScreen() {
     setIsSubmitting(true);
 
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const response = await axios.post(
-        `${API_BASE_URL}/api/apartment-types`,
-        apartmentForm,
-        { headers }
-      );
-
+      const response = await appClient.post('/apartment-types', apartmentForm);
       Alert.alert('Success', `Apartment Type "${apartmentForm.name}" added successfully!`);
       setShowApartmentModal(false);
       setApartmentForm({ name: '', base_fee: '' });
-      fetchApartmentTypes(); // Refresh the list after adding a new type
+      fetchApartmentTypes();
     } catch (error) {
       console.error('Error adding apartment type:', error);
       Alert.alert('Error', 'Failed to add apartment type. Please try again.');
@@ -85,68 +96,112 @@ export default function ApartmentTypesScreen() {
   };
 
   const handleBackPress = () => {
-    navigation.goBack();
+    router.back();
   };
 
   const renderApartmentType = ({ item }) => (
     <View style={styles.listItem}>
       <View style={styles.itemInfo}>
         <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemFee}>Base Fee: ${item.base_fee}</Text>
+        <Text style={styles.itemFee}>Base Fee: ₦{item.base_fee?.toLocaleString()}</Text>
       </View>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      {/* Background blobs */}
+      <View style={[styles.blob, styles.blob1]} />
+      <View style={[styles.blob, styles.blob2]} />
 
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackPress}
-            accessible={true}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Apartment Types</Text>
-            <Text style={styles.headerSubtitle}>Manage apartment categories and pricing</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBackPress}
+              accessible
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+            >
+              <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+            </TouchableOpacity>
+            <View style={styles.logoRow}>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.secondary]}
+                style={styles.logoGradient}
+              >
+                <Ionicons name="business" size={18} color="white" />
+              </LinearGradient>
+              <Text style={styles.logoText}>CleanHaul</Text>
+            </View>
+            <View style={styles.userInfoRight}>
+              {user?.companyName && (
+                <Text style={styles.companyName}>{user.companyName}</Text>
+              )}
+              <Text style={styles.roleText}>{user?.role?.toUpperCase() || 'ADMIN'}</Text>
+              <Text style={styles.staffName}>{user?.full_name || 'User'}</Text>
+            </View>
           </View>
+          <Text style={styles.headline}>Apartment Types</Text>
+          <Text style={styles.subheadline}>Manage apartment categories and pricing</Text>
         </View>
-      </View>
 
-      <ScrollView style={styles.content}>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowApartmentModal(true)}
-        >
-          <Ionicons name="add-circle" size={24} color="white" />
-          <Text style={styles.addButtonText}>Add Apartment Type</Text>
-        </TouchableOpacity>
+        {/* Add Button Card */}
+        <View style={styles.sectionCard}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowApartmentModal(true)}
+          >
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.secondary]}
+              style={styles.gradientButton}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="add-circle" size={24} color="white" />
+              <Text style={styles.addButtonText}>Add Apartment Type</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.listTitle}>Apartment Types List</Text>
+        {/* List Section */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="list" size={20} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Apartment Types List</Text>
+          </View>
 
-        {loading ? (
-          <ActivityIndicator size="large" color="#2E8B57" style={styles.loadingIndicator} />
-        ) : apartmentTypes.length === 0 ? (
-          <Text style={styles.emptyText}>No apartment types found.</Text>
-        ) : (
-          <FlatList
-            data={apartmentTypes}
-            renderItem={renderApartmentType}
-            keyExtractor={(item) => item._id}
-            scrollEnabled={false}
-          />
-        )}
+          {loading ? (
+            <ActivityIndicator size="large" color={COLORS.primary} style={styles.loadingIndicator} />
+          ) : apartmentTypes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="business-outline" size={48} color={COLORS.gray[300]} />
+              <Text style={styles.emptyTitle}>No apartment types found</Text>
+              <Text style={styles.emptyText}>Tap the button above to add your first type.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={apartmentTypes}
+              renderItem={renderApartmentType}
+              keyExtractor={(item) => item._id}
+              scrollEnabled={false}
+            />
+          )}
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.tagline}>CLEAN • SMART • RELIABLE</Text>
+          <Text style={styles.copyright}>© 2026 CleanHaul • B2B Waste Operations</Text>
+        </View>
       </ScrollView>
 
-      {/* Apartment Type Modal */}
+      {/* Add Apartment Type Modal */}
       <Modal
         visible={showApartmentModal}
         animationType="slide"
@@ -155,11 +210,22 @@ export default function ApartmentTypesScreen() {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Apartment Type</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Apartment Type</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowApartmentModal(false);
+                  setApartmentForm({ name: '', base_fee: '' });
+                }}
+              >
+                <Ionicons name="close" size={24} color={COLORS.gray[500]} />
+              </TouchableOpacity>
+            </View>
 
             <TextInput
               style={styles.input}
               placeholder="Name (e.g., Studio, 1 Bedroom)"
+              placeholderTextColor={COLORS.gray[400]}
               value={apartmentForm.name}
               onChangeText={(text) => setApartmentForm({ ...apartmentForm, name: text })}
             />
@@ -167,6 +233,7 @@ export default function ApartmentTypesScreen() {
             <TextInput
               style={styles.input}
               placeholder="Base Fee (e.g., 1000)"
+              placeholderTextColor={COLORS.gray[400]}
               value={apartmentForm.base_fee}
               onChangeText={(text) => setApartmentForm({ ...apartmentForm, base_fee: text })}
               keyboardType="numeric"
@@ -174,7 +241,7 @@ export default function ApartmentTypesScreen() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.cancelButton}
+                style={[styles.modalButton, styles.cancelButton]}
                 onPress={() => {
                   setShowApartmentModal(false);
                   setApartmentForm({ name: '', base_fee: '' });
@@ -184,12 +251,12 @@ export default function ApartmentTypesScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.submitButton}
+                style={[styles.modalButton, styles.submitButton]}
                 onPress={handleApartmentSubmit}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color="white" />
                 ) : (
                   <Text style={styles.buttonText}>Add</Text>
                 )}
@@ -205,97 +272,213 @@ export default function ApartmentTypesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#ffffff',
+  },
+  blob: {
+    position: 'absolute',
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    opacity: 0.15,
+  },
+  blob1: {
+    top: -150,
+    left: -150,
+    backgroundColor: COLORS.primary,
+  },
+  blob2: {
+    bottom: -150,
+    right: -150,
+    backgroundColor: COLORS.secondary,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   header: {
-    backgroundColor: '#2E8B57',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    flexDirection: 'column',
+    marginBottom: 24,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  headerTopRow: {
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.gray[100],
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    marginTop: 4,
   },
-  headerContent: {
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
+    marginLeft: 8,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 4,
+  logoGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerSubtitle: {
+  logoText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.gray[800],
+    marginLeft: 10,
+  },
+  companyName: {
+    fontSize: 11,
+    color: COLORS.gray[500],
+    fontWeight: '500',
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  staffName: {
+    fontSize: 11,
+    color: COLORS.gray[800],
+    fontWeight: '600',
+  },
+  userInfoRight: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  headline: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.gray[800],
+    letterSpacing: -0.3,
+    marginTop: 12,
+  },
+  subheadline: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '400',
+    color: COLORS.gray[500],
+    marginTop: 2,
   },
-  content: {
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
     padding: 20,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.gray[700],
+    marginLeft: 8,
   },
   addButton: {
-    backgroundColor: '#2E8B57',
-    padding: 15,
-    borderRadius: 10,
+    overflow: 'hidden',
+    borderRadius: 16,
+  },
+  gradientButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 10,
   },
   addButtonText: {
     color: 'white',
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  listTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#2E8B57',
+    fontSize: 16,
+    fontWeight: '600',
   },
   listItem: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: COLORS.gray[50],
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.gray[100],
   },
   itemInfo: {
     flexDirection: 'column',
   },
   itemName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1E293B',
+    fontWeight: '600',
+    color: COLORS.gray[800],
+    marginBottom: 4,
   },
   itemFee: {
     fontSize: 14,
-    color: '#64748B',
-    marginTop: 4,
+    color: COLORS.gray[500],
   },
   loadingIndicator: {
     marginTop: 20,
   },
-  emptyText: {
-    textAlign: 'center',
-    fontSize: 16,
-    color: '#64748B',
-    marginTop: 20,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
   },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.gray[700],
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.gray[500],
+    textAlign: 'center',
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  tagline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.gray[400],
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  copyright: {
+    fontSize: 9,
+    color: COLORS.gray[300],
+  },
+  // Modal Styles
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -303,50 +486,70 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-    color: '#2E8B57',
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
+    borderColor: COLORS.gray[200],
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
+    color: COLORS.gray[800],
+    backgroundColor: COLORS.gray[50],
+    marginBottom: 16,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 8,
   },
-  cancelButton: {
-    backgroundColor: '#f0f0f0',
-    padding: 10,
-    borderRadius: 5,
-    width: '48%',
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
+  cancelButton: {
+    backgroundColor: COLORS.gray[100],
+  },
   cancelButtonText: {
-    color: '#64748B',
+    color: COLORS.gray[600],
+    fontSize: 16,
     fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: '#2E8B57',
-    padding: 10,
-    borderRadius: 5,
-    width: '48%',
-    alignItems: 'center',
+    backgroundColor: COLORS.primary,
   },
   buttonText: {
-    color: '#fff',
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

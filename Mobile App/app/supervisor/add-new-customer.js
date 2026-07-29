@@ -61,35 +61,35 @@ export default function AddCustomerForm() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
   const fetchData = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
 
       // Fetch streets
-      const streetData = await axios.get(`${API_BASE_URL}/api/street/all`, { headers });
+      const streetData = await apiClient.get(`/street/all`);
       setStreets(streetData.data.streets || []);
 
       // Fetch apartment types
-      const apartmentTypeData = await axios.get(`${API_BASE_URL}/api/apartment-types`, { headers });
+      const apartmentTypeData = await apiClient.get(`/apartment-types`);
       setApartmentTypes(apartmentTypeData.data.apartmentTypes || []);
 
       // Fetch commercial subtypes
-      const commercialSubtypeData = await axios.get(`${API_BASE_URL}/api/commercial-subtypes`, { headers });
+      const commercialSubtypeData = await apiClient.get(`/commercial-subtypes`);
       setCommercialSubtypes(commercialSubtypeData.data.commercialSubtypes || []);
 
       // Fetch institutional subtypes
-      const institutionalSubtypeData = await axios.get(`${API_BASE_URL}/api/institutional-subtypes`, { headers });
+      const institutionalSubtypeData = await apiClient.get(`/institutional-subtypes`);
       setInstitutionalSubtypes(institutionalSubtypeData.data.institutionalSubtypes || []);
 
     } catch (error) {
@@ -193,8 +193,8 @@ export default function AddCustomerForm() {
     setSubmitting(true);
 
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
 
       const payload = {
         name: formData.name,
@@ -210,8 +210,8 @@ export default function AddCustomerForm() {
         status: formData.status,
       };
 
-      const response = await axios.post(
-        `${API_BASE_URL}/api/customers/create`,
+      const response = await apiClient.post(
+        `/customers/create`,
         payload,
         { headers }
       );

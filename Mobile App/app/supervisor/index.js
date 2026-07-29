@@ -74,15 +74,15 @@ export default function SupervisorHome() {
   const fetchDashboardData = async () => {
     try {
       // console.log('Starting to fetch dashboard data...');
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       // console.log('Token retrieved:', token ? 'Token exists' : 'No token found');
-      const headers = { Authorization: `Bearer ${token}` };
+     
 
       // Fetch supervisor-specific data
       // console.log('Making API calls to fetch supervisor data...');
       const [allAssignments, paymentsToday] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/trucks/all-assignments`, { headers }),
-        axios.get(`${API_BASE_URL}/api/payments/today-collections`, { headers })
+        apiClient.get(`/trucks/all-assignments`),
+        apiClient.get(`/payments/today-collections`)
       ]);
 
       // console.log('All Assignments Response:', allAssignments.data);
@@ -147,8 +147,8 @@ export default function SupervisorHome() {
     setStartingAssignment(true);
     
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
 
       // Get current location if permission is granted
       let locationData = null;
@@ -173,8 +173,8 @@ export default function SupervisorHome() {
         start_location: locationData // Include location data
       };
 
-      const response = await axios.post(
-        `${API_BASE_URL}/api/trucks/start-assignment`,
+      const response = await apiClient.post(
+        `/trucks/start-assignment`,
         requestBody,
         { headers }
       );
@@ -202,8 +202,8 @@ export default function SupervisorHome() {
     setUpdatingStatus(true);
     
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
 
       // Get current location if permission is granted
       let locationData = null;
@@ -229,8 +229,8 @@ export default function SupervisorHome() {
         location: locationData
       };
 
-      const response = await axios.post(
-        `${API_BASE_URL}/api/trucks/update-assignment-status`,
+      const response = await apiClient.post(
+        `/trucks/update-assignment-status`,
         requestBody,
         { headers }
       );

@@ -24,13 +24,13 @@ export default function CustomerIndex() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 

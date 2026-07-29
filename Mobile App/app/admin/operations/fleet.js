@@ -6,10 +6,13 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSelector } from 'react-redux';
 
 // Import components
 import CreateTruck from '../../../components/CreateTruck';
@@ -21,25 +24,26 @@ const { width } = Dimensions.get('window');
 const Fleet = () => {
   const [activeTab, setActiveTab] = useState('create');
   const navigation = useNavigation();
+  const user = useSelector((state) => state.auth.user);
 
   const tabs = [
-    { 
-      id: 'create', 
-      label: 'Create Truck', 
+    {
+      id: 'create',
+      label: 'Create Truck',
       icon: 'add-circle-outline',
-      color: '#6366f1'
+      color: '#16A085',
     },
-    { 
-      id: 'assign', 
-      label: 'Assign Route', 
+    {
+      id: 'assign',
+      label: 'Assign Route',
       icon: 'navigate-outline',
-      color: '#10b981'
+      color: '#f59e0b',
     },
-    { 
-      id: 'view', 
-      label: 'View Fleet', 
+    {
+      id: 'view',
+      label: 'View Fleet',
       icon: 'list-outline',
-      color: '#8b5cf6'
+      color: '#8b5cf6',
     },
   ];
 
@@ -56,66 +60,50 @@ const Fleet = () => {
     }
   };
 
-  const handleBackPress = () => {
-    navigation.goBack();
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Enhanced Header */}
+      {/* Header – matches index.js and reports */}
       <View style={styles.header}>
-        {/* Back Button and Title Row */}
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackPress}
-            accessible={true}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <View style={styles.headerIcon}>
-              <Ionicons name="car-sport-outline" size={32} color="white" />
-            </View>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.headerTitle}>Fleet Management</Text>
-              <Text style={styles.headerSubtitle}>Manage trucks, teams, and routes</Text>
-            </View>
+          <View style={styles.logoRow}>
+            <LinearGradient colors={['#16A085', '#f59e0b']} style={styles.logoGradient}>
+              <Ionicons name="car-sport" size={18} color="white" />
+            </LinearGradient>
+            <Text style={styles.logoText}>CleanHaul</Text>
+          </View>
+          <View style={styles.userInfoRight}>
+            {user?.companyName && <Text style={styles.companyName}>{user.companyName}</Text>}
+            <Text style={styles.roleText}>{user?.role?.toUpperCase() || 'ADMIN'}</Text>
+            <Text style={styles.staffName}>{user?.full_name || 'User'}</Text>
           </View>
         </View>
-
-        <View style={styles.headerStats}>
-          <View style={styles.statPill}>
-            <Text style={styles.statPillText}>🚛 Active Fleet</Text>
-          </View>
-        </View>
+        <Text style={styles.headline}>Fleet Management</Text>
       </View>
 
-      {/* Enhanced Tab Navigation */}
+      {/* Tab Navigation */}
       <View style={styles.tabContainer}>
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.id}
-            style={[
-              styles.tab,
-              activeTab === tab.id && [styles.activeTab, { borderBottomColor: tab.color }]
-            ]}
+            style={[styles.tab, activeTab === tab.id && styles.activeTab]}
             onPress={() => setActiveTab(tab.id)}
           >
-            <Ionicons 
-              name={tab.icon} 
-              size={20} 
-              color={activeTab === tab.id ? tab.color : '#64748B'} 
+            <Ionicons
+              name={tab.icon}
+              size={20}
+              color={activeTab === tab.id ? tab.color : '#64748B'}
             />
-            <Text style={[
-              styles.tabLabel,
-              activeTab === tab.id && [styles.activeTabLabel, { color: tab.color }]
-            ]}>
+            <Text
+              style={[
+                styles.tabLabel,
+                activeTab === tab.id && [styles.activeTabLabel, { color: tab.color }],
+              ]}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -123,9 +111,7 @@ const Fleet = () => {
       </View>
 
       {/* Content */}
-      <View style={styles.content}>
-        {renderContent()}
-      </View>
+      <View style={styles.content}>{renderContent()}</View>
     </SafeAreaView>
   );
 };
@@ -133,89 +119,104 @@ const Fleet = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
   header: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
-  headerTopRow: {
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    marginTop: 4,
   },
-  headerContent: {
+  logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginLeft: 12,
   },
-  headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  logoGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
+  logoText: {
+    fontSize: 18,
     fontWeight: '700',
-    color: 'white',
-    marginBottom: 2,
+    color: '#1f2937',
+    marginLeft: 10,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '400',
+  userInfoRight: {
+    alignItems: 'flex-end',
+    gap: 2,
   },
-  headerStats: {
-    flexDirection: 'row',
+  companyName: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
   },
-  statPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  statPillText: {
+  roleText: {
     fontSize: 12,
-    color: 'white',
+    fontWeight: '700',
+    color: '#16A085',
+  },
+  staffName: {
+    fontSize: 11,
+    color: '#1f2937',
     fontWeight: '600',
+  },
+  headline: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    letterSpacing: -0.3,
+    marginTop: 12,
   },
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: 'white',
     marginHorizontal: 16,
-    marginTop: -16,
     borderRadius: 16,
     padding: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   tab: {
     flex: 1,
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeTab: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    backgroundColor: 'rgba(22, 160, 133, 0.08)',
   },
   tabLabel: {
     fontSize: 13,

@@ -52,26 +52,26 @@ export default function RecordService() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
         return;
       }
       await fetchActiveRoute();
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
   const fetchActiveRoute = async () => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
 
       // Call the supervisor assignments endpoint to get today's assignment
-      const response = await axios.get(`${API_BASE_URL}/api/trucks/my-assignments`, { headers });
+      const response = await apiClient.get(`/trucks/my-assignments`);
       
       if (response.data.assignment) {
         // Use the assignment data directly and set streets from populated data
@@ -92,10 +92,10 @@ export default function RecordService() {
 
   const fetchCustomersForStreet = async (streetId) => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
 
-      const response = await axios.get(`${API_BASE_URL}/api/customers/by-street/${streetId}`, { headers });
+      const response = await apiClient.get(`/customers/by-street/${streetId}`);
       setCustomers(response.data.customers || []);
     } catch (error) {
       console.error('Fetch customers error:', error);
@@ -172,7 +172,7 @@ export default function RecordService() {
     setSubmitting(true);
 
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       const headers = { 
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -191,7 +191,7 @@ export default function RecordService() {
       };
 
       // Submit service record
-      await axios.post(`${API_BASE_URL}/api/services/create`, serviceData, { headers });
+      await apiClient.post(`/services/create`, serviceData);
       
       setSubmitting(false);
       setShowSuccess(true);

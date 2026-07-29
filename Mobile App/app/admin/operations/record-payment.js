@@ -11,14 +11,16 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { jwtDecode } from 'jwt-decode';
-// import { API_BASE_URL } from '../../../config';
+
 import { useRouter } from 'expo-router';
+import apiClient from '../../../hooks/services/client';
+import { useSelector } from 'react-redux';
 
 const { width } = Dimensions.get('window');
 
@@ -34,7 +36,9 @@ export default function RecordPayment() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [agentId, setAgentId] = useState('');
-  
+  const user = useSelector((state) => state.auth.user);
+
+
   const [formData, setFormData] = useState({
     street: '',
     customer: '',
@@ -46,7 +50,7 @@ export default function RecordPayment() {
     is_full_payment: false,
     pickup_id: '',
   });
-  
+
   const [showDropdown, setShowDropdown] = useState({
     street: false,
     customer: false,
@@ -61,29 +65,28 @@ export default function RecordPayment() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
       } else {
-        const decodedToken = jwtDecode(token);
-        setAgentId(decodedToken.user.id);
+      
+        setAgentId(user.id);
         setFormData(prevFormData => ({
           ...prevFormData,
-          agent_id: decodedToken.user.id,
+          agent_id: user.id,
         }));
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
   const fetchData = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
 
-      const streetData = await axios.get(`${API_BASE_URL}/api/street/all`, { headers });
+
+      const streetData = await apiClient.get(`/street/all`);
       setStreets(streetData.data.streets || []);
 
       setLoading(false);
@@ -96,11 +99,11 @@ export default function RecordPayment() {
   const fetchCustomersByStreet = async (streetId) => {
     setLoadingCustomers(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_BASE_URL}/api/customers/by-street/${streetId}`, { headers });
+     
+    
+      const response = await apiClient.get(`/customers/by-street/${streetId}`);
       setCustomers(response.data.customers || []);
-      
+
       if (response.data.customers.length === 0) {
         Alert.alert('No Customers', 'No customers found on this street');
       }
@@ -116,20 +119,15 @@ export default function RecordPayment() {
   const fetchCustomerPaymentHistory = async (customerId) => {
     setLoadingHistory(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      // Fetch customer details
-      const customerResponse = await axios.get(`${API_BASE_URL}/api/customers/${customerId}`, { headers });
+  
+      const customerResponse = await apiClient.get(`/customers/${customerId}`);
       setSelectedCustomerDetails(customerResponse.data.customer);
-      
-      // Fetch payment summary
-      const summaryResponse = await axios.get(`${API_BASE_URL}/api/payments/summary/${customerId}`, { headers });
+
+      const summaryResponse = await apiClient.get(`/payments/summary/${customerId}`);
       setCustomerPaymentHistory(summaryResponse.data);
-      
-      // Calculate balance for the currently selected month
+
       calculateMonthBalance(summaryResponse.data, formData.month, customerResponse.data.customer.base_fee);
-      
+
     } catch (error) {
       console.error('Error fetching customer payment history:', error);
       setCustomerPaymentHistory(null);
@@ -140,7 +138,6 @@ export default function RecordPayment() {
 
   const calculateMonthBalance = (paymentHistory, selectedMonth, baseFee) => {
     if (!paymentHistory || !paymentHistory.monthly_fees || paymentHistory.monthly_fees.length === 0) {
-      // No payment records - use base fee
       setSelectedMonthBalance({
         total_fee: baseFee,
         paid_so_far: 0,
@@ -152,19 +149,17 @@ export default function RecordPayment() {
       return;
     }
 
-    // Check if selected month exists in records
     const [year, month] = selectedMonth.split('-').map(Number);
     const monthEntry = paymentHistory.monthly_fees.find(fee => {
       const feeDate = new Date(fee.month);
-      return feeDate.getUTCFullYear() === year && 
+      return feeDate.getUTCFullYear() === year &&
              feeDate.getUTCMonth() === month - 1;
     });
 
     if (monthEntry) {
-      // Month has records - use actual data
       const paidSoFar = monthEntry.total_fee - monthEntry.remaining_balance;
       const remaining = Math.max(0, monthEntry.remaining_balance);
-      
+
       setSelectedMonthBalance({
         total_fee: monthEntry.total_fee,
         paid_so_far: paidSoFar,
@@ -172,10 +167,9 @@ export default function RecordPayment() {
         status: remaining === 0 ? 'paid' : paidSoFar > 0 ? 'partial' : 'unpaid',
         has_records: true
       });
-      
+
       setFormData(prev => ({ ...prev, amount: remaining > 0 ? remaining.toString() : '' }));
     } else {
-      // Month not in records - use base fee
       setSelectedMonthBalance({
         total_fee: baseFee,
         paid_so_far: 0,
@@ -189,7 +183,7 @@ export default function RecordPayment() {
 
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
-    
+
     if (field === 'street') {
       setFormData(prev => ({ ...prev, customer: '', amount: '' }));
       setSelectedCustomerDetails(null);
@@ -198,7 +192,7 @@ export default function RecordPayment() {
       setCustomers([]);
       fetchCustomersByStreet(value);
     }
-    
+
     if (field === 'customer') {
       setFormData(prev => ({ ...prev, amount: '' }));
       setSelectedMonthBalance(null);
@@ -207,8 +201,8 @@ export default function RecordPayment() {
 
     if (field === 'month' && selectedCustomerDetails) {
       calculateMonthBalance(
-        customerPaymentHistory, 
-        value, 
+        customerPaymentHistory,
+        value,
         selectedCustomerDetails.base_fee
       );
     }
@@ -226,7 +220,6 @@ export default function RecordPayment() {
       return;
     }
 
-    // Check if overpaying
     if (selectedMonthBalance && amount > selectedMonthBalance.remaining) {
       Alert.alert(
         'Overpayment Warning',
@@ -245,7 +238,7 @@ export default function RecordPayment() {
   const submitPayment = async (amount) => {
     setSubmitting(true);
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       const headers = { Authorization: `Bearer ${token}` };
       const payload = {
         customer_id: formData.customer,
@@ -259,14 +252,14 @@ export default function RecordPayment() {
         pickup_id: formData.pickup_id || undefined,
         allow_overpayment: true
       };
-      
+
       const response = await axios.post(`${API_BASE_URL}/api/payments`, payload, { headers });
-      
+
       const summary = response.data.payment_summary;
       const receipt = response.data.receipt;
-      
+
       let message = `Payment recorded successfully!\n\nTotal Fee: ₦${summary?.total_fee || 0}\nTotal Paid: ₦${summary?.total_paid || 0}\nRemaining: ₦${summary?.remaining_balance || 0}`;
-      
+
       if (receipt) {
         message += `\n\nReceipt: ${receipt.receipt_number}`;
         if (receipt.sent) {
@@ -277,7 +270,7 @@ export default function RecordPayment() {
           message += `\nℹ️ No email on file`;
         }
       }
-      
+
       Alert.alert('Success', message, [{ text: 'OK', onPress: () => router.back() }]);
     } catch (error) {
       console.error('Error recording payment:', error);
@@ -295,7 +288,7 @@ export default function RecordPayment() {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'paid': return '#10B981';
       case 'partial': return '#F59E0B';
       case 'unpaid': return '#EF4444';
@@ -304,7 +297,7 @@ export default function RecordPayment() {
   };
 
   const getStatusLabel = (status) => {
-    switch(status) {
+    switch (status) {
       case 'paid': return 'Fully Paid';
       case 'partial': return 'Partially Paid';
       case 'unpaid': return 'Unpaid';
@@ -345,9 +338,9 @@ export default function RecordPayment() {
                   }}
                 >
                   <Text style={styles.modalItemText}>
-                    {isSimpleValue 
-                      ? option.label 
-                      : field === 'customer' 
+                    {isSimpleValue
+                      ? option.label
+                      : field === 'customer'
                         ? formatCustomerDisplay(option)
                         : (option.streetName || option.name)}
                   </Text>
@@ -374,9 +367,8 @@ export default function RecordPayment() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
+          <ActivityIndicator size="large" color="#16A085" />
           <Text style={styles.loadingText}>Loading payment form...</Text>
         </View>
       </SafeAreaView>
@@ -385,24 +377,24 @@ export default function RecordPayment() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#6366f1" />
-      
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="white" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Record Payment</Text>
-          <Text style={styles.headerSubtitle}>Collect customer payments</Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <Ionicons name="card" size={24} color="white" />
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Record Payment</Text>
+            <Text style={styles.headerSubtitle}>Collect customer payments</Text>
+          </View>
+          <View style={styles.headerPlaceholder} />
         </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
+        <View style={styles.sectionCard}>
           {/* Street Selection */}
           <View style={styles.formGroup}>
             <View style={styles.labelContainer}>
@@ -441,14 +433,14 @@ export default function RecordPayment() {
             >
               {loadingCustomers ? (
                 <View style={styles.loadingRow}>
-                  <ActivityIndicator size="small" color="#6366f1" />
+                  <ActivityIndicator size="small" color="#16A085" />
                   <Text style={styles.loadingTextSmall}>Loading customers...</Text>
                 </View>
               ) : (
                 <>
                   <Text style={formData.customer ? styles.dropdownTextSelected : styles.dropdownText}>
-                    {formData.customer 
-                      ? formatCustomerDisplay(customers.find(c => c._id === formData.customer)) 
+                    {formData.customer
+                      ? formatCustomerDisplay(customers.find(c => c._id === formData.customer))
                       : 'Select Customer'}
                   </Text>
                   <Ionicons name="chevron-down" size={20} color="#94a3b8" />
@@ -465,21 +457,21 @@ export default function RecordPayment() {
             <View style={styles.customerCard}>
               <View style={styles.customerCardHeader}>
                 <View style={styles.customerAvatar}>
-                  <Ionicons name="person-circle" size={32} color="#6366f1" />
+                  <Ionicons name="person-circle" size={32} color="#16A085" />
                 </View>
                 <View style={styles.customerInfo}>
                   <Text style={styles.customerName}>{selectedCustomerDetails.name}</Text>
                   <Text style={styles.customerType}>
-                    {selectedCustomerDetails.customer_type === 'residential' 
+                    {selectedCustomerDetails.customer_type === 'residential'
                       ? selectedCustomerDetails.apartment_type?.name || 'Residential'
                       : selectedCustomerDetails.commercial_subtype?.name || 'Commercial'}
                   </Text>
                 </View>
               </View>
-              
+
               {loadingHistory ? (
                 <View style={styles.loadingSection}>
-                  <ActivityIndicator size="small" color="#6366f1" />
+                  <ActivityIndicator size="small" color="#16A085" />
                   <Text style={styles.loadingTextSmall}>Loading payment history...</Text>
                 </View>
               ) : (
@@ -538,7 +530,7 @@ export default function RecordPayment() {
                   );
                 }}
               >
-                <Ionicons name="help-circle-outline" size={24} color="#6366f1" />
+                <Ionicons name="help-circle-outline" size={24} color="#16A085" />
               </TouchableOpacity>
             </View>
             <Text style={styles.helperText}>Format: YYYY-MM (e.g., 2024-12)</Text>
@@ -604,8 +596,8 @@ export default function RecordPayment() {
                 styles.helperText,
                 parseFloat(formData.amount) > selectedMonthBalance.remaining && { color: '#EF4444' }
               ]}>
-                {parseFloat(formData.amount) < selectedMonthBalance.remaining 
-                  ? `Partial payment: ₦${(selectedMonthBalance.remaining - parseFloat(formData.amount)).toLocaleString()} will remain` 
+                {parseFloat(formData.amount) < selectedMonthBalance.remaining
+                  ? `Partial payment: ₦${(selectedMonthBalance.remaining - parseFloat(formData.amount)).toLocaleString()} will remain`
                   : parseFloat(formData.amount) === selectedMonthBalance.remaining
                     ? '✓ Full payment for this month'
                     : `⚠ Overpayment by ₦${(parseFloat(formData.amount) - selectedMonthBalance.remaining).toLocaleString()}`}
@@ -665,9 +657,9 @@ export default function RecordPayment() {
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity 
-            style={[styles.submitButton, submitting && styles.submitButtonDisabled]} 
-            onPress={handleSubmit} 
+          <TouchableOpacity
+            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
             disabled={submitting}
           >
             {submitting ? (
@@ -724,44 +716,77 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  header: {
-    backgroundColor: '#6366f1',
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  // Header
+  header: {
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 5,
+    elevation: 3,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   backButton: {
-    padding: 8,
-    marginRight: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerContent: {
+  headerTextContainer: {
     flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#1e293b',
+    marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 2,
+    color: '#64748b',
+    fontWeight: '400',
   },
-  headerIcon: {
-    padding: 8,
+  headerPlaceholder: {
+    width: 40,
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 16,
   },
-  section: {
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 20,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
   },
   formGroup: {
     marginBottom: 20,
@@ -773,7 +798,7 @@ const styles = StyleSheet.create({
   labelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   label: {
     fontSize: 14,
@@ -784,10 +809,9 @@ const styles = StyleSheet.create({
   required: {
     color: '#ef4444',
     marginLeft: 2,
-    fontSize: 14,
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 12,
@@ -795,11 +819,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#1e293b',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
   },
   monthInputContainer: {
     flexDirection: 'row',
@@ -817,17 +836,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
   },
   dropdownDisabled: {
     backgroundColor: '#f1f5f9',
@@ -859,15 +873,12 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   customerCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   customerCardHeader: {
     flexDirection: 'row',
@@ -978,7 +989,7 @@ const styles = StyleSheet.create({
     color: '#1e293b',
   },
   submitButton: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#16A085',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1000,22 +1011,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#64748b',
-    fontWeight: '500',
-  },
   loadingSection: {
     padding: 20,
     alignItems: 'center',
   },
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1023,16 +1023,16 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
     maxHeight: 400,
   },
   modalItem: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',

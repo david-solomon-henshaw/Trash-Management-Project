@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  FlatList, 
-  TextInput, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  TextInput,
+  StyleSheet,
   Platform,
-  Dimensions 
+  Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -21,7 +21,7 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
   const [cardWidth, setCardWidth] = useState(0);
 
   // console.log(staff, 'staff');
-  
+
   useEffect(() => {
     if (containerWidth > 0) {
       const minCardWidth = 160;
@@ -63,7 +63,7 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
   function getRoleColor(role) {
     const colors = {
       supervisor: '#8b5cf6',
-      driver: '#10b981', 
+      driver: '#10b981',
       field_agent: '#f59e0b',
       admin: '#ef4444',
       c_care: '#6366f1',
@@ -84,7 +84,7 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
   const renderStaffCard = ({ item }) => {
     const isSelected = formData.team_members.some((member) => member.user === item._id);
     const roleColor = getRoleColor(item.role);
-    
+
     return (
       <TouchableOpacity
         style={[
@@ -150,8 +150,9 @@ const TeamMemberSelection = ({ formData, setFormData, staff }) => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <View style={styles.headerIcon}>
-            <Ionicons name="people" size={24} color="#6366f1" />
+       // In the header section, change the icon color:
+          <View style={[styles.headerIcon, { backgroundColor: 'rgba(22, 160, 133, 0.1)' }]}>
+            <Ionicons name="people" size={24} color="#16A085" />
           </View>
           <View>
             <Text style={styles.title}>Team Assembly</Text>

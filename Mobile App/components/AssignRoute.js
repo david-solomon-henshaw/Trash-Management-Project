@@ -7,9 +7,9 @@ import {
   Alert,
   StyleSheet,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-// import { API_BASE_URL } from '../config';
-import axios from 'axios';
+import appClient from '../hooks/services/client'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RouteAndTruckSelection from './RouteAndTruckSelection';
 import TeamMemberSelection from './TeamMemberSelection';
@@ -37,16 +37,14 @@ const AssignRoute = () => {
   const fetchData = async () => {
     try {
       setFetching(true);
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      const [trucksRes, staffRes, streetsRes] = await Promise.allSettled([
-        axios.get(`${API_BASE_URL}/api/trucks`, { headers }),
-        axios.get(`${API_BASE_URL}/api/staff`, { headers }),
-        axios.get(`${API_BASE_URL}/api/street/all`, { headers })
-      ]);
+      const token = await AsyncStorage.getItem('userToken');
+  
 
-      // console.log(streetsRes)
+      const [trucksRes, staffRes, streetsRes] = await Promise.allSettled([
+        appClient.get(`/trucks`),
+        appClient.get(`/staff`),
+        appClient.get(`/street/all`),
+      ]);
 
       if (trucksRes.status === 'fulfilled') {
         setTrucks(trucksRes.value.data.trucks || []);
@@ -79,9 +77,8 @@ const AssignRoute = () => {
   const toggleStreet = (streetId) => {
     const isSelected = formData.street_ids.includes(streetId);
     const updatedStreets = isSelected
-      ? formData.street_ids.filter(id => id !== streetId)
+      ? formData.street_ids.filter((id) => id !== streetId)
       : [...formData.street_ids, streetId];
-    
     setFormData({ ...formData, street_ids: updatedStreets });
   };
 
@@ -102,14 +99,13 @@ const AssignRoute = () => {
       Alert.alert('Error', 'At least one street must be selected');
       return false;
     }
-    const hasSupervisor = formData.team_members.some(member => member.role === 'supervisor' || member.role === 'admin');
+    const hasSupervisor = formData.team_members.some((member) => member.role === 'supervisor' || member.role === 'admin');
     if (!hasSupervisor) {
       Alert.alert('Error', 'Team must have a supervisor or admin');
       return false;
     }
-    
     const invalidMembers = formData.team_members.some(
-      member => !member.user || !['supervisor', 'driver', 'field_agent', 'admin'].includes(member.role)
+      (member) => !member.user || !['supervisor', 'driver', 'field_agent', 'admin'].includes(member.role)
     );
     if (invalidMembers) {
       Alert.alert('Error', 'All team members must have a valid user and role');
@@ -122,24 +118,19 @@ const AssignRoute = () => {
     if (!validateForm()) return;
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       const cleanTeamMembers = formData.team_members.map(({ tempId, ...member }) => member);
-      const response = await axios.post(
-        `${API_BASE_URL}/api/trucks/assign-route`,
+      const response = await appClient.post(
+        `/trucks/assign-route`,
         {
           truck_id: formData.truck_id,
           team_members: cleanTeamMembers,
           street_ids: formData.street_ids,
           scheduled_date: formData.scheduled_date,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
         }
       );
       if (response.status === 201) {
-        Alert.alert('Success', 'Route assigned successfully!', [
-          { text: 'OK', onPress: resetForm },
-        ]);
+        Alert.alert('Success', 'Route assigned successfully!', [{ text: 'OK', onPress: resetForm }]);
       }
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to assign route';
@@ -162,7 +153,7 @@ const AssignRoute = () => {
   if (fetching) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6366f1" />
+        <ActivityIndicator size="large" color="#16A085" />
         <Text style={styles.loadingText}>Loading assignment data...</Text>
       </View>
     );
@@ -174,8 +165,8 @@ const AssignRoute = () => {
         {/* Summary Stats */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-              <Ionicons name="car-sport" size={20} color="#6366f1" />
+            <View style={[styles.statIcon, { backgroundColor: 'rgba(22, 160, 133, 0.1)' }]}>
+              <Ionicons name="car-sport" size={20} color="#16A085" />
             </View>
             <Text style={styles.statValue}>{trucks.length}</Text>
             <Text style={styles.statLabel}>Available Trucks</Text>
@@ -196,7 +187,7 @@ const AssignRoute = () => {
           </View>
         </View>
 
-        {/* ROUTE AND TRUCK SELECTION */}
+        {/* Route and Truck Selection */}
         <RouteAndTruckSelection
           formData={formData}
           handleInputChange={handleInputChange}
@@ -205,17 +196,13 @@ const AssignRoute = () => {
           setShowTruckOptions={setShowTruckOptions}
         />
 
-        {/* TEAM MEMBERS */}
-        <TeamMemberSelection
-          formData={formData}
-          setFormData={setFormData}
-          staff={staff}
-        />
+        {/* Team Members */}
+        <TeamMemberSelection formData={formData} setFormData={setFormData} staff={staff} />
 
-        {/* STREETS SELECTION */}
+        {/* Streets Selection */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
+            <View style={[styles.sectionIcon, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
               <Ionicons name="location" size={20} color="#8b5cf6" />
             </View>
             <View>
@@ -223,7 +210,7 @@ const AssignRoute = () => {
               <Text style={styles.sectionSubtitle}>Select streets for this route</Text>
             </View>
           </View>
-          
+
           <View style={styles.selectionSummary}>
             <View style={styles.summaryBadge}>
               <Text style={styles.summaryText}>
@@ -236,25 +223,15 @@ const AssignRoute = () => {
             {streets.map((street) => (
               <TouchableOpacity
                 key={street._id}
-                style={[
-                  styles.streetChip,
-                  formData.street_ids.includes(street._id) && styles.selectedStreetChip,
-                ]}
+                style={[styles.streetChip, formData.street_ids.includes(street._id) && styles.selectedStreetChip]}
                 onPress={() => toggleStreet(street._id)}
-                accessible={true}
-                accessibilityLabel={`Toggle ${street.name}`}
               >
-                <Ionicons 
-                  name={formData.street_ids.includes(street._id) ? "checkmark-circle" : "location-outline"} 
-                  size={16} 
-                  color={formData.street_ids.includes(street._id) ? "white" : "#64748B"} 
+                <Ionicons
+                  name={formData.street_ids.includes(street._id) ? 'checkmark-circle' : 'location-outline'}
+                  size={16}
+                  color={formData.street_ids.includes(street._id) ? 'white' : '#64748B'}
                 />
-                <Text
-                  style={[
-                    styles.streetChipText,
-                    formData.street_ids.includes(street._id) && styles.selectedStreetChipText,
-                  ]}
-                >
+                <Text style={[styles.streetChipText, formData.street_ids.includes(street._id) && styles.selectedStreetChipText]}>
                   {street.streetName}
                 </Text>
               </TouchableOpacity>
@@ -262,15 +239,13 @@ const AssignRoute = () => {
           </View>
         </View>
 
-        {/* ACTION BUTTONS */}
+        {/* Action Buttons */}
         <View style={styles.sectionContainer}>
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.actionButton, styles.assignButton, loading && styles.disabledButton]}
               onPress={handleSubmit}
               disabled={loading}
-              accessible={true}
-              accessibilityLabel="Assign Route"
             >
               {loading ? (
                 <ActivityIndicator color="white" size="small" />
@@ -281,12 +256,7 @@ const AssignRoute = () => {
                 </>
               )}
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.clearButton]}
-              onPress={resetForm}
-              accessible={true}
-              accessibilityLabel="Clear Form"
-            >
+            <TouchableOpacity style={[styles.actionButton, styles.clearButton]} onPress={resetForm}>
               <Ionicons name="refresh" size={20} color="#64748B" />
               <Text style={styles.clearButtonText}>Clear Form</Text>
             </TouchableOpacity>
@@ -329,11 +299,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   statIcon: {
     width: 40,
@@ -360,11 +336,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -375,7 +357,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(139, 92, 246, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -446,14 +427,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   assignButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
   },
   disabledButton: {
     backgroundColor: '#9ca3af',

@@ -7,37 +7,41 @@ import {
   ScrollView,
   Alert,
   StyleSheet,
-  StatusBar,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-// import { API_BASE_URL } from '../../../config';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSelector } from 'react-redux';
 import { useRouter } from 'expo-router';
+import appClient from '../../../hooks/services/client';
+
+const COLORS = {
+  primary: '#16A085',
+  secondary: '#f59e0b',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  gray: {
+    50: '#f8fafc',
+    100: '#f1f5f9',
+    200: '#e2e8f0',
+    300: '#cbd5e1',
+    400: '#94a3b8',
+    500: '#64748b',
+    600: '#475569',
+    700: '#334155',
+    800: '#1e293b',
+    900: '#0f172a',
+  },
+};
 
 export default function AddStreetForm() {
-  const [formData, setFormData] = useState({
-    streetName: '',
-    details: '',
-  });
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        router.replace('/Login');
-      }
-    } catch (error) {
-      console.error('Auth check error:', error);
-      router.replace('/Login');
-    }
-  };
+  const [formData, setFormData] = useState({ streetName: '', details: '' });
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
@@ -57,35 +61,18 @@ export default function AddStreetForm() {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await axios.post(
-        `${API_BASE_URL}/api/street/create`,
-        {
-          streetName: formData.streetName.trim(),
-          details: formData.details.trim(),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+      await appClient.post('/street/create', {
+        streetName: formData.streetName.trim(),
+        details: formData.details.trim(),
+      });
       Alert.alert(
         'Success',
         `Street "${formData.streetName}" has been added successfully!`,
         [
-          {
-            text: 'Add Another',
-            onPress: resetForm,
-            style: 'default',
-          },
-          {
-            text: 'Done',
-            onPress: () => router.back(),
-            style: 'cancel',
-          },
+          { text: 'Add Another', onPress: resetForm },
+          { text: 'Done', onPress: () => router.back(), style: 'cancel' },
         ]
       );
     } catch (error) {
@@ -97,10 +84,7 @@ export default function AddStreetForm() {
   };
 
   const resetForm = () => {
-    setFormData({
-      streetName: '',
-      details: '',
-    });
+    setFormData({ streetName: '', details: '' });
   };
 
   const handleCancel = () => {
@@ -120,153 +104,141 @@ export default function AddStreetForm() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      <View style={[styles.blob, styles.blob1]} />
+      <View style={[styles.blob, styles.blob2]} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleCancel}
-            accessibilityLabel="Go back"
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Add Street</Text>
-            <Text style={styles.headerSubtitle}>Register a new street location</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
+              <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+            </TouchableOpacity>
+            <View style={styles.logoRow}>
+              <LinearGradient colors={[COLORS.primary, COLORS.secondary]} style={styles.logoGradient}>
+                <Ionicons name="map" size={18} color="white" />
+              </LinearGradient>
+              <Text style={styles.logoText}>CleanHaul</Text>
+            </View>
+            <View style={styles.userInfoRight}>
+              {user?.companyName && <Text style={styles.companyName}>{user.companyName}</Text>}
+              <Text style={styles.roleText}>{user?.role?.toUpperCase() || 'ADMIN'}</Text>
+              <Text style={styles.staffName}>{user?.full_name || 'User'}</Text>
+            </View>
           </View>
+          <Text style={styles.headline}>Add Street</Text>
+          <Text style={styles.subheadline}>Register a new street location</Text>
         </View>
-      </View>
 
-      {/* Form Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.form}>
-          {/* SECTION 1: STREET INFORMATION */}
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Street Information</Text>
-              <Text style={styles.sectionSubtitle}>Enter the basic details of the street</Text>
-            </View>
-
-            {/* Street Name */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Street Name *</Text>
-              <View style={[
-                styles.outlineInput,
-                formData.streetName.trim() && styles.inputWithValue
-              ]}>
-                <Text style={styles.inputIcon}>🛣️</Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter street name (e.g., Main Street, Oak Avenue)"
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.streetName}
-                  onChangeText={(text) => handleInputChange('streetName', text)}
-                  accessibilityLabel="Street name input"
-                  maxLength={100}
-                  autoCapitalize="words"
-                />
-              </View>
-              <Text style={styles.helperText}>
-                {formData.streetName.length}/100 characters
-              </Text>
-            </View>
-
-            {/* Details */}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Additional Details</Text>
-              <View style={[
-                styles.outlineInput,
-                styles.textAreaInput,
-                formData.details.trim() && styles.inputWithValue
-              ]}>
-                <Text style={[styles.inputIcon, styles.textAreaIcon]}>📝</Text>
-                <TextInput
-                  style={[styles.textInput, styles.textArea]}
-                  placeholder="Enter additional details (e.g., landmarks, special instructions)"
-                  placeholderTextColor="#9CA3AF"
-                  value={formData.details}
-                  onChangeText={(text) => handleInputChange('details', text)}
-                  accessibilityLabel="Street details input"
-                  maxLength={500}
-                  multiline={true}
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-              </View>
-              <Text style={styles.helperText}>
-                {formData.details.length}/500 characters • Optional
-              </Text>
-            </View>
+        {/* Form Card */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="information-circle" size={20} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Street Information</Text>
           </View>
 
-          {/* SECTION 2: PREVIEW */}
-          {(formData.streetName.trim() || formData.details.trim()) && (
-            <View style={styles.sectionContainer}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Preview</Text>
-                <Text style={styles.sectionSubtitle}>How this street will appear</Text>
-              </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Street Name *</Text>
+            <View style={[styles.inputContainer, formData.streetName && styles.inputFilled]}>
+              <Ionicons name="location" size={18} color={COLORS.gray[500]} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Enter street name (e.g., Main Street)"
+                placeholderTextColor={COLORS.gray[400]}
+                value={formData.streetName}
+                onChangeText={(text) => handleInputChange('streetName', text)}
+                maxLength={100}
+                autoCapitalize="words"
+              />
+            </View>
+            <Text style={styles.helperText}>{formData.streetName.length}/100 characters</Text>
+          </View>
 
-              <View style={styles.previewCard}>
-                <View style={styles.previewHeader}>
-                  <Text style={styles.previewTitle}>
-                    {formData.streetName.trim() || 'Street Name'}
-                  </Text>
-                  <Text style={styles.previewBadge}>NEW</Text>
-                </View>
-                {formData.details.trim() && (
-                  <Text style={styles.previewDetails}>{formData.details}</Text>
-                )}
-                <Text style={styles.previewFooter}>
-                  Created on {new Date().toLocaleDateString()}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Additional Details</Text>
+            <View style={[styles.inputContainer, formData.details && styles.inputFilled]}>
+              <Ionicons name="document-text" size={18} color={COLORS.gray[500]} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Enter additional details (e.g., landmarks)"
+                placeholderTextColor={COLORS.gray[400]}
+                value={formData.details}
+                onChangeText={(text) => handleInputChange('details', text)}
+                maxLength={500}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+            <Text style={styles.helperText}>{formData.details.length}/500 characters • Optional</Text>
+          </View>
+
+          {/* Preview */}
+          {(formData.streetName.trim() || formData.details.trim()) && (
+            <View style={styles.previewCard}>
+              <View style={styles.previewHeader}>
+                <Text style={styles.previewTitle}>
+                  {formData.streetName.trim() || 'Street Name'}
                 </Text>
+                <View style={styles.previewBadge}>
+                  <Text style={styles.previewBadgeText}>NEW</Text>
+                </View>
               </View>
+              {formData.details.trim() && (
+                <Text style={styles.previewDetails}>{formData.details}</Text>
+              )}
+              <Text style={styles.previewFooter}>
+                Created on {new Date().toLocaleDateString()}
+              </Text>
             </View>
           )}
+        </View>
 
-          {/* SECTION 3: ACTION BUTTONS */}
-          <View style={styles.sectionContainer}>
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.primaryButton,
-                  loading && styles.disabledButton
-                ]}
-                onPress={handleSubmit}
-                disabled={loading}
-                accessibilityLabel="Add street"
-              >
-                <Text style={[
-                  styles.primaryButtonText,
-                  loading && styles.disabledButtonText
-                ]}>
-                  {loading ? 'Adding Street...' : '+ Add Street'}
-                </Text>
-              </TouchableOpacity>
+        {/* Action Buttons */}
+        <View style={styles.sectionCard}>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.primaryButton, loading && styles.disabledButton]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <Ionicons name="add-circle" size={20} color="white" />
+                  <Text style={styles.primaryButtonText}>Add Street</Text>
+                </>
+              )}
+            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.actionButton, styles.secondaryButton]}
-                onPress={resetForm}
-                disabled={loading}
-                accessibilityLabel="Clear form"
-              >
-                <Text style={styles.secondaryButtonText}>Clear Form</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.secondaryButton]}
+              onPress={resetForm}
+              disabled={loading}
+            >
+              <Text style={styles.secondaryButtonText}>Clear Form</Text>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          {/* Help Section */}
-          <View style={styles.helpSection}>
-            <Text style={styles.helpTitle}>💡 Tips</Text>
-            <Text style={styles.helpText}>
+        {/* Tips */}
+        <View style={styles.tipsCard}>
+          <Ionicons name="bulb" size={20} color={COLORS.secondary} />
+          <View style={styles.tipsContent}>
+            <Text style={styles.tipsTitle}>Tips</Text>
+            <Text style={styles.tipsText}>
               • Use clear, recognizable street names{'\n'}
               • Include landmarks or notable features in details{'\n'}
               • Double-check spelling before submitting
             </Text>
           </View>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.tagline}>CLEAN • SMART • RELIABLE</Text>
+          <Text style={styles.copyright}>© 2026 CleanHaul • B2B Waste Operations</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -274,224 +246,96 @@ export default function AddStreetForm() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  blob: { position: 'absolute', width: 400, height: 400, borderRadius: 200, opacity: 0.15 },
+  blob1: { top: -150, left: -150, backgroundColor: COLORS.primary },
+  blob2: { bottom: -150, right: -150, backgroundColor: COLORS.secondary },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 20 },
   header: {
-    backgroundColor: '#2E8B57',
-    paddingBottom: 24,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
+    backgroundColor: 'white',
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    padding: 18,
+    marginBottom: 24,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12 },
+      android: { elevation: 3 },
+    }),
   },
-  backButtonText: {
-    fontSize: 20,
-    color: 'white',
-    fontWeight: '600',
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 2,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '400',
-  },
-  content: {
-    flex: 1,
-  },
-  form: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  sectionContainer: {
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  backButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.gray[100], justifyContent: 'center', alignItems: 'center' },
+  logoRow: { flexDirection: 'row', alignItems: 'center', flex: 1, marginLeft: 8 },
+  logoGradient: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  logoText: { fontSize: 18, fontWeight: '700', color: COLORS.gray[800], marginLeft: 10 },
+  companyName: { fontSize: 11, color: COLORS.gray[500], fontWeight: '500' },
+  roleText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+  staffName: { fontSize: 11, color: COLORS.gray[800], fontWeight: '600' },
+  userInfoRight: { alignItems: 'flex-end', gap: 2 },
+  headline: { fontSize: 18, fontWeight: '700', color: COLORS.gray[800], letterSpacing: -0.3, marginTop: 12 },
+  subheadline: { fontSize: 14, color: COLORS.gray[500], marginTop: 2 },
+  sectionCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 20,
+    borderRadius: 24,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: 16,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12 },
+      android: { elevation: 4 },
+    }),
   },
-  sectionHeader: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingBottom: 16,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '400',
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  outlineInput: {
-    minHeight: 48,
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    backgroundColor: 'white',
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.gray[700], marginLeft: 8 },
+  formGroup: { marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '600', color: COLORS.gray[600], marginBottom: 8 },
+  inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    backgroundColor: COLORS.gray[50],
+    borderWidth: 1,
+    borderColor: COLORS.gray[200],
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
   },
-  inputWithValue: {
-    borderColor: '#2E8B57',
-    backgroundColor: '#F0FDF4',
-  },
-  textAreaInput: {
-    minHeight: 120,
-    alignItems: 'flex-start',
-  },
-  inputIcon: {
-    fontSize: 18,
-    marginRight: 12,
-    width: 20,
-    marginTop: 2,
-  },
-  textAreaIcon: {
-    marginTop: 0,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#111827',
-    lineHeight: 22,
-  },
-  textArea: {
-    textAlignVertical: 'top',
-    minHeight: 80,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 6,
-    marginLeft: 4,
-  },
+  inputFilled: { borderColor: COLORS.primary, backgroundColor: '#f0fdfa' },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, fontSize: 16, color: COLORS.gray[800] },
+  textArea: { minHeight: 80, textAlignVertical: 'top' },
+  helperText: { fontSize: 12, color: COLORS.gray[500], marginTop: 4, marginLeft: 4 },
   previewCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
+    backgroundColor: COLORS.gray[50],
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.gray[200],
   },
-  previewHeader: {
+  previewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  previewTitle: { fontSize: 16, fontWeight: '600', color: COLORS.gray[800] },
+  previewBadge: { backgroundColor: COLORS.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  previewBadgeText: { color: 'white', fontSize: 10, fontWeight: '600' },
+  previewDetails: { fontSize: 14, color: COLORS.gray[600], marginBottom: 8, lineHeight: 20 },
+  previewFooter: { fontSize: 12, color: COLORS.gray[400], fontStyle: 'italic' },
+  buttonRow: { flexDirection: 'row', gap: 12 },
+  actionButton: { flex: 1, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', flexDirection: 'row', gap: 8 },
+  primaryButton: { backgroundColor: COLORS.primary },
+  primaryButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  secondaryButton: { backgroundColor: 'white', borderWidth: 1, borderColor: COLORS.gray[200] },
+  secondaryButtonText: { color: COLORS.gray[600], fontSize: 16, fontWeight: '600' },
+  disabledButton: { opacity: 0.6 },
+  tipsCard: {
+    backgroundColor: '#f0f9ff',
+    borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  previewTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-    flex: 1,
-  },
-  previewBadge: {
-    backgroundColor: '#2E8B57',
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '600',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  previewDetails: {
-    fontSize: 14,
-    color: '#64748B',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  previewFooter: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
-  },
-  buttonContainer: {
+    alignItems: 'flex-start',
     gap: 12,
-  },
-  actionButton: {
-    height: 48,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#2E8B57',
-  },
-  disabledButton: {
-    backgroundColor: '#9CA3AF',
-  },
-  primaryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  disabledButtonText: {
-    color: '#F3F4F6',
-  },
-  secondaryButton: {
-    backgroundColor: 'white',
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-  },
-  secondaryButtonText: {
-    color: '#6B7280',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  helpSection: {
-    backgroundColor: '#F0F9FF',
-    borderRadius: 8,
-    padding: 16,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E0F2FE',
+    borderColor: '#bae6fd',
   },
-  helpTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0369A1',
-    marginBottom: 8,
-  },
-  helpText: {
-    fontSize: 13,
-    color: '#075985',
-    lineHeight: 18,
-  },
+  tipsContent: { flex: 1 },
+  tipsTitle: { fontSize: 14, fontWeight: '700', color: '#0369a1', marginBottom: 4 },
+  tipsText: { fontSize: 13, color: '#075985', lineHeight: 18 },
+  footer: { alignItems: 'center', paddingVertical: 16 },
+  tagline: { fontSize: 10, fontWeight: '800', color: COLORS.gray[400], letterSpacing: 2, marginBottom: 4 },
+  copyright: { fontSize: 9, color: COLORS.gray[300] },
 });

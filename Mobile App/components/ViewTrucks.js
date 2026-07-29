@@ -9,8 +9,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Platform,
 } from 'react-native';
-// import { API_BASE_URL } from '../config';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,13 +28,10 @@ const ViewTrucks = () => {
 
   const fetchTrucks = async () => {
     try {
-      const token = await AsyncStorage.getItem('token'); 
-      const response = await axios.get(
-        `${API_BASE_URL}/api/trucks/`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await apiClient.get(`/trucks/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setTrucks(response.data.trucks || []);
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to fetch trucks';
@@ -68,20 +65,19 @@ const ViewTrucks = () => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
   const TruckCard = ({ truck }) => {
     const statusConfig = getStatusConfig(truck.truckStatus);
-    
+
     return (
       <View style={styles.truckCard}>
-        {/* Header */}
         <View style={styles.truckHeader}>
           <View style={styles.truckIdentity}>
-            <View style={styles.truckIcon}>
-              <Ionicons name="car-sport" size={24} color="#6366f1" />
+            <View style={[styles.truckIcon, { backgroundColor: 'rgba(22, 160, 133, 0.1)' }]}>
+              <Ionicons name="car-sport" size={24} color="#16A085" />
             </View>
             <View>
               <Text style={styles.plateNumber}>{truck.plate_number}</Text>
@@ -90,13 +86,10 @@ const ViewTrucks = () => {
           </View>
           <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
             <Ionicons name={statusConfig.icon} size={14} color={statusConfig.color} />
-            <Text style={[styles.statusText, { color: statusConfig.color }]}>
-              {statusConfig.label}
-            </Text>
+            <Text style={[styles.statusText, { color: statusConfig.color }]}>{statusConfig.label}</Text>
           </View>
         </View>
 
-        {/* Details */}
         <View style={styles.truckDetails}>
           <View style={styles.detailGrid}>
             <View style={styles.detailItem}>
@@ -107,32 +100,24 @@ const ViewTrucks = () => {
             <View style={styles.detailItem}>
               <Ionicons name="calendar" size={16} color="#64748B" />
               <Text style={styles.detailLabel}>Assignments</Text>
-              <Text style={styles.detailValue}>
-                {truck.assignment_history?.length || 0}
-              </Text>
+              <Text style={styles.detailValue}>{truck.assignment_history?.length || 0}</Text>
             </View>
           </View>
 
-          {/* Recent Assignments */}
           {truck.assignment_history && truck.assignment_history.length > 0 && (
             <View style={styles.historySection}>
               <Text style={styles.historyTitle}>Recent Routes</Text>
               {truck.assignment_history.slice(0, 2).map((assignment, index) => (
                 <View key={index} style={styles.historyItem}>
                   <Ionicons name="location" size={14} color="#8b5cf6" />
-                  <Text style={styles.historyInfo}>
-                    {assignment.route || 'Unnamed Route'}
-                  </Text>
-                  <Text style={styles.historyDate}>
-                    {formatDate(assignment.logged_at)}
-                  </Text>
+                  <Text style={styles.historyInfo}>{assignment.route || 'Unnamed Route'}</Text>
+                  <Text style={styles.historyDate}>{formatDate(assignment.logged_at)}</Text>
                 </View>
               ))}
             </View>
           )}
         </View>
 
-        {/* Footer */}
         <View style={styles.truckFooter}>
           <View style={styles.dateInfo}>
             <Ionicons name="time" size={12} color="#94a3b8" />
@@ -149,27 +134,20 @@ const ViewTrucks = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#6366f1" />
+        <ActivityIndicator size="large" color="#16A085" />
         <Text style={styles.loadingText}>Loading fleet data...</Text>
       </View>
     );
   }
 
-  const operationalCount = trucks.filter(t => t.truckStatus === 'operational').length;
-  const maintenanceCount = trucks.filter(t => t.truckStatus === 'maintenance').length;
-  const inactiveCount = trucks.filter(t => t.truckStatus === 'inactive').length;
+  const operationalCount = trucks.filter((t) => t.truckStatus === 'operational').length;
+  const maintenanceCount = trucks.filter((t) => t.truckStatus === 'maintenance').length;
+  const inactiveCount = trucks.filter((t) => t.truckStatus === 'inactive').length;
 
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={
-        <RefreshControl 
-          refreshing={refreshing} 
-          onRefresh={onRefresh}
-          colors={['#6366f1']}
-          tintColor="#6366f1"
-        />
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#16A085']} tintColor="#16A085" />}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.content}>
@@ -178,7 +156,7 @@ const ViewTrucks = () => {
           <View style={styles.overviewHeader}>
             <Text style={styles.overviewTitle}>Fleet Overview</Text>
             <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
-              <Ionicons name="refresh" size={18} color="#6366f1" />
+              <Ionicons name="refresh" size={18} color="#16A085" />
               <Text style={styles.refreshText}>Refresh</Text>
             </TouchableOpacity>
           </View>
@@ -264,11 +242,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   overviewHeader: {
     flexDirection: 'row',
@@ -287,12 +271,12 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: 'rgba(22, 160, 133, 0.1)',
     borderRadius: 12,
   },
   refreshText: {
     fontSize: 14,
-    color: '#6366f1',
+    color: '#16A085',
     fontWeight: '600',
   },
   statsGrid: {
@@ -330,11 +314,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   sectionHeader: {
     marginBottom: 20,
@@ -375,7 +365,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -501,7 +490,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyAction: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#16A085',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

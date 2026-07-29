@@ -11,15 +11,14 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-// import { API_BASE_URL } from '../config';
-import axios from 'axios';
+import appClient from '../hooks/services/client'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
 const CreateTruck = () => {
   const [formData, setFormData] = useState({
     plate_number: '',
-    truckModel: '', // Changed from truckmodel
+    truckModel: '',
     truckCapacity: '',
     truckStatus: '',
   });
@@ -33,21 +32,13 @@ const CreateTruck = () => {
     { label: 'Inactive', value: 'inactive', icon: 'close-circle', color: '#ef4444' },
   ];
 
-  const getStatusLabel = (statusValue) => {
-    const status = statuses.find(s => s.value === statusValue);
-    return status ? status.label : 'Select Status';
-  };
-
   const getStatusDisplay = (statusValue) => {
-    const status = statuses.find(s => s.value === statusValue);
+    const status = statuses.find((s) => s.value === statusValue);
     if (!status) return null;
-    
     return (
       <View style={styles.statusDisplay}>
         <Ionicons name={status.icon} size={16} color={status.color} />
-        <Text style={[styles.statusDisplayText, { color: status.color }]}>
-          {status.label}
-        </Text>
+        <Text style={[styles.statusDisplayText, { color: status.color }]}>{status.label}</Text>
       </View>
     );
   };
@@ -66,38 +57,29 @@ const CreateTruck = () => {
       Alert.alert('Error', 'Please fill in all required fields');
       return false;
     }
-
     const truckCapacityNum = parseFloat(formData.truckCapacity);
     if (isNaN(truckCapacityNum) || truckCapacityNum <= 0) {
-      Alert.alert('Error', 'Please enter a valid truckCapacity (positive number)');
+      Alert.alert('Error', 'Please enter a valid capacity (positive number)');
       return false;
     }
-
     if (formData.plate_number.length < 3) {
       Alert.alert('Error', 'Plate number must be at least 3 characters');
       return false;
     }
-
     return true;
   };
 
   const handleSubmit = async () => {
-    // console.log('Submitting form data:', formData);
     if (!validateForm()) return;
-    
     setSubmitting(true);
-    const token = await AsyncStorage.getItem('token');
+    const token = await AsyncStorage.getItem('userToken');
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/trucks/create`,
+      const response = await appClient.post(
+        `/trucks/create`,
         {
           ...formData,
           truckCapacity: parseFloat(formData.truckCapacity),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+        });
       if (response.status === 201) {
         Alert.alert('Success', 'Truck created successfully!', [
           { text: 'OK', onPress: () => resetForm() },
@@ -114,7 +96,7 @@ const CreateTruck = () => {
   const resetForm = () => {
     setFormData({
       plate_number: '',
-      truckModel: '', // Changed from truckmodel
+      truckModel: '',
       truckCapacity: '',
       truckStatus: '',
     });
@@ -124,31 +106,16 @@ const CreateTruck = () => {
   const isFormValid = formData.plate_number && formData.truckModel && formData.truckCapacity && formData.truckStatus;
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.form}>
-          {/* Header Card */}
-          <View style={styles.headerCard}>
-            <View style={styles.headerIcon}>
-              <Ionicons name="car-sport" size={32} color="#6366f1" />
-            </View>
-            <View>
-              <Text style={styles.headerTitle}>Add New Truck</Text>
-              <Text style={styles.headerSubtitle}>Register a new vehicle to your fleet</Text>
-            </View>
-          </View>
-
           {/* TRUCK DETAILS */}
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="document-text" size={20} color="#6366f1" />
+              <Ionicons name="document-text" size={20} color="#16A085" />
               <Text style={styles.sectionTitle}>Truck Details</Text>
             </View>
 
-            {/* Plate_number and truckModel Row */}
             <View style={styles.inputRow}>
               <View style={[styles.formGroup, { flex: 1 }]}>
                 <Text style={styles.label}>Plate Number *</Text>
@@ -166,21 +133,20 @@ const CreateTruck = () => {
               </View>
 
               <View style={[styles.formGroup, { flex: 1, marginLeft: 12 }]}>
-                <Text style={styles.label}>Truck Model *</Text> {/* Updated label */}
+                <Text style={styles.label}>Truck Model *</Text>
                 <View style={styles.inputContainer}>
                   <Ionicons name="construct" size={20} color="#94a3b8" style={styles.inputIcon} />
                   <TextInput
                     style={styles.textInput}
-                    placeholder="Truck model"
+                    placeholder="e.g., Ford F-550"
                     placeholderTextColor="#94a3b8"
-                    value={formData.truckModel} // Changed from truckmodel
-                    onChangeText={(text) => handleInputChange('truckModel', text)} // Changed from truckmodel
+                    value={formData.truckModel}
+                    onChangeText={(text) => handleInputChange('truckModel', text)}
                   />
                 </View>
               </View>
             </View>
 
-            {/* truckCapacity */}
             <View style={styles.formGroup}>
               <Text style={styles.label}>Truck Capacity (tons) *</Text>
               <View style={styles.inputContainer}>
@@ -217,11 +183,7 @@ const CreateTruck = () => {
                 ) : (
                   <Text style={styles.placeholderText}>Select truck status</Text>
                 )}
-                <Ionicons 
-                  name={showStatusOptions ? "chevron-up" : "chevron-down"} 
-                  size={16} 
-                  color="#64748B" 
-                />
+                <Ionicons name={showStatusOptions ? 'chevron-up' : 'chevron-down'} size={16} color="#64748B" />
               </TouchableOpacity>
 
               {showStatusOptions && (
@@ -229,17 +191,11 @@ const CreateTruck = () => {
                   {statuses.map((status) => (
                     <TouchableOpacity
                       key={status.value}
-                      style={[
-                        styles.dropdownOption,
-                        formData.truckStatus === status.value && styles.selectedOption
-                      ]}
+                      style={[styles.dropdownOption, formData.truckStatus === status.value && styles.selectedOption]}
                       onPress={() => handleStatusChange(status.value)}
                     >
                       <Ionicons name={status.icon} size={18} color={status.color} />
-                      <Text style={[
-                        styles.dropdownOptionText,
-                        formData.truckStatus === status.value && styles.selectedOptionText
-                      ]}>
+                      <Text style={[styles.dropdownOptionText, formData.truckStatus === status.value && styles.selectedOptionText]}>
                         {status.label}
                       </Text>
                     </TouchableOpacity>
@@ -253,11 +209,7 @@ const CreateTruck = () => {
           <View style={styles.sectionContainer}>
             <View style={styles.buttonRow}>
               <TouchableOpacity
-                style={[
-                  styles.actionButton, 
-                  styles.createButton,
-                  !isFormValid && styles.disabledButton
-                ]}
+                style={[styles.actionButton, styles.createButton, !isFormValid && styles.disabledButton]}
                 onPress={handleSubmit}
                 disabled={!isFormValid || submitting}
               >
@@ -271,17 +223,13 @@ const CreateTruck = () => {
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.actionButton, styles.clearButton]}
-                onPress={resetForm}
-              >
+              <TouchableOpacity style={[styles.actionButton, styles.clearButton]} onPress={resetForm}>
                 <Ionicons name="refresh" size={20} color="#64748B" />
                 <Text style={styles.clearButtonText}>Clear</Text>
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Form Status */}
           <View style={styles.formStatus}>
             <Text style={styles.formStatusText}>
               {isFormValid ? '✅ All fields completed' : 'Fill all required fields to continue'}
@@ -302,49 +250,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  headerCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  headerIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '400',
-  },
   sectionContainer: {
     backgroundColor: 'white',
     borderRadius: 16,
     marginBottom: 16,
     padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -431,11 +352,17 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     borderRadius: 12,
     backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
     overflow: 'hidden',
   },
   dropdownOption: {
@@ -447,7 +374,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   selectedOption: {
-    backgroundColor: 'rgba(99, 102, 241, 0.05)',
+    backgroundColor: 'rgba(22, 160, 133, 0.05)',
   },
   dropdownOptionText: {
     fontSize: 16,
@@ -455,7 +382,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedOptionText: {
-    color: '#6366f1',
+    color: '#16A085',
     fontWeight: '600',
   },
   buttonRow: {
@@ -470,14 +397,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   createButton: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#16A085',
   },
   disabledButton: {
     backgroundColor: '#cbd5e1',

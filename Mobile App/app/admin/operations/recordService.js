@@ -11,14 +11,15 @@ import {
   ActivityIndicator,
   Image,
   Modal,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
-// import { API_BASE_URL } from '../../../config';
+import apiClient from '../../../hooks/services/client';
+
 
 export default function RecordService() {
   const router = useRouter();
@@ -26,17 +27,14 @@ export default function RecordService() {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Data state
   const [activeRoute, setActiveRoute] = useState(null);
   const [streets, setStreets] = useState([]);
   const [customers, setCustomers] = useState([]);
 
-  // Dropdown states
   const [showStreetDropdown, setShowStreetDropdown] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
-  // Form state
   const [formData, setFormData] = useState({
     street: null,
     customer: null,
@@ -52,36 +50,32 @@ export default function RecordService() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
         return;
       }
       await fetchActiveRoute();
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
   const fetchActiveRoute = async () => {
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      // Call the supervisor assignments endpoint to get today's assignment
-      const response = await axios.get(`${API_BASE_URL}/api/trucks/my-assignments`, { headers });
       
+      const response = await apiClient.get(`/trucks/my-assignments`);
+
       if (response.data.assignment) {
-        // Use the assignment data directly and set streets from populated data
         setActiveRoute(response.data.assignment);
         setStreets(response.data.assignment.streets || []);
       } else {
         setActiveRoute(null);
         setStreets([]);
       }
-      
+
     } catch (error) {
       console.error('Fetch assignment error:', error);
       Alert.alert('Error', 'Failed to fetch today\'s assignment');
@@ -92,10 +86,8 @@ export default function RecordService() {
 
   const fetchCustomersForStreet = async (streetId) => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const response = await axios.get(`${API_BASE_URL}/api/customers/by-street/${streetId}`, { headers });
+    
+      const response = await apiClient.get(`/customers/by-street/${streetId}`);
       setCustomers(response.data.customers || []);
     } catch (error) {
       console.error('Fetch customers error:', error);
@@ -104,9 +96,9 @@ export default function RecordService() {
   };
 
   const handleStreetSelect = (street) => {
-    setFormData(prev => ({ 
-      ...prev, 
-      street, 
+    setFormData(prev => ({
+      ...prev,
+      street,
       customer: null,
       service_status: ''
     }));
@@ -127,7 +119,7 @@ export default function RecordService() {
   const pickImage = async (type) => {
     try {
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      
+
       if (permissionResult.granted === false) {
         Alert.alert('Permission Required', 'Camera permission is required to take photos');
         return;
@@ -153,7 +145,6 @@ export default function RecordService() {
   };
 
   const handleSubmit = async () => {
-    // Validation
     if (!formData.street || !formData.customer || !formData.service_status) {
       Alert.alert('Missing Information', 'Please select street, customer, and service status');
       return;
@@ -172,31 +163,24 @@ export default function RecordService() {
     setSubmitting(true);
 
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { 
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
+    
 
-      // Prepare service data matching your schema
       const serviceData = {
         customer: formData.customer._id,
         route: activeRoute._id,
         service_date: new Date().toISOString(),
         service_month: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(),
-        before_photo: formData.before_photo, // In real app, upload to server first
+        before_photo: formData.before_photo,
         after_photo: formData.after_photo,
         service_status: formData.service_status,
         service_notes: formData.service_notes,
       };
 
-      // Submit service record
-      await axios.post(`${API_BASE_URL}/api/services/create`, serviceData, { headers });
-      
+      await apiClient.post(`/services/create`, serviceData);
+
       setSubmitting(false);
       setShowSuccess(true);
-      
-      // Reset form after success
+
       setTimeout(() => {
         setFormData({
           street: null,
@@ -208,7 +192,7 @@ export default function RecordService() {
         });
         setShowSuccess(false);
       }, 2000);
-      
+
     } catch (error) {
       setSubmitting(false);
       console.error('Submit error:', error);
@@ -250,9 +234,8 @@ export default function RecordService() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#06b6d4" />
+          <ActivityIndicator size="large" color="#16A085" />
           <Text style={styles.loadingText}>Loading today's assignment...</Text>
         </View>
       </SafeAreaView>
@@ -262,13 +245,15 @@ export default function RecordService() {
   if (!activeRoute) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
         <View style={styles.header}>
-          <View style={styles.headerTopRow}>
+          <View style={styles.headerTop}>
             <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-              <Ionicons name="arrow-back" size={24} color="white" />
+              <Ionicons name="arrow-back" size={24} color="#1e293b" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Record Service</Text>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Record Service</Text>
+            </View>
+            <View style={styles.headerPlaceholder} />
           </View>
         </View>
         <View style={styles.noRouteContainer}>
@@ -285,20 +270,24 @@ export default function RecordService() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
+        <View style={styles.headerTop}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Record Service</Text>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Record Service</Text>
+            <Text style={styles.headerSubtitle}>Today's Assignment</Text>
+          </View>
+          <View style={styles.headerPlaceholder} />
         </View>
         <View style={styles.activeRouteInfo}>
-          <Text style={styles.activeRouteText}>Today's Assignment: {activeRoute.name || `Route #${activeRoute._id?.substring(0, 8)}`}</Text>
+          <Text style={styles.activeRouteText}>{activeRoute.name || `Route #${activeRoute._id?.substring(0, 8)}`}</Text>
           <Text style={styles.activeRouteSubtext}>
-            Truck: {activeRoute.assigned_truck?.plate_number} • 
+            Truck: {activeRoute.assigned_truck?.plate_number} •
             {activeRoute.scheduled_date ? ` Scheduled: ${new Date(activeRoute.scheduled_date).toLocaleDateString()}` : ''}
           </Text>
         </View>
@@ -306,7 +295,7 @@ export default function RecordService() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.formContainer}>
-          
+
           {/* Success Message */}
           {showSuccess && (
             <View style={styles.successMessage}>
@@ -316,133 +305,135 @@ export default function RecordService() {
           )}
 
           {/* Street Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Select Street *</Text>
-            <TouchableOpacity 
-              style={styles.dropdownButton}
-              onPress={() => setShowStreetDropdown(true)}
-            >
-              <Text style={formData.street ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
-                {formData.street ? formData.street.name : 'Choose a street'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#64748b" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Customer Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Select Customer *</Text>
-            <TouchableOpacity 
-              style={[styles.dropdownButton, !formData.street && styles.dropdownDisabled]}
-              onPress={() => formData.street && setShowCustomerDropdown(true)}
-              disabled={!formData.street}
-            >
-              <Text style={formData.customer ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
-                {formData.customer ? `${formData.customer.name} (${formData.customer.house_number})` : 'Choose a customer'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={formData.street ? "#64748b" : "#cbd5e1"} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Service Status Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Service Status *</Text>
-            <TouchableOpacity 
-              style={[styles.dropdownButton, !formData.customer && styles.dropdownDisabled]}
-              onPress={() => formData.customer && setShowStatusDropdown(true)}
-              disabled={!formData.customer}
-            >
-              <Text style={formData.service_status ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
-                {formData.service_status ? 
-                  formData.service_status === 'serviced' ? 'Serviced' :
-                  formData.service_status === 'not_home' ? 'Not Home' : 'Refused Service'
-                  : 'Select service status'
-                }
-              </Text>
-              <Ionicons name="chevron-down" size={20} color={formData.customer ? "#64748b" : "#cbd5e1"} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Photos Section */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Before Photo *</Text>
-            {formData.before_photo ? (
-              <View style={styles.photoPreview}>
-                <Image source={{ uri: formData.before_photo }} style={styles.photoImage} />
-                <TouchableOpacity 
-                  style={styles.photoRetake}
-                  onPress={() => pickImage('before')}
-                >
-                  <Ionicons name="camera" size={16} color="white" />
-                  <Text style={styles.photoRetakeText}>Retake</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity 
-                style={styles.photoButton}
-                onPress={() => pickImage('before')}
-              >
-                <Ionicons name="camera" size={24} color="#06b6d4" />
-                <Text style={styles.photoButtonText}>Take Before Photo</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {formData.service_status === 'serviced' && (
+          <View style={styles.sectionCard}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>After Photo *</Text>
-              {formData.after_photo ? (
+              <Text style={styles.label}>Select Street *</Text>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setShowStreetDropdown(true)}
+              >
+                <Text style={formData.street ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
+                  {formData.street ? formData.street.name : 'Choose a street'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Customer Dropdown */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Select Customer *</Text>
+              <TouchableOpacity
+                style={[styles.dropdownButton, !formData.street && styles.dropdownDisabled]}
+                onPress={() => formData.street && setShowCustomerDropdown(true)}
+                disabled={!formData.street}
+              >
+                <Text style={formData.customer ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
+                  {formData.customer ? `${formData.customer.name} (${formData.customer.house_number})` : 'Choose a customer'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={formData.street ? "#64748b" : "#cbd5e1"} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Service Status Dropdown */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Service Status *</Text>
+              <TouchableOpacity
+                style={[styles.dropdownButton, !formData.customer && styles.dropdownDisabled]}
+                onPress={() => formData.customer && setShowStatusDropdown(true)}
+                disabled={!formData.customer}
+              >
+                <Text style={formData.service_status ? styles.dropdownTextSelected : styles.dropdownTextPlaceholder}>
+                  {formData.service_status ?
+                    formData.service_status === 'serviced' ? 'Serviced' :
+                      formData.service_status === 'not_home' ? 'Not Home' : 'Refused Service'
+                    : 'Select service status'
+                  }
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={formData.customer ? "#64748b" : "#cbd5e1"} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Photos Section */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Before Photo *</Text>
+              {formData.before_photo ? (
                 <View style={styles.photoPreview}>
-                  <Image source={{ uri: formData.after_photo }} style={styles.photoImage} />
-                  <TouchableOpacity 
+                  <Image source={{ uri: formData.before_photo }} style={styles.photoImage} />
+                  <TouchableOpacity
                     style={styles.photoRetake}
-                    onPress={() => pickImage('after')}
+                    onPress={() => pickImage('before')}
                   >
                     <Ionicons name="camera" size={16} color="white" />
                     <Text style={styles.photoRetakeText}>Retake</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.photoButton}
-                  onPress={() => pickImage('after')}
+                  onPress={() => pickImage('before')}
                 >
-                  <Ionicons name="camera" size={24} color="#06b6d4" />
-                  <Text style={styles.photoButtonText}>Take After Photo</Text>
+                  <Ionicons name="camera" size={24} color="#16A085" />
+                  <Text style={styles.photoButtonText}>Take Before Photo</Text>
                 </TouchableOpacity>
               )}
             </View>
-          )}
 
-          {/* Notes */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Service Notes</Text>
-            <TextInput
-              style={styles.notesInput}
-              placeholder="Add any additional notes..."
-              value={formData.service_notes}
-              onChangeText={(text) => setFormData(prev => ({ ...prev, service_notes: text }))}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </View>
-
-          {/* Submit Button */}
-          <TouchableOpacity 
-            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <>
-                <Ionicons name="save" size={20} color="white" />
-                <Text style={styles.submitButtonText}>Record Service</Text>
-              </>
+            {formData.service_status === 'serviced' && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>After Photo *</Text>
+                {formData.after_photo ? (
+                  <View style={styles.photoPreview}>
+                    <Image source={{ uri: formData.after_photo }} style={styles.photoImage} />
+                    <TouchableOpacity
+                      style={styles.photoRetake}
+                      onPress={() => pickImage('after')}
+                    >
+                      <Ionicons name="camera" size={16} color="white" />
+                      <Text style={styles.photoRetakeText}>Retake</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.photoButton}
+                    onPress={() => pickImage('after')}
+                  >
+                    <Ionicons name="camera" size={24} color="#16A085" />
+                    <Text style={styles.photoButtonText}>Take After Photo</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </TouchableOpacity>
+
+            {/* Notes */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Service Notes</Text>
+              <TextInput
+                style={styles.notesInput}
+                placeholder="Add any additional notes..."
+                value={formData.service_notes}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, service_notes: text }))}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <>
+                  <Ionicons name="save" size={20} color="white" />
+                  <Text style={styles.submitButtonText}>Record Service</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
@@ -466,7 +457,7 @@ export default function RecordService() {
             >
               <Text style={styles.modalItemText}>{street.name}</Text>
               {formData.street?._id === street._id && (
-                <Ionicons name="checkmark" size={20} color="#10b981" />
+                <Ionicons name="checkmark" size={20} color="#16A085" />
               )}
             </TouchableOpacity>
           ))
@@ -499,7 +490,7 @@ export default function RecordService() {
                 </Text>
               </View>
               {formData.customer?._id === customer._id && (
-                <Ionicons name="checkmark" size={20} color="#10b981" />
+                <Ionicons name="checkmark" size={20} color="#16A085" />
               )}
             </TouchableOpacity>
           ))
@@ -518,24 +509,24 @@ export default function RecordService() {
             onPress={() => handleStatusSelect(status)}
           >
             <View style={styles.statusItem}>
-              <Ionicons 
+              <Ionicons
                 name={
                   status === 'serviced' ? 'checkmark-circle' :
-                  status === 'not_home' ? 'home-outline' : 'close-circle'
-                } 
-                size={20} 
+                    status === 'not_home' ? 'home-outline' : 'close-circle'
+                }
+                size={20}
                 color={
                   status === 'serviced' ? '#10b981' :
-                  status === 'not_home' ? '#f59e0b' : '#ef4444'
+                    status === 'not_home' ? '#f59e0b' : '#ef4444'
                 }
               />
               <Text style={styles.modalItemText}>
                 {status === 'serviced' ? 'Serviced' :
-                 status === 'not_home' ? 'Not Home' : 'Refused Service'}
+                  status === 'not_home' ? 'Not Home' : 'Refused Service'}
               </Text>
             </View>
             {formData.service_status === status && (
-              <Ionicons name="checkmark" size={20} color="#10b981" />
+              <Ionicons name="checkmark" size={20} color="#16A085" />
             )}
           </TouchableOpacity>
         ))}
@@ -549,50 +540,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  header: {
-    backgroundColor: '#06b6d4',
-    paddingBottom: 12,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  activeRouteInfo: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  activeRouteText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  activeRouteSubtext: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  content: {
-    flex: 1,
-  },
-  formContainer: {
-    padding: 20,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -600,8 +547,75 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#64748b',
     fontSize: 16,
+    color: '#64748b',
+  },
+  // Header
+  header: {
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  activeRouteInfo: {
+    paddingHorizontal: 4,
+    paddingTop: 4,
+  },
+  activeRouteText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  activeRouteSubtext: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  formContainer: {
+    paddingBottom: 20,
   },
   noRouteContainer: {
     flex: 1,
@@ -622,6 +636,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
+  },
   inputGroup: {
     marginBottom: 24,
   },
@@ -632,10 +657,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dropdownButton: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -644,6 +669,7 @@ const styles = StyleSheet.create({
   dropdownDisabled: {
     backgroundColor: '#f8fafc',
     borderColor: '#e2e8f0',
+    opacity: 0.6,
   },
   dropdownTextSelected: {
     fontSize: 16,
@@ -657,9 +683,9 @@ const styles = StyleSheet.create({
   photoButton: {
     backgroundColor: '#f0f9ff',
     borderWidth: 2,
-    borderColor: '#06b6d4',
+    borderColor: '#16A085',
     borderStyle: 'dashed',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 24,
     alignItems: 'center',
     gap: 8,
@@ -667,23 +693,23 @@ const styles = StyleSheet.create({
   photoButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#06b6d4',
+    color: '#16A085',
   },
   photoPreview: {
     position: 'relative',
-    borderRadius: 8,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   photoImage: {
     width: '100%',
     height: 200,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   photoRetake: {
     position: 'absolute',
     bottom: 12,
     right: 12,
-    backgroundColor: 'rgba(6, 182, 212, 0.9)',
+    backgroundColor: 'rgba(22, 160, 133, 0.9)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -697,10 +723,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   notesInput: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
     color: '#1e293b',
@@ -708,14 +734,19 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#16A085',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     gap: 8,
     marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5,
   },
   submitButtonDisabled: {
     opacity: 0.6,
@@ -729,7 +760,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#d1fae5',
     borderWidth: 1,
     borderColor: '#a7f3d0',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',

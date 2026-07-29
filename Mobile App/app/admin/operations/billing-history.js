@@ -12,13 +12,14 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-// import { API_BASE_URL } from '../../../config';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import apiClient from '../../../hooks/services/client';
 
 const { width } = Dimensions.get('window');
 
@@ -31,14 +32,14 @@ export default function CustomerBillingHistory() {
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [paymentDetailModalVisible, setPaymentDetailModalVisible] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
-  
+
   const [customers, setCustomers] = useState([]);
   const [billingHistory, setBillingHistory] = useState({});
   const [paymentDetails, setPaymentDetails] = useState({});
 
   const getAuthToken = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       return token;
     } catch (error) {
       console.error('Error getting auth token:', error);
@@ -50,8 +51,8 @@ export default function CustomerBillingHistory() {
     try {
       setLoading(true);
       const token = await getAuthToken();
-      const url = `${API_BASE_URL}/api/billing/search?query=${encodeURIComponent(query)}`;
-      const response = await axios.get(url, {
+      const url = `/billing/search?query=${encodeURIComponent(query)}`;
+      const response = await apiClient.get(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -82,7 +83,7 @@ export default function CustomerBillingHistory() {
   const prefetchCustomerBillingHistory = async (customerId) => {
     try {
       const token = await getAuthToken();
-      const response = await axios.get(`${API_BASE_URL}/api/billing/customer/${customerId}`, {
+      const response = await apiClient.get(`/billing/customer/${customerId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -104,7 +105,7 @@ export default function CustomerBillingHistory() {
     try {
       if (paymentDetails[paymentId]) return;
       const token = await getAuthToken();
-      const response = await axios.get(`${API_BASE_URL}/api/billing/payment/${paymentId}`, {
+      const response = await apiClient.get(`/billing/payment/${paymentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -168,7 +169,7 @@ export default function CustomerBillingHistory() {
       .reduce((sum, p) => sum + p.amount, 0);
     const totalPayments = payments.length;
     const lastPayment = payments[0];
-    
+
     return {
       totalPaid,
       totalPayments,
@@ -193,7 +194,7 @@ export default function CustomerBillingHistory() {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'paid': return '#10b981';
       case 'pending': return '#f59e0b';
       case 'unpaid': return '#ef4444';
@@ -202,7 +203,7 @@ export default function CustomerBillingHistory() {
   };
 
   const getStatusIcon = (status) => {
-    switch(status) {
+    switch (status) {
       case 'paid': return 'checkmark-circle';
       case 'pending': return 'time';
       case 'unpaid': return 'close-circle';
@@ -219,29 +220,22 @@ export default function CustomerBillingHistory() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
-          <View style={styles.headerText}>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Billing History</Text>
             <Text style={styles.headerSubtitle}>Track customer payments and billing</Text>
           </View>
-          <View style={styles.headerIcon}>
-            <Ionicons name="receipt" size={24} color="white" />
-          </View>
+          <View style={styles.headerPlaceholder} />
         </View>
-      </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchSection}>
+        {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
             <Ionicons name="search" size={20} color="#64748b" />
@@ -261,16 +255,16 @@ export default function CustomerBillingHistory() {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10b981']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#16A085']} tintColor="#16A085" />
         }
       >
         {loading && !refreshing && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#10b981" />
+            <ActivityIndicator size="large" color="#16A085" />
             <Text style={styles.loadingText}>Loading customers...</Text>
           </View>
         )}
@@ -279,7 +273,7 @@ export default function CustomerBillingHistory() {
         <View style={styles.customersSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleContainer}>
-              <Ionicons name="people" size={20} color="#10b981" />
+              <Ionicons name="people" size={20} color="#16A085" />
               <Text style={styles.sectionTitle}>
                 {searchQuery ? 'Search Results' : 'All Customers'}
               </Text>
@@ -305,7 +299,7 @@ export default function CustomerBillingHistory() {
             !loading && filteredCustomers.map((customer) => {
               const stats = calculateCustomerStats(customer._id);
               const customerPayments = billingHistory[customer._id] || [];
-              
+
               return (
                 <TouchableOpacity
                   key={customer._id}
@@ -315,10 +309,10 @@ export default function CustomerBillingHistory() {
                 >
                   <View style={styles.customerMain}>
                     <View style={styles.customerAvatar}>
-                      <Ionicons 
-                        name={customer.customer_type === 'residential' ? 'home' : 'business'} 
-                        size={24} 
-                        color="white" 
+                      <Ionicons
+                        name={customer.customer_type === 'residential' ? 'home' : 'business'}
+                        size={24}
+                        color="white"
                       />
                     </View>
                     <View style={styles.customerInfo}>
@@ -340,10 +334,10 @@ export default function CustomerBillingHistory() {
                       styles.statusIndicator,
                       customer.status === 'active' ? styles.statusActive : styles.statusInactive
                     ]}>
-                      <Ionicons 
-                        name={customer.status === 'active' ? 'checkmark' : 'close'} 
-                        size={16} 
-                        color="white" 
+                      <Ionicons
+                        name={customer.status === 'active' ? 'checkmark' : 'close'}
+                        size={16}
+                        color="white"
                       />
                     </View>
                   </View>
@@ -366,7 +360,7 @@ export default function CustomerBillingHistory() {
 
                   <View style={styles.viewHistoryButton}>
                     <Text style={styles.viewHistoryText}>View Payment History</Text>
-                    <Ionicons name="chevron-forward" size={16} color="#10b981" />
+                    <Ionicons name="chevron-forward" size={16} color="#16A085" />
                   </View>
                 </TouchableOpacity>
               );
@@ -412,8 +406,8 @@ export default function CustomerBillingHistory() {
                       <View style={styles.summaryItem}>
                         <Text style={styles.summaryLabel}>Customer Type</Text>
                         <Text style={styles.summaryValue}>
-                          {selectedCustomer.customer_type === 'residential' 
-                            ? selectedCustomer.apartment_type?.name 
+                          {selectedCustomer.customer_type === 'residential'
+                            ? selectedCustomer.apartment_type?.name
                             : selectedCustomer.commercial_subtype?.name}
                         </Text>
                       </View>
@@ -433,13 +427,13 @@ export default function CustomerBillingHistory() {
                   {/* Payment History */}
                   <View style={styles.paymentHistorySection}>
                     <View style={styles.sectionHeader}>
-                      <Ionicons name="receipt" size={20} color="#10b981" />
+                      <Ionicons name="receipt" size={20} color="#16A085" />
                       <Text style={styles.sectionTitle}>Payment Records</Text>
                     </View>
-                    
+
                     {paymentsForSelectedCustomer === undefined ? (
                       <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="small" color="#10b981" />
+                        <ActivityIndicator size="small" color="#16A085" />
                         <Text style={styles.loadingText}>Loading payment records...</Text>
                       </View>
                     ) : paymentsForSelectedCustomer.length === 0 ? (
@@ -472,10 +466,10 @@ export default function CustomerBillingHistory() {
                                 ₦{payment.amount.toLocaleString()}
                               </Text>
                               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(payment.payment_status) + '20' }]}>
-                                <Ionicons 
-                                  name={getStatusIcon(payment.payment_status)} 
-                                  size={12} 
-                                  color={getStatusColor(payment.payment_status)} 
+                                <Ionicons
+                                  name={getStatusIcon(payment.payment_status)}
+                                  size={12}
+                                  color={getStatusColor(payment.payment_status)}
                                 />
                                 <Text style={[styles.statusText, { color: getStatusColor(payment.payment_status) }]}>
                                   {payment.payment_status.toUpperCase()}
@@ -483,13 +477,13 @@ export default function CustomerBillingHistory() {
                               </View>
                             </View>
                           </View>
-                          
+
                           <View style={styles.paymentFooter}>
                             <View style={styles.methodBadge}>
-                              <Ionicons 
-                                name={payment.payment_method === 'cash' ? 'cash' : 'card'} 
-                                size={12} 
-                                color="#64748b" 
+                              <Ionicons
+                                name={payment.payment_method === 'cash' ? 'cash' : 'card'}
+                                size={12}
+                                color="#64748b"
                               />
                               <Text style={styles.methodText}>
                                 {payment.payment_method.charAt(0).toUpperCase() + payment.payment_method.slice(1)}
@@ -544,7 +538,7 @@ export default function CustomerBillingHistory() {
                 <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
                   <View style={styles.detailSection}>
                     <View style={styles.detailSectionHeader}>
-                      <Ionicons name="information-circle" size={20} color="#10b981" />
+                      <Ionicons name="information-circle" size={20} color="#16A085" />
                       <Text style={styles.detailSectionTitle}>Payment Information</Text>
                     </View>
                     <View style={styles.detailGrid}>
@@ -582,7 +576,7 @@ export default function CustomerBillingHistory() {
 
                   <View style={styles.detailSection}>
                     <View style={styles.detailSectionHeader}>
-                      <Ionicons name="person" size={20} color="#10b981" />
+                      <Ionicons name="person" size={20} color="#16A085" />
                       <Text style={styles.detailSectionTitle}>Collection Details</Text>
                     </View>
                     <View style={styles.detailGrid}>
@@ -614,7 +608,7 @@ export default function CustomerBillingHistory() {
                   {selectedPayment.agent_notes && (
                     <View style={styles.detailSection}>
                       <View style={styles.detailSectionHeader}>
-                        <Ionicons name="document-text" size={20} color="#10b981" />
+                        <Ionicons name="document-text" size={20} color="#16A085" />
                         <Text style={styles.detailSectionTitle}>Agent Notes</Text>
                       </View>
                       <Text style={styles.notesText}>{selectedPayment.agent_notes}</Text>
@@ -644,76 +638,71 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  // Header
   header: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 5,
+    elevation: 3,
   },
-  headerContent: {
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerText: {
+  headerTextContainer: {
     flex: 1,
     marginLeft: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#1e293b',
     marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#64748b',
+    fontWeight: '400',
   },
-  headerIcon: {
+  headerPlaceholder: {
     width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  searchSection: {
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
   },
   searchContainer: {
-    // Additional container styles if needed
+    marginTop: 8,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
     fontSize: 16,
     color: '#1e293b',
+    marginHorizontal: 12,
   },
   content: {
     flex: 1,
@@ -732,13 +721,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#1e293b',
     marginLeft: 8,
   },
   countBadge: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -759,7 +748,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
     borderLeftWidth: 4,
-    borderLeftColor: '#10b981',
+    borderLeftColor: '#16A085',
   },
   customerMain: {
     flexDirection: 'row',
@@ -770,7 +759,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -844,7 +833,7 @@ const styles = StyleSheet.create({
   viewHistoryText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#10b981',
+    color: '#16A085',
   },
   emptyState: {
     alignItems: 'center',
@@ -999,7 +988,7 @@ const styles = StyleSheet.create({
   paymentAmount: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#10b981',
+    color: '#16A085',
     marginBottom: 8,
   },
   paymentFooter: {
@@ -1091,7 +1080,7 @@ const styles = StyleSheet.create({
   },
   amountHighlight: {
     fontWeight: 'bold',
-    color: '#10b981',
+    color: '#16A085',
     fontSize: 16,
   },
   verifiedBadge: {
@@ -1131,7 +1120,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   closeButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

@@ -476,13 +476,269 @@ const getCustomerGrowth = async (req, res) => {
   }
 };
 
+
+
+const getReportsSummary = async (req, res) => {
+  try {
+    const companyId = req.user.companyId;
+
+    // Date boundaries for current month and last 6 months
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    // Run all aggregations in parallel
+    const [
+      // Revenue overview (all-time)
+      revenueOverview,
+      // Monthly revenue (current month)
+      monthlyRevenue,
+      // Revenue trend (last 6 months)
+      revenueTrend,
+      // Revenue by street
+      revenueByStreet,
+      // Revenue by customer type
+      revenueByType,
+      // Payment status counts
+      paidCount,
+      pendingCount,
+      overdueCustomers,
+      // Collection rate: expected from customer fees
+      expectedRevenue,
+      // Collection rate: collected from payments
+      collectedRevenue,
+      // Agent performance
+      agentPerformance,
+      // Outstanding balances
+      outstandingBalances,
+    ] = await Promise.all([
+      // 1. Revenue overview (all-time paid payments)
+      Payment.aggregate([
+        { $match: { companyId, payment_status: 'paid' } },
+        {
+          $group: {
+            _id: null,
+            total_revenue: { $sum: '$amount' },
+            cash_revenue: { $sum: { $cond: [{ $eq: ['$payment_method', 'cash'] }, '$amount', 0] } },
+            transfer_revenue: { $sum: { $cond: [{ $eq: ['$payment_method', 'transfer'] }, '$amount', 0] } },
+          },
+        },
+      ]),
+
+      // 2. Monthly revenue (current month)
+      Payment.aggregate([
+        {
+          $match: {
+            companyId,
+            payment_status: 'paid',
+            payment_date: { $gte: startOfMonth, $lte: endOfMonth },
+          },
+        },
+        { $group: { _id: null, monthly_revenue: { $sum: '$amount' } } },
+      ]),
+
+      // 3. Revenue trend (last 6 months)
+      Payment.aggregate([
+        {
+          $match: {
+            companyId,
+            payment_status: 'paid',
+            payment_date: { $gte: sixMonthsAgo },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: '$payment_date' },
+              month: { $month: '$payment_date' },
+            },
+            revenue: { $sum: '$amount' },
+          },
+        },
+        { $sort: { '_id.year': 1, '_id.month': 1 } },
+        {
+          $project: {
+            _id: 0,
+            month: {
+              $concat: [
+                { $toString: '$_id.year' },
+                '-',
+                {
+                  $cond: [
+                    { $lt: ['$_id.month', 10] },
+                    { $concat: ['0', { $toString: '$_id.month' }] },
+                    { $toString: '$_id.month' },
+                  ],
+                },
+              ],
+            },
+            revenue: 1,
+          },
+        },
+      ]),
+
+      // 4. Revenue by street
+      Payment.aggregate([
+        { $match: { companyId, payment_status: 'paid' } },
+        { $lookup: { from: 'customers', localField: 'customer_id', foreignField: '_id', as: 'customer' } },
+        { $unwind: '$customer' },
+        { $lookup: { from: 'streets', localField: 'customer.street', foreignField: '_id', as: 'street' } },
+        { $unwind: '$street' },
+        {
+          $group: {
+            _id: '$street._id',
+            street_name: { $first: '$street.name' },
+            total_revenue: { $sum: '$amount' },
+            payment_count: { $sum: 1 },
+          },
+        },
+        { $sort: { total_revenue: -1 } },
+        { $project: { _id: 0, street_name: 1, total_revenue: 1, payment_count: 1 } },
+      ]),
+
+      // 5. Revenue by customer type
+      Payment.aggregate([
+        { $match: { companyId, payment_status: 'paid' } },
+        { $lookup: { from: 'customers', localField: 'customer_id', foreignField: '_id', as: 'customer' } },
+        { $unwind: '$customer' },
+        {
+          $group: {
+            _id: '$customer.customer_type',
+            total_revenue: { $sum: '$amount' },
+          },
+        },
+        { $project: { _id: 0, customer_type: '$_id', total_revenue: 1 } },
+      ]),
+
+      // 6. Paid payments count
+      Payment.countDocuments({ companyId, payment_status: 'paid' }),
+
+      // 7. Pending payments count
+      Payment.countDocuments({ companyId, payment_status: 'pending' }),
+
+      // 8. Overdue customers count
+      Customer.countDocuments({
+        companyId,
+        'monthly_fees.remaining_balance': { $gt: 0 },
+      }),
+
+      // 9. Expected revenue for current month (sum of total_fee for current month)
+      Customer.aggregate([
+        { $match: { companyId } },
+        { $unwind: '$monthly_fees' },
+        {
+          $match: {
+            'monthly_fees.month': { $gte: startOfMonth, $lte: endOfMonth },
+          },
+        },
+        { $group: { _id: null, expected_revenue: { $sum: '$monthly_fees.total_fee' } } },
+      ]),
+
+      // 10. Collected revenue for current month
+      Payment.aggregate([
+        {
+          $match: {
+            companyId,
+            payment_status: 'paid',
+            payment_date: { $gte: startOfMonth, $lte: endOfMonth },
+          },
+        },
+        { $group: { _id: null, collected_revenue: { $sum: '$amount' } } },
+      ]),
+
+      // 11. Agent performance (same as existing getAgentPerformance)
+      Payment.aggregate([
+        { $match: { companyId, payment_status: 'paid' } },
+        {
+          $group: {
+            _id: '$agent_id',
+            total_collections: { $sum: '$amount' },
+            payment_count: { $sum: 1 },
+            cash_payments: { $sum: { $cond: [{ $eq: ['$payment_method', 'cash'] }, 1, 0] } },
+            transfer_payments: { $sum: { $cond: [{ $eq: ['$payment_method', 'transfer'] }, 1, 0] } },
+          },
+        },
+        { $lookup: { from: 'staffs', localField: '_id', foreignField: '_id', as: 'agent' } },
+        { $unwind: '$agent' },
+        {
+          $project: {
+            _id: 0,
+            agent_name: '$agent.full_name',
+            total_collections: 1,
+            payment_count: 1,
+            cash_payments: 1,
+            transfer_payments: 1,
+          },
+        },
+        { $sort: { total_collections: -1 } },
+      ]),
+
+      // 12. Outstanding balances (total sum and distinct customer count)
+      Customer.aggregate([
+        { $match: { companyId } },
+        { $unwind: '$monthly_fees' },
+        { $match: { 'monthly_fees.remaining_balance': { $gt: 0 } } },
+        {
+          $group: {
+            _id: null,
+            total_outstanding: { $sum: '$monthly_fees.remaining_balance' },
+            customers_with_balance: { $addToSet: '$_id' },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            total_outstanding: 1,
+            customers_with_balance: { $size: '$customers_with_balance' },
+          },
+        },
+      ]),
+    ]);
+
+    // Build the final response object with defaults for missing data
+    const responseData = {
+      revenueOverview: {
+        total_revenue: revenueOverview[0]?.total_revenue || 0,
+        monthly_revenue: monthlyRevenue[0]?.monthly_revenue || 0,
+        cash_revenue: revenueOverview[0]?.cash_revenue || 0,
+        transfer_revenue: revenueOverview[0]?.transfer_revenue || 0,
+      },
+      revenueTrend: revenueTrend || [],
+      revenueByStreet: revenueByStreet || [],
+      revenueByType: revenueByType || [],
+      paymentStatus: [
+        { status: 'paid', count: paidCount },
+        { status: 'pending', count: pendingCount },
+        { status: 'overdue', count: overdueCustomers },
+      ],
+      collectionRate: {
+        expected_revenue: expectedRevenue[0]?.expected_revenue || 0,
+        collected_revenue: collectedRevenue[0]?.collected_revenue || 0,
+        collection_rate:
+          expectedRevenue[0]?.expected_revenue && expectedRevenue[0].expected_revenue > 0
+            ? (collectedRevenue[0]?.collected_revenue / expectedRevenue[0].expected_revenue) * 100
+            : 0,
+      },
+      agentPerformance: agentPerformance || [],
+      outstandingBalances: outstandingBalances[0] || { total_outstanding: 0, customers_with_balance: 0 },
+    };
+
+    res.json({ success: true, data: responseData });
+  } catch (error) {
+    console.error('Error in getReportsSummary:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // ==================== EXPORTS ====================
 
 module.exports = {
   getDashboardMetrics,
   getLiveOperations,
   getRouteAnalytics,
-
+  getReportsSummary,
   getCustomerOverview,
   getRevenueTrend,
   getAgentPerformance,

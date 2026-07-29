@@ -37,7 +37,7 @@ export default function HomeScreen() {
   const [selectedOperation, setSelectedOperation] = useState(null);
   const [showOperationModal, setShowOperationModal] = useState(false);
  
-  console.log(user);
+
   
   const getStatusColor = (status) => {
     switch (status) {

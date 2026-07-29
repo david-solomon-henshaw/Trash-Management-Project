@@ -11,14 +11,17 @@ import {
   Modal,
   TextInput,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSelector } from 'react-redux';
 
 export default function VerifyServices() {
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [services, setServices] = useState([]);
@@ -55,7 +58,7 @@ export default function VerifyServices() {
       },
       service_date: new Date('2024-01-15T09:30:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/400x300/06b6d4/ffffff?text=Before+Service',
+      before_photo: 'https://via.placeholder.com/400x300/16A085/ffffff?text=Before+Service',
       after_photo: 'https://via.placeholder.com/400x300/10b981/ffffff?text=After+Service',
       service_notes: 'Regular service completed. Area was clean before service. All waste properly collected.',
       service_status: 'serviced',
@@ -87,7 +90,7 @@ export default function VerifyServices() {
       },
       service_date: new Date('2024-01-15T10:15:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/400x300/06b6d4/ffffff?text=Before+Service',
+      before_photo: 'https://via.placeholder.com/400x300/16A085/ffffff?text=Before+Service',
       after_photo: null,
       service_notes: 'Customer was not available at time of service. Attempted contact but no response.',
       service_status: 'not_home',
@@ -119,7 +122,7 @@ export default function VerifyServices() {
       },
       service_date: new Date('2024-01-14T14:20:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/400x300/06b6d4/ffffff?text=Before+Service',
+      before_photo: 'https://via.placeholder.com/400x300/16A085/ffffff?text=Before+Service',
       after_photo: null,
       service_notes: 'Customer refused service due to personal reasons. Was polite but declined service.',
       service_status: 'refused',
@@ -151,7 +154,7 @@ export default function VerifyServices() {
       },
       service_date: new Date('2024-01-14T11:45:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/400x300/06b6d4/ffffff?text=Before+Service',
+      before_photo: 'https://via.placeholder.com/400x300/16A085/ffffff?text=Before+Service',
       after_photo: 'https://via.placeholder.com/400x300/10b981/ffffff?text=After+Service',
       service_notes: 'Business premises serviced. All waste collected efficiently. Photos show proper completion.',
       service_status: 'serviced',
@@ -183,7 +186,7 @@ export default function VerifyServices() {
       },
       service_date: new Date('2024-01-13T16:30:00Z'),
       service_month: new Date('2024-01-01T00:00:00Z'),
-      before_photo: 'https://via.placeholder.com/400x300/06b6d4/ffffff?text=Before+Service',
+      before_photo: 'https://via.placeholder.com/400x300/16A085/ffffff?text=Before+Service',
       after_photo: 'https://via.placeholder.com/400x300/ef4444/ffffff?text=Incomplete+Service',
       service_notes: 'Institutional service completed but area not properly cleaned.',
       service_status: 'serviced',
@@ -207,39 +210,36 @@ export default function VerifyServices() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
         return;
       }
-      // Simulate API call
       setTimeout(() => {
         setServices(dummyServices);
         setLoading(false);
       }, 1500);
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
   const filterServices = () => {
     let filtered = [...dummyServices];
-    
-    // Status filter
+
     if (filters.status !== 'all') {
-      filtered = filtered.filter(service => 
+      filtered = filtered.filter(service =>
         service.verification.status === filters.status
       );
     }
-    
-    // Service type filter
+
     if (filters.serviceType !== 'all') {
-      filtered = filtered.filter(service => 
+      filtered = filtered.filter(service =>
         service.service_status === filters.serviceType
       );
     }
-    
+
     setServices(filtered);
   };
 
@@ -285,36 +285,34 @@ export default function VerifyServices() {
 
   const handleVerifyService = async (status) => {
     setVerifying(true);
-    
+
     try {
-      // Simulate API call
       setTimeout(() => {
-        // Update the service verification status
-        const updatedServices = services.map(service => 
-          service._id === selectedService._id 
+        const updatedServices = services.map(service =>
+          service._id === selectedService._id
             ? {
                 ...service,
                 verification: {
                   status,
-                  verified_by: { _id: 'currentUser', name: 'Current User' },
+                  verified_by: { _id: 'currentUser', name: user?.full_name || 'Current User' },
                   verified_date: new Date(),
                   notes: verificationNotes
                 }
               }
             : service
         );
-        
+
         setServices(updatedServices);
         setVerifying(false);
         setShowVerifyModal(false);
         setVerificationNotes('');
-        
+
         Alert.alert(
           'Verification Complete',
           `Service has been ${status === 'verified' ? 'verified' : 'rejected'} successfully.`
         );
       }, 1000);
-      
+
     } catch (error) {
       setVerifying(false);
       Alert.alert('Error', 'Failed to verify service');
@@ -326,7 +324,7 @@ export default function VerifyServices() {
   };
 
   const ServiceCard = ({ service }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.serviceCard}
       onPress={() => {
         setSelectedService(service);
@@ -370,7 +368,7 @@ export default function VerifyServices() {
         <View style={styles.detailRow}>
           <Ionicons name="calendar" size={16} color="#64748b" />
           <Text style={styles.detailText}>
-            {new Date(service.service_date).toLocaleDateString()} • 
+            {new Date(service.service_date).toLocaleDateString()} •
             {new Date(service.service_date).toLocaleTimeString()}
           </Text>
         </View>
@@ -396,7 +394,7 @@ export default function VerifyServices() {
 
       {/* Action Button for Pending Services */}
       {service.verification.status === 'pending' && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.verifyButton}
           onPress={() => {
             setSelectedService(service);
@@ -563,7 +561,7 @@ export default function VerifyServices() {
               {/* Verify Action for Pending Services */}
               {selectedService.verification.status === 'pending' && (
                 <View style={styles.detailSection}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.verifyActionButton}
                     onPress={() => {
                       setShowDetails(false);
@@ -610,7 +608,7 @@ export default function VerifyServices() {
                 </Text>
                 <Text style={styles.serviceSummaryText}>
                   {selectedService.service_status === 'serviced' ? 'Serviced' :
-                   selectedService.service_status === 'not_home' ? 'Not Home' : 'Refused'} • 
+                   selectedService.service_status === 'not_home' ? 'Not Home' : 'Refused'} •
                   {new Date(selectedService.service_date).toLocaleDateString()}
                 </Text>
               </View>
@@ -631,7 +629,7 @@ export default function VerifyServices() {
 
               {/* Verification Actions */}
               <View style={styles.verificationActions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.verifyAction, styles.rejectAction]}
                   onPress={() => handleVerifyService('rejected')}
                   disabled={verifying}
@@ -646,7 +644,7 @@ export default function VerifyServices() {
                   )}
                 </TouchableOpacity>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.verifyAction, styles.approveAction]}
                   onPress={() => handleVerifyService('verified')}
                   disabled={verifying}
@@ -671,9 +669,8 @@ export default function VerifyServices() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#06b6d4" />
+          <ActivityIndicator size="large" color="#16A085" />
           <Text style={styles.loadingText}>Loading services for verification...</Text>
         </View>
       </SafeAreaView>
@@ -682,35 +679,39 @@ export default function VerifyServices() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
+        <View style={styles.headerTop}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Verify Services</Text>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Verify Services</Text>
+            <Text style={styles.headerSubtitle}>Review and validate service records</Text>
+          </View>
+          <View style={styles.headerPlaceholder} />
         </View>
 
         {/* Stats Bar */}
-        <View style={styles.statsBar}>
+        <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>
+            <Text style={styles.statNumber}>
               {services.filter(s => s.verification.status === 'pending').length}
             </Text>
             <Text style={styles.statLabel}>Pending</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>
+            <Text style={styles.statNumber}>
               {services.filter(s => s.verification.status === 'verified').length}
             </Text>
             <Text style={styles.statLabel}>Verified</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>
+            <Text style={styles.statNumber}>
               {services.filter(s => s.verification.status === 'rejected').length}
             </Text>
             <Text style={styles.statLabel}>Rejected</Text>
@@ -729,16 +730,10 @@ export default function VerifyServices() {
                 {['all', 'pending', 'verified', 'rejected'].map(status => (
                   <TouchableOpacity
                     key={status}
-                    style={[
-                      styles.filterOption,
-                      filters.status === status && styles.filterOptionSelected
-                    ]}
+                    style={[styles.filterOption, filters.status === status && styles.filterOptionSelected]}
                     onPress={() => handleFilterChange('status', status)}
                   >
-                    <Text style={[
-                      styles.filterOptionText,
-                      filters.status === status && styles.filterOptionTextSelected
-                    ]}>
+                    <Text style={[styles.filterOptionText, filters.status === status && styles.filterOptionTextSelected]}>
                       {status === 'all' ? 'All' :
                        status === 'pending' ? 'Pending' :
                        status === 'verified' ? 'Verified' : 'Rejected'}
@@ -755,16 +750,10 @@ export default function VerifyServices() {
                 {['all', 'serviced', 'not_home', 'refused'].map(type => (
                   <TouchableOpacity
                     key={type}
-                    style={[
-                      styles.filterOption,
-                      filters.serviceType === type && styles.filterOptionSelected
-                    ]}
+                    style={[styles.filterOption, filters.serviceType === type && styles.filterOptionSelected]}
                     onPress={() => handleFilterChange('serviceType', type)}
                   >
-                    <Text style={[
-                      styles.filterOptionText,
-                      filters.serviceType === type && styles.filterOptionTextSelected
-                    ]}>
+                    <Text style={[styles.filterOptionText, filters.serviceType === type && styles.filterOptionTextSelected]}>
                       {type === 'all' ? 'All' :
                        type === 'serviced' ? 'Serviced' :
                        type === 'not_home' ? 'Not Home' : 'Refused'}
@@ -779,7 +768,7 @@ export default function VerifyServices() {
 
       {/* Services List */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.servicesContainer}>
+        <View style={styles.scrollContent}>
           {services.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="checkmark-done" size={64} color="#cbd5e1" />
@@ -805,40 +794,73 @@ export default function VerifyServices() {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  header: {
-    backgroundColor: '#06b6d4',
-    paddingBottom: 16,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  // Header
+  header: {
+    flexDirection: 'column',
     marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#1e293b',
+    marginBottom: 2,
   },
-  statsBar: {
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '400',
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  statsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    marginHorizontal: 20,
+    backgroundColor: 'rgba(22,160,133,0.1)',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -847,34 +869,34 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  statValue: {
+  statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#16A085',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#64748b',
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#e2e8f0',
   },
   filtersContainer: {
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
+    paddingVertical: 12,
   },
   filtersScroll: {
     paddingHorizontal: 20,
   },
   filters: {
     flexDirection: 'row',
-    paddingVertical: 16,
     gap: 24,
   },
   filterGroup: {
@@ -884,7 +906,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 4,
   },
   filterOptions: {
     flexDirection: 'row',
@@ -899,8 +920,8 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   filterOptionSelected: {
-    backgroundColor: '#06b6d4',
-    borderColor: '#06b6d4',
+    backgroundColor: '#16A085',
+    borderColor: '#16A085',
   },
   filterOptionText: {
     fontSize: 14,
@@ -913,25 +934,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  servicesContainer: {
-    padding: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    color: '#64748b',
-    fontSize: 16,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 60,
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 24,
     marginTop: 20,
   },
   emptyStateTitle: {
@@ -952,7 +964,7 @@ const styles = StyleSheet.create({
   },
   serviceCard: {
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1056,12 +1068,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   verifyButton: {
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#16A085',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     gap: 8,
     marginBottom: 12,
   },
@@ -1073,9 +1085,9 @@ const styles = StyleSheet.create({
   verificationInfo: {
     backgroundColor: '#f8fafc',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: '#10b981',
+    borderLeftColor: '#16A085',
   },
   verificationText: {
     fontSize: 14,
@@ -1096,13 +1108,13 @@ const styles = StyleSheet.create({
   detailsModal: {
     backgroundColor: '#fff',
     margin: 20,
-    borderRadius: 20,
+    borderRadius: 24,
     maxHeight: '85%',
   },
   verifyModal: {
     backgroundColor: '#fff',
     margin: 20,
-    borderRadius: 20,
+    borderRadius: 24,
     maxHeight: '80%',
   },
   modalHeader: {
@@ -1221,7 +1233,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   verifyActionButton: {
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#16A085',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1298,7 +1310,7 @@ const styles = StyleSheet.create({
     borderColor: '#fecaca',
   },
   approveAction: {
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#16A085',
   },
   rejectActionText: {
     color: '#ef4444',

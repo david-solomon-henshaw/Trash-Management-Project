@@ -16,9 +16,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
+import apiClient from  '../../../hooks/services/client'
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { API_BASE_URL } from '../../../config';
 import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
@@ -61,35 +60,31 @@ export default function AddCustomerForm() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
   const fetchData = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+      
 
-      // Fetch streets
-      const streetData = await axios.get(`${API_BASE_URL}/api/street/all`, { headers });
+      const streetData = await apiClient.get(`/street/all`);
       setStreets(streetData.data.streets || []);
 
-      // Fetch apartment types
-      const apartmentTypeData = await axios.get(`${API_BASE_URL}/api/apartment-types`, { headers });
+      const apartmentTypeData = await apiClient.get(`/apartment-types`);
       setApartmentTypes(apartmentTypeData.data.apartmentTypes || []);
 
-      // Fetch commercial subtypes
-      const commercialSubtypeData = await axios.get(`${API_BASE_URL}/api/commercial-subtypes`, { headers });
+      const commercialSubtypeData = await apiClient.get(`/commercial-subtypes`);
       setCommercialSubtypes(commercialSubtypeData.data.commercialSubtypes || []);
 
-      // Fetch institutional subtypes
-      const institutionalSubtypeData = await axios.get(`${API_BASE_URL}/api/institutional-subtypes`, { headers });
+      const institutionalSubtypeData = await apiClient.get(`/institutional-subtypes`);
       setInstitutionalSubtypes(institutionalSubtypeData.data.institutionalSubtypes || []);
 
     } catch (error) {
@@ -117,7 +112,6 @@ export default function AddCustomerForm() {
         ...prev,
         [field]: value,
       };
-      // Update address if house_number or street_label changes
       if (field === 'house_number') {
         newFormData.address = `${value} ${prev.street_label || ''}`.trim();
       }
@@ -139,7 +133,6 @@ export default function AddCustomerForm() {
         [field]: value,
         [`${field}_label`]: label,
       };
-      // Update address if street is selected
       if (field === 'street') {
         newFormData.address = `${prev.house_number} ${label || ''}`.trim();
       }
@@ -193,8 +186,8 @@ export default function AddCustomerForm() {
     setSubmitting(true);
 
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
 
       const payload = {
         name: formData.name,
@@ -210,8 +203,8 @@ export default function AddCustomerForm() {
         status: formData.status,
       };
 
-      const response = await axios.post(
-        `${API_BASE_URL}/api/customers/create`,
+      const response = await apiClient.post(
+        `/customers/create`,
         payload,
         { headers }
       );
@@ -286,7 +279,7 @@ export default function AddCustomerForm() {
                     {option.name || option.streetName || option.label}
                   </Text>
                   {formData[field] === (option.id || option._id || option.value) && (
-                    <Ionicons name="checkmark" size={20} color="#10b981" />
+                    <Ionicons name="checkmark" size={20} color="#16A085" />
                   )}
                 </TouchableOpacity>
               ))
@@ -300,9 +293,9 @@ export default function AddCustomerForm() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10b981" />
+          <ActivityIndicator size="large" color="#16A085" />
           <Text style={styles.loadingText}>Loading form data...</Text>
         </View>
       </SafeAreaView>
@@ -311,38 +304,32 @@ export default function AddCustomerForm() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Header */}
+      {/* Header – matches dashboard style */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
+        <View style={styles.headerTop}>
           <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Add New Customer</Text>
-            <Text style={styles.headerSubtitle}>Register a new customer account</Text>
-          </View>
-          <View style={styles.headerIcon}>
-            <Ionicons name="person-add" size={24} color="white" />
-          </View>
+          <Text style={styles.headerTitle}>Add New Customer</Text>
+          <View style={styles.headerPlaceholder} />
         </View>
+        <Text style={styles.headerSubtitle}>Register a new customer account</Text>
       </View>
 
-      {/* Form */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Personal Information Section */}
-          <View style={styles.section}>
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="person-circle" size={20} color="#10b981" />
+              <Ionicons name="person-circle" size={20} color="#16A085" />
               <Text style={styles.sectionTitle}>Personal Information</Text>
             </View>
 
-            {/* Name */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="person-outline" size={16} color="#64748b" />
@@ -359,7 +346,6 @@ export default function AddCustomerForm() {
               />
             </View>
 
-            {/* Email */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="mail-outline" size={16} color="#64748b" />
@@ -376,7 +362,6 @@ export default function AddCustomerForm() {
               />
             </View>
 
-            {/* Phone */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="call-outline" size={16} color="#64748b" />
@@ -396,13 +381,12 @@ export default function AddCustomerForm() {
           </View>
 
           {/* Address Information Section */}
-          <View style={styles.section}>
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="location" size={20} color="#10b981" />
+              <Ionicons name="location" size={20} color="#16A085" />
               <Text style={styles.sectionTitle}>Address Information</Text>
             </View>
 
-            {/* Street Dropdown */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="pin" size={16} color="#64748b" />
@@ -421,7 +405,6 @@ export default function AddCustomerForm() {
               </TouchableOpacity>
             </View>
 
-            {/* House Number */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="home-outline" size={16} color="#64748b" />
@@ -438,7 +421,6 @@ export default function AddCustomerForm() {
               />
             </View>
 
-            {/* Full Address */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="business-outline" size={16} color="#64748b" />
@@ -460,13 +442,12 @@ export default function AddCustomerForm() {
           </View>
 
           {/* Customer Type Section */}
-          <View style={styles.section}>
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <Ionicons name="business" size={20} color="#10b981" />
+              <Ionicons name="business" size={20} color="#16A085" />
               <Text style={styles.sectionTitle}>Customer Type</Text>
             </View>
 
-            {/* Customer Type Dropdown */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="layers-outline" size={16} color="#64748b" />
@@ -485,7 +466,6 @@ export default function AddCustomerForm() {
               </TouchableOpacity>
             </View>
 
-            {/* Apartment Type - Only for Residential */}
             {formData.customer_type === 'residential' && (
               <View style={styles.inputGroup}>
                 <View style={styles.labelContainer}>
@@ -506,7 +486,6 @@ export default function AddCustomerForm() {
               </View>
             )}
 
-            {/* Commercial Subtype - Only for Commercial */}
             {formData.customer_type === 'commercial' && (
               <View style={styles.inputGroup}>
                 <View style={styles.labelContainer}>
@@ -527,7 +506,6 @@ export default function AddCustomerForm() {
               </View>
             )}
 
-            {/* Institutional Subtype - Only for Institutional */}
             {formData.customer_type === 'institutional' && (
               <View style={styles.inputGroup}>
                 <View style={styles.labelContainer}>
@@ -548,7 +526,6 @@ export default function AddCustomerForm() {
               </View>
             )}
 
-            {/* Status Dropdown */}
             <View style={styles.inputGroup}>
               <View style={styles.labelContainer}>
                 <Ionicons name="flag-outline" size={16} color="#64748b" />
@@ -560,7 +537,7 @@ export default function AddCustomerForm() {
                 style={styles.dropdownButton}
                 onPress={() => toggleDropdown('status')}
               >
-                <Text style={[styles.dropdownText, styles.dropdownTextSelected]}>
+                <Text style={[styles.dropdownText, formData.status_label && styles.dropdownTextSelected]}>
                   {formData.status_label || 'Active'}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color="#94a3b8" />
@@ -665,92 +642,85 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '500',
   },
+  // Header
   header: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 5,
+    elevation: 3,
   },
-  headerContent: {
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerText: {
-    flex: 1,
-    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 2,
+    color: '#1e293b',
+    textAlign: 'center',
+    flex: 1,
+  },
+  headerPlaceholder: {
+    width: 40,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-  },
-  headerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    color: '#64748b',
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  section: {
+  // Section Cards
+  sectionCard: {
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 24,
+    padding: 20,
     marginBottom: 20,
-    padding: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    overflow: 'hidden',
+    shadowRadius: 12,
+    elevation: 4,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#1e293b',
     marginLeft: 8,
   },
   inputGroup: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    marginBottom: 16,
   },
   labelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   label: {
     fontSize: 14,
@@ -794,6 +764,7 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     fontWeight: '500',
   },
+  // Bottom actions
   bottomActions: {
     flexDirection: 'row',
     backgroundColor: 'white',
@@ -831,7 +802,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
     paddingVertical: 14,
     borderRadius: 12,
     gap: 8,

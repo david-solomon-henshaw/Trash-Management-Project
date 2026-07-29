@@ -1,105 +1,131 @@
 import React, { useState } from 'react';
 import {
-    Alert, StyleSheet, View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Dimensions
+    Alert,
+    StyleSheet,
+    View,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    KeyboardAvoidingView,
+    Platform,
+    Dimensions,
+    ActivityIndicator,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import appClient from '../hooks/services/client'
-import { jwtDecode } from 'jwt-decode';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ✅ import the hook
+import appClient from '../hooks/services/client';
+import jwtDecode from 'jwt-decode';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDispatch } from 'react-redux';
 import { setUser } from '@/hooks/store/slices/authSlice';
-
 
 const { width, height } = Dimensions.get('window');
 const isTablet = width >= 768;
 
 export default function Index() {
+    const insets = useSafeAreaInsets(); // ✅ get safe area insets
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
     const router = useRouter();
-    const dispatch = useDispatch()
+    const dispatch = useDispatch();
 
-    const handleLogin = async (email, password) => {
+    const handleLogin = async () => {
+        if (!email || !password) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        const emailRegex = /\S+@\S+\.\S+/;
+        if (!emailRegex.test(email)) {
+            Alert.alert('Error', 'Please enter a valid email address');
+            return;
+        }
+
+        setLoading(true);
+
         try {
-            if (!email || !password) {
-                Alert.alert('Error', 'Please fill in all fields');
-                return;
-            }
-
             const response = await appClient.post('/staff/signin', { email, password });
-
             const { token } = response.data;
 
-            // Decode token to get the role
             let userRole;
             try {
                 const decoded = jwtDecode(token);
                 userRole = decoded.user?.role;
-                dispatch(setUser({
-                    id: decoded.user.id,
-                    role: decoded.user.role,
-                    full_name: decoded.user.full_name,
-                    companyId: decoded.user.companyId,
-                    companyName: decoded.user.companyName
-                }));
-
+                dispatch(
+                    setUser({
+                        id: decoded.user.id,
+                        role: decoded.user.role,
+                        full_name: decoded.user.full_name,
+                        companyId: decoded.user.companyId,
+                        companyName: decoded.user.companyName,
+                        subStatus: decoded.user.companySubStatus,
+                    })
+                );
             } catch (decodeError) {
-                // console.log('Token decode error:', decodeError);
                 Alert.alert('Error', 'Failed to read login token');
+                setLoading(false);
                 return;
             }
 
             if (!userRole) {
-                // console.log('Role is missing from token');
                 Alert.alert('Error', 'User role not found in token');
+                setLoading(false);
                 return;
             }
 
-            // Store the token
             await AsyncStorage.setItem('userToken', token);
 
-
-            // Map only valid login roles to routes
-            const roleRouteMap = {
-                'admin': '/admin',
-                'supervisor': '/supervisor',
-                'csr': '/csr'
+            const roleRouteMap: Record<string, string> = {
+                admin: '/admin',
+                supervisor: '/supervisor',
+                csr: '/csr',
             };
 
             const route = roleRouteMap[userRole];
-
             if (!route) {
-                Alert.alert('Access Denied', `Role "${userRole}" is not authorized to access this app`);
+                Alert.alert(
+                    'Access Denied',
+                    `Role "${userRole}" is not authorized to access this app`
+                );
+                setLoading(false);
                 return;
             }
 
-            // console.log('Navigating to:', route);
             router.replace(route);
-
         } catch (error) {
-            // console.log("--- LOGIN ERROR DEBUG --");
-            // console.log("Full error:", error);
-
             if (error.response) {
-                // console.log("Status Data:", error.response.data);
-                // console.log("Status Code:", error.response.status);
-                Alert.alert('Login Failed', error.response.data.message || error.response.data);
+                Alert.alert(
+                    'Login Failed',
+                    error.response.data.message || error.response.data
+                );
             } else if (error.request) {
-                // console.log("No response received:", error.request);
                 Alert.alert('Error', 'Server is unreachable. Check your connection.');
             } else {
-                // console.log("Error Message:", error.message);
+                Alert.alert('Error', 'An unexpected error occurred.');
             }
-            // console.log("---------"
+        } finally {
+            setLoading(false);
         }
     };
+
     return (
-        <SafeAreaView style={styles.container}>
-            {/* --- BACKGROUND BLOBS (Replicating the CSS Blobs) --- */}
+        // ✅ Apply insets as padding to the outermost container
+        <View
+            style={[
+                styles.container,
+                {
+                    paddingTop: insets.top,
+                    paddingBottom: insets.bottom,
+                    paddingLeft: insets.left,
+                    paddingRight: insets.right,
+                },
+            ]}
+        >
+            {/* --- BACKGROUND BLOBS --- */}
             <View style={[styles.blob, styles.blob1]} />
             <View style={[styles.blob, styles.blob2]} />
 
@@ -108,15 +134,17 @@ export default function Index() {
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.keyboardView}
                 >
-                    {/* --- MAIN GLASS CARD --- */}
                     <BlurView intensity={60} tint="light" style={styles.glassCard}>
-
                         {/* Header: Logo + Brand */}
                         <View style={{ marginBottom: isTablet ? 24 : 20 }}>
                             <View style={styles.headerRow}>
                                 <View style={styles.logoContainer}>
                                     <View style={styles.logoCircle}>
-                                        <FontAwesome5 name="recycle" size={isTablet ? 22 : 18} color="white" />
+                                        <FontAwesome5
+                                            name="recycle"
+                                            size={isTablet ? 22 : 18}
+                                            color="white"
+                                        />
                                     </View>
                                     <Text style={styles.brandName}>CleanHaul</Text>
                                 </View>
@@ -126,29 +154,39 @@ export default function Index() {
                             </View>
                         </View>
 
-                        {/* Welcome Text */}
                         <View style={styles.welcomeSection}>
                             <Text style={styles.title}>Welcome back</Text>
-                            <Text style={styles.subtitle}>Sign in to your company dashboard.</Text>
+                            <Text style={styles.subtitle}>
+                                Sign in to your company dashboard.
+                            </Text>
                         </View>
 
-                        {/* Form Fields */}
                         <View style={styles.form}>
-                            {/* Email Input */}
                             <View style={styles.inputContainer}>
-                                <FontAwesome5 name="user" size={isTablet ? 18 : 14} color="#94a3b8" style={styles.inputIcon} />
+                                <FontAwesome5
+                                    name="user"
+                                    size={isTablet ? 18 : 14}
+                                    color="#94a3b8"
+                                    style={styles.inputIcon}
+                                />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Email or username"
                                     placeholderTextColor="#94a3b8"
                                     value={email}
                                     onChangeText={setEmail}
+                                    autoCapitalize="none"
+                                    keyboardType="email-address"
                                 />
                             </View>
 
-                            {/* Password Input */}
                             <View style={styles.inputContainer}>
-                                <FontAwesome5 name="lock" size={isTablet ? 18 : 14} color="#94a3b8" style={styles.inputIcon} />
+                                <FontAwesome5
+                                    name="lock"
+                                    size={isTablet ? 18 : 14}
+                                    color="#94a3b8"
+                                    style={styles.inputIcon}
+                                />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Password"
@@ -157,54 +195,82 @@ export default function Index() {
                                     value={password}
                                     onChangeText={setPassword}
                                 />
-                                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                <TouchableOpacity
+                                    onPress={() => setShowPassword(!showPassword)}
+                                >
                                     <FontAwesome5
-                                        name={showPassword ? "eye" : "eye-slash"}
+                                        name={showPassword ? 'eye' : 'eye-slash'}
                                         size={isTablet ? 18 : 14}
                                         color="#94a3b8"
                                     />
                                 </TouchableOpacity>
                             </View>
 
-                            {/* Options: Remember & Forgot */}
                             <View style={styles.optionsRow}>
                                 <TouchableOpacity style={styles.checkboxRow}>
-                                    <View style={[styles.checkbox, isTablet && { width: 20, height: 20 }]} />
+                                    <View
+                                        style={[
+                                            styles.checkbox,
+                                            isTablet && { width: 20, height: 20 },
+                                        ]}
+                                    />
                                     <Text style={styles.optionText}>Remember me</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity>
-                                    <Text style={[styles.optionText, { color: '#16A085', fontWeight: '600' }]}>
+                                    <Text
+                                        style={[
+                                            styles.optionText,
+                                            { color: '#16A085', fontWeight: '600' },
+                                        ]}
+                                    >
                                         Forgot password?
                                     </Text>
                                 </TouchableOpacity>
                             </View>
 
-                            {/* Sign In Button */}
                             <TouchableOpacity
-                                style={styles.signInButton}
-                                onPress={() => handleLogin(email, password)}
+                                style={[
+                                    styles.signInButton,
+                                    loading && styles.signInButtonDisabled,
+                                ]}
+                                onPress={handleLogin}
+                                disabled={loading}
                             >
-                                <Text style={styles.signInButtonText}>Sign In</Text>
-                                <FontAwesome5 name="arrow-right" size={isTablet ? 16 : 14} color="white" />
+                                {loading ? (
+                                    <ActivityIndicator size="small" color="white" />
+                                ) : (
+                                    <>
+                                        <Text style={styles.signInButtonText}>
+                                            Sign In
+                                        </Text>
+                                        <FontAwesome5
+                                            name="arrow-right"
+                                            size={isTablet ? 16 : 14}
+                                            color="white"
+                                        />
+                                    </>
+                                )}
                             </TouchableOpacity>
                         </View>
 
-                        {/* Create Account Link */}
                         <View style={styles.footer}>
                             <Text style={styles.footerText}>New to CleanHaul?</Text>
                             <TouchableOpacity onPress={() => router.push('/register')}>
-                                <Text style={styles.linkText}> Create company account →</Text>
+                                <Text style={styles.linkText}>
+                                    {' '}
+                                    Create company account →
+                                </Text>
                             </TouchableOpacity>
                         </View>
 
-                        {/* Tagline */}
                         <Text style={styles.tagline}>CLEAN • SMART • RELIABLE</Text>
-                        <Text style={styles.copyright}>© 2026 CleanHaul • B2B Waste Operations</Text>
-
+                        <Text style={styles.copyright}>
+                            © 2026 CleanHaul • B2B Waste Operations
+                        </Text>
                     </BlurView>
                 </KeyboardAvoidingView>
             </View>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -215,7 +281,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    // Blobs to match your HTML floatBlob animation
     blob: {
         position: 'absolute',
         width: isTablet ? 500 : 350,
@@ -226,12 +291,12 @@ const styles = StyleSheet.create({
     blob1: {
         top: isTablet ? -150 : -100,
         left: isTablet ? -150 : -100,
-        backgroundColor: '#16A085', // Teal
+        backgroundColor: '#16A085',
     },
     blob2: {
         bottom: isTablet ? -150 : -100,
         right: isTablet ? -150 : -100,
-        backgroundColor: '#f59e0b', // Amber
+        backgroundColor: '#f59e0b',
     },
     safeArea: {
         flex: 1,
@@ -248,7 +313,7 @@ const styles = StyleSheet.create({
         borderRadius: isTablet ? 40 : 32,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.4)',
-        overflow: 'hidden', // Required for border radius with BlurView
+        overflow: 'hidden',
         backgroundColor: 'rgba(255, 255, 255, 0.25)',
     },
     headerRow: {
@@ -359,6 +424,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 5,
+    },
+    signInButtonDisabled: {
+        opacity: 0.6,
     },
     signInButtonText: {
         color: 'white',

@@ -5,81 +5,108 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  StatusBar,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useSelector } from 'react-redux';
+
+// Theme constants
+const COLORS = {
+  primary: '#16A085',
+  secondary: '#f59e0b',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  purple: '#8b5cf6',
+  pink: '#ec4899',
+  cyan: '#06b6d4',
+  brown: '#8B4513',
+  gray: {
+    50: '#f8fafc',
+    100: '#f1f5f9',
+    200: '#e2e8f0',
+    300: '#cbd5e1',
+    400: '#94a3b8',
+    500: '#64748b',
+    600: '#475569',
+    700: '#334155',
+    800: '#1e293b',
+    900: '#0f172a',
+  },
+};
 
 export default function OperationsIndex() {
   const router = useRouter();
-  
+  const user = useSelector((state) => state.auth.user);
+
   const operationsActions = [
     {
       id: 'staffs',
       title: 'Staff Management',
       description: 'Manage staff accounts and roles',
-      icon: '👥',
-      color: '#16A085',
+      icon: 'people',
+      color: COLORS.primary,
       route: '/admin/operations/staffs',
     },
     {
       id: 'fleet',
       title: 'Fleet Management',
       description: 'Manage trucks, routes, and assignments',
-      icon: '🚛',
-      color: '#f59e0b',
+      icon: 'car',
+      color: COLORS.secondary,
       route: '/admin/operations/fleet',
     },
     {
       id: 'apartment-types',
       title: 'Residential Apartment Types',
       description: 'Manage apartment types and base fees',
-      icon: '🏠',
-      color: '#10b981',
+      icon: 'home',
+      color: COLORS.success,
       route: '/admin/operations/apartment-types',
     },
     {
       id: 'commercial-subtypes',
       title: 'Commercial Subtypes',
       description: 'Manage commercial subtypes and base fees',
-      icon: '🏢',
-      color: '#8b5cf6',
+      icon: 'business',
+      color: COLORS.purple,
       route: '/admin/operations/commercial-subtypes',
-    },{
-    id: 'institutional-subtypes',
-  title: 'Institutional Subtypes',
-  description: 'Manage institutional subtypes and base fees',
-  icon: '🏛️',
-  color: '#8B4513',
-  route: '/admin/operations/institutional-subtypes',
-},
+    },
+    {
+      id: 'institutional-subtypes',
+      title: 'Institutional Subtypes',
+      description: 'Manage institutional subtypes and base fees',
+      icon: 'school',
+      color: COLORS.brown,
+      route: '/admin/operations/institutional-subtypes',
+    },
     {
       id: 'streets',
       title: 'Street Management',
       description: 'Manage streets and locations',
-      icon: '📍',
-      color: '#ef4444',
+      icon: 'location',
+      color: COLORS.danger,
       route: '/admin/operations/streets',
     },
     {
       id: 'customer',
       title: 'Customer Management',
       description: 'Manage and organize customer accounts',
-      icon: '👤',
-      color: '#ec4899',
+      icon: 'person',
+      color: COLORS.pink,
       route: '/admin/operations/customer',
     },
     {
       id: 'service-hub',
       title: 'Service Hub',
-      description: 'Manage services, pricing, and service categories',
-      icon: '🛠️',
-      color: '#06b6d4',
+      description: 'Manage services, pricing, and categories',
+      icon: 'construct',
+      color: COLORS.cyan,
       route: '/admin/operations/service-hub',
     },
-    
-  
   ];
 
   const handleCardPress = (route) => {
@@ -88,32 +115,52 @@ export default function OperationsIndex() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#16A085" />
-      
-      {/* Enhanced Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerIcon}>
-            <Text style={styles.headerEmoji}>⚙️</Text>
+      {/* Background blobs (optional) */}
+      <View style={[styles.blob, styles.blob1]} />
+      <View style={[styles.blob, styles.blob2]} />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header - matches index.js style */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View style={styles.logoRow}>
+              <LinearGradient
+                colors={[COLORS.primary, COLORS.secondary]}
+                style={styles.logoGradient}
+              >
+                <Ionicons name="construct" size={18} color="white" />
+              </LinearGradient>
+              <Text style={styles.logoText}>CleanHaul</Text>
+            </View>
+            <View style={styles.userInfoRight}>
+              {user?.companyName && (
+                <Text style={styles.companyName}>{user.companyName}</Text>
+              )}
+              <Text style={styles.roleText}>
+                {user?.role?.toUpperCase() || 'ADMIN'}
+              </Text>
+              <Text style={styles.staffName}>{user?.full_name || 'User'}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Operations Hub</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={styles.headline}>Operations Hub</Text>
+          <Text style={styles.subheadline}>
             Centralized management for all operations
           </Text>
         </View>
-      </View>
 
-      {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.cardsContainer}>
+        {/* Quick Actions Grid */}
+        <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
+            <Ionicons name="apps" size={20} color={COLORS.primary} />
             <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <Text style={styles.sectionSubtitle}>Select a module to manage</Text>
           </View>
-          
-          {/* Grid Layout for Tiles */}
+          <Text style={styles.sectionSubtitle}>
+            Select a module to manage
+          </Text>
+
           <View style={styles.gridContainer}>
             {operationsActions.map((action) => (
               <TouchableOpacity
@@ -122,36 +169,52 @@ export default function OperationsIndex() {
                 onPress={() => handleCardPress(action.route)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.tileIconContainer, { backgroundColor: action.color }]}>
-                  <Text style={styles.tileIconEmoji}>{action.icon}</Text>
-                </View>
-                
+                <LinearGradient
+                  colors={[action.color, `${action.color}80`]}
+                  style={styles.tileIcon}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name={action.icon} size={24} color="white" />
+                </LinearGradient>
                 <View style={styles.tileTextContainer}>
                   <Text style={styles.tileTitle}>{action.title}</Text>
-                  <Text style={styles.tileDescription}>{action.description}</Text>
+                  <Text style={styles.tileDescription} numberOfLines={2}>
+                    {action.description}
+                  </Text>
                 </View>
-                
                 <View style={styles.tileArrow}>
-                  <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={COLORS.gray[400]}
+                  />
                 </View>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Enhanced Info Section */}
-        <View style={styles.infoSection}>
-          <View style={styles.infoCard}>
-            <View style={styles.infoIconContainer}>
-              <Text style={styles.infoIcon}>💡</Text>
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>Operations Center</Text>
-              <Text style={styles.infoText}>
-                Manage all operational aspects of Clean Haul from this centralized hub. Changes sync in real-time across the platform.
-              </Text>
-            </View>
+        {/* Info Section */}
+        <View style={styles.infoCard}>
+          <View style={styles.infoIconContainer}>
+            <Ionicons name="bulb" size={24} color={COLORS.primary} />
           </View>
+          <View style={styles.infoContent}>
+            <Text style={styles.infoTitle}>Operations Center</Text>
+            <Text style={styles.infoText}>
+              Manage all operational aspects of Clean Haul from this centralized
+              hub. Changes sync in real-time across the platform.
+            </Text>
+          </View>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.tagline}>CLEAN • SMART • RELIABLE</Text>
+          <Text style={styles.copyright}>
+            © 2026 CleanHaul • B2B Waste Operations
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -161,167 +224,204 @@ export default function OperationsIndex() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#ffffff',
   },
-  
-  // Enhanced Header
-  header: {
-    backgroundColor: '#16A085',
+  blob: {
+    position: 'absolute',
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    opacity: 0.15,
+  },
+  blob1: {
+    top: -150,
+    left: -150,
+    backgroundColor: COLORS.primary,
+  },
+  blob2: {
+    bottom: -150,
+    right: -150,
+    backgroundColor: COLORS.secondary,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
     paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
+  },
+  header: {
+    flexDirection: 'column',
+    marginBottom: 24,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
-    paddingBottom: 8,
+    marginBottom: 14,
   },
-  headerIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoGradient: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  headerEmoji: {
-    fontSize: 28,
-  },
-  headerContent: {
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 28,
+  logoText: {
+    fontSize: 18,
     fontWeight: '700',
-    color: 'white',
-    marginBottom: 6,
-    textAlign: 'center',
+    color: COLORS.gray[800],
+    marginLeft: 10,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+  companyName: {
+    fontSize: 11,
+    color: COLORS.gray[500],
     fontWeight: '500',
-    textAlign: 'center',
   },
-
-  // Content
-  content: {
-    flex: 1,
+  roleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
-  cardsContainer: {
+  staffName: {
+    fontSize: 11,
+    color: COLORS.gray[800],
+    fontWeight: '600',
+  },
+  userInfoRight: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  headline: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.gray[800],
+    letterSpacing: -0.3,
+    marginTop: 12,
+  },
+  subheadline: {
+    fontSize: 14,
+    color: COLORS.gray[500],
+    marginTop: 2,
+  },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
     padding: 20,
-    paddingTop: 24,
+    marginBottom: 20,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   sectionHeader: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1e293b',
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '400',
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.gray[700],
+    marginLeft: 8,
   },
-
-  // Grid Layout
+  sectionSubtitle: {
+    fontSize: 13,
+    color: COLORS.gray[500],
+    marginBottom: 16,
+    marginLeft: 28,
+  },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-
-  // Tile Cards
   tileCard: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.gray[50],
     borderRadius: 16,
     width: '48%',
-    marginBottom: 16,
+    marginBottom: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: COLORS.gray[100],
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  tileIconContainer: {
+  tileIcon: {
     width: 48,
     height: 48,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  tileIconEmoji: {
-    fontSize: 24,
   },
   tileTextContainer: {
-    flex: 1,
     marginBottom: 8,
   },
   tileTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1e293b',
+    color: COLORS.gray[800],
     marginBottom: 4,
   },
   tileDescription: {
     fontSize: 12,
-    color: '#64748b',
+    color: COLORS.gray[500],
     lineHeight: 16,
   },
   tileArrow: {
     alignSelf: 'flex-end',
-  },
-
-  // Info Section
-  infoSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
   },
   infoCard: {
     backgroundColor: '#ecfdf5',
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#a7f3d0',
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    marginBottom: 20,
   },
   infoIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(22, 160, 133, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  infoIcon: {
-    fontSize: 20,
   },
   infoContent: {
     flex: 1,
@@ -336,5 +436,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#047857',
     lineHeight: 18,
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  tagline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.gray[400],
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  copyright: {
+    fontSize: 9,
+    color: COLORS.gray[300],
   },
 });

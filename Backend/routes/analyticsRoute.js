@@ -1,8 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('../controllers/analyticsController');
-
+const authMiddleware = require('../middleware/auth'); 
 // ==================== MANAGER DASHBOARD ROUTES ====================
+
+
+// Protect all analytics routes
+router.use(authMiddleware);
 
 // GET /api/analytics/dashboard-metrics - Main dashboard metrics
 router.get('/dashboard-metrics', analyticsController.getDashboardMetrics);
@@ -40,4 +44,6 @@ router.get('/reports/revenue-trend', analyticsController.getRevenueTrend);
 // GET /api/analytics/reports/agent-performance (legacy route)
 router.get('/reports/agent-performance', analyticsController.getAgentPerformance);
 
-module.exports = router;
+// ==================== REPORTS SUMMARY ====================
+router.get('/reports/summary', analyticsController.getReportsSummary);
+module.exports = router;  

@@ -14,12 +14,12 @@ const auth = require('../middleware/auth'); // Adjust path as needed
 // @route   GET /api/institutional-subtypes
 // @desc    Get all institutional subtypes
 // @access  Public (or Private based on your requirements)
-router.get('/', getAllInstitutionalSubtypes);
+router.get('/', auth, getAllInstitutionalSubtypes);
 
 // @route   GET /api/institutional-subtypes/:id
 // @desc    Get institutional subtype by ID
 // @access  Public (or Private based on your requirements)
-router.get('/:id', getInstitutionalSubtypeById);
+router.get('/:id', auth, getInstitutionalSubtypeById);
 
 // @route   POST /api/institutional-subtypes
 // @desc    Create a new institutional subtype

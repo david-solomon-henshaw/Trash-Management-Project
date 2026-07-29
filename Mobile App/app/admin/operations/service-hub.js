@@ -7,16 +7,19 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSelector } from 'react-redux';
 
 const { width } = Dimensions.get('window');
 
 export default function ServiceHub() {
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     checkAuth();
@@ -24,13 +27,13 @@ export default function ServiceHub() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
@@ -44,7 +47,7 @@ export default function ServiceHub() {
       title: 'Record Service',
       description: 'Create new service records and entries',
       icon: 'add-circle',
-      color: '#06b6d4',
+      color: '#16A085',
       route: '/admin/operations/recordService',
     },
     {
@@ -79,151 +82,147 @@ export default function ServiceHub() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-      {/* Header with Back Button */}
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackPress}
-            accessible={true}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <View style={styles.headerMain}>
-              <View style={styles.headerTextContainer}>
-                <Text style={styles.headerTitle}>Service Hub</Text>
-                <Text style={styles.headerSubtitle}>
-                  Manage all service operations and tracking
-                </Text>
-              </View>
-              <View style={styles.headerIcon}>
-                <Ionicons name="construct" size={32} color="white" />
-              </View>
-            </View>
-            
-            {/* Quick Stats Row */}
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>4</Text>
-                <Text style={styles.statLabel}>Modules</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>All</Text>
-                <Text style={styles.statLabel}>Access</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>24/7</Text>
-                <Text style={styles.statLabel}>Available</Text>
-              </View>
-            </View>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Service Hub</Text>
+            <Text style={styles.headerSubtitle}>Manage all service operations</Text>
+          </View>
+          <View style={styles.userInfoRight}>
+            {user?.companyName && <Text style={styles.companyName}>{user.companyName}</Text>}
+            <Text style={styles.roleText}>{user?.role?.toUpperCase() || 'ADMIN'}</Text>
+            <Text style={styles.staffName}>{user?.full_name || 'User'}</Text>
+          </View>
+        </View>
+
+        {/* Quick Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>4</Text>
+            <Text style={styles.statLabel}>Modules</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>All</Text>
+            <Text style={styles.statLabel}>Access</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNumber}>24/7</Text>
+            <Text style={styles.statLabel}>Available</Text>
           </View>
         </View>
       </View>
 
-      {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Main Actions Grid */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="flash" size={24} color="#06b6d4" />
-            <Text style={styles.sectionTitle}>Service Management</Text>
+        <View style={styles.scrollContent}>
+          {/* Main Actions Grid */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="flash" size={24} color="#16A085" />
+              <Text style={styles.sectionTitle}>Service Management</Text>
+            </View>
+
+            <View style={styles.cardsGrid}>
+              {serviceActions.map((action) => (
+                <TouchableOpacity
+                  key={action.id}
+                  style={styles.actionCard}
+                  onPress={() => handleCardPress(action.route)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.cardIconContainer, { backgroundColor: `${action.color}15` }]}>
+                    <Ionicons name={action.icon} size={28} color={action.color} />
+                  </View>
+
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle}>{action.title}</Text>
+                    <Text style={styles.cardDescription}>{action.description}</Text>
+                  </View>
+
+                  <View style={[styles.cardArrow, { backgroundColor: `${action.color}15` }]}>
+                    <Ionicons name="chevron-forward" size={20} color={action.color} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-          
-          <View style={styles.cardsGrid}>
-            {serviceActions.map((action) => (
-              <TouchableOpacity
-                key={action.id}
-                style={styles.actionCard}
-                onPress={() => handleCardPress(action.route)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.cardIconContainer, { backgroundColor: `${action.color}15` }]}>
-                  <Ionicons name={action.icon} size={28} color={action.color} />
+
+          {/* Features Section */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="star" size={24} color="#16A085" />
+              <Text style={styles.sectionTitle}>Service Features</Text>
+            </View>
+
+            <View style={styles.featuresGrid}>
+              <View style={styles.featureCard}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name="calendar" size={20} color="#16A085" />
                 </View>
-                
-                <View style={styles.cardContent}>
-                  <Text style={styles.cardTitle}>{action.title}</Text>
-                  <Text style={styles.cardDescription}>{action.description}</Text>
+                <Text style={styles.featureTitle}>Scheduling</Text>
+                <Text style={styles.featureDescription}>
+                  Schedule and track service appointments efficiently
+                </Text>
+              </View>
+
+              <View style={styles.featureCard}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name="shield-checkmark" size={20} color="#16A085" />
                 </View>
+                <Text style={styles.featureTitle}>Verification</Text>
+                <Text style={styles.featureDescription}>
+                  Quality assurance and service validation
+                </Text>
+              </View>
 
-                <View style={[styles.cardArrow, { backgroundColor: `${action.color}15` }]}>
-                  <Ionicons name="chevron-forward" size={20} color={action.color} />
+              <View style={styles.featureCard}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name="analytics" size={20} color="#16A085" />
                 </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Features Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="star" size={24} color="#06b6d4" />
-            <Text style={styles.sectionTitle}>Service Features</Text>
-          </View>
-          
-          <View style={styles.featuresGrid}>
-            <View style={styles.featureCard}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="calendar" size={20} color="#06b6d4" />
+                <Text style={styles.featureTitle}>Analytics</Text>
+                <Text style={styles.featureDescription}>
+                  Comprehensive service performance insights
+                </Text>
               </View>
-              <Text style={styles.featureTitle}>Scheduling</Text>
-              <Text style={styles.featureDescription}>
-                Schedule and track service appointments efficiently
-              </Text>
-            </View>
 
-            <View style={styles.featureCard}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="shield-checkmark" size={20} color="#06b6d4" />
+              <View style={styles.featureCard}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name="document" size={20} color="#16A085" />
+                </View>
+                <Text style={styles.featureTitle}>Reporting</Text>
+                <Text style={styles.featureDescription}>
+                  Detailed service reports and documentation
+                </Text>
               </View>
-              <Text style={styles.featureTitle}>Verification</Text>
-              <Text style={styles.featureDescription}>
-                Quality assurance and service validation
-              </Text>
-            </View>
-
-            <View style={styles.featureCard}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="analytics" size={20} color="#06b6d4" />
-              </View>
-              <Text style={styles.featureTitle}>Analytics</Text>
-              <Text style={styles.featureDescription}>
-                Comprehensive service performance insights
-              </Text>
-            </View>
-
-            <View style={styles.featureCard}>
-              <View style={styles.featureIcon}>
-                <Ionicons name="document" size={20} color="#06b6d4" />
-              </View>
-              <Text style={styles.featureTitle}>Reporting</Text>
-              <Text style={styles.featureDescription}>
-                Detailed service reports and documentation
-              </Text>
             </View>
           </View>
-        </View>
 
-        {/* Info Banner */}
-        <View style={styles.infoBanner}>
-          <View style={styles.infoContent}>
-            <View style={styles.infoIcon}>
-              <Ionicons name="information-circle" size={24} color="#06b6d4" />
+          {/* Info Banner */}
+          <View style={styles.infoBanner}>
+            <View style={styles.infoContent}>
+              <View style={styles.infoIcon}>
+                <Ionicons name="information-circle" size={24} color="#16A085" />
+              </View>
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoTitle}>Complete Service Management</Text>
+                <Text style={styles.infoDescription}>
+                  Track, verify, and analyze all service operations from recording to reporting. Maintain quality standards and service excellence.
+                </Text>
+              </View>
             </View>
-            <View style={styles.infoTextContainer}>
-              <Text style={styles.infoTitle}>Complete Service Management</Text>
-              <Text style={styles.infoDescription}>
-                Track, verify, and analyze all service operations from recording to reporting. Maintain quality standards and service excellence.
-              </Text>
-            </View>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.tagline}>CLEAN • SMART • RELIABLE</Text>
+            <Text style={styles.copyright}>© 2026 CleanHaul • B2B Waste Operations</Text>
           </View>
         </View>
       </ScrollView>
@@ -236,69 +235,76 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  // Header
   header: {
-    backgroundColor: '#06b6d4',
-    paddingBottom: 24,
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 5,
+    elevation: 3,
   },
-  headerTopRow: {
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    marginTop: 4,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerMain: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 20,
   },
   headerTextContainer: {
     flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 8,
+    color: '#1e293b',
+    marginBottom: 2,
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    lineHeight: 22,
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '400',
   },
-  headerIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 12,
+  userInfoRight: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  companyName: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#16A085',
+  },
+  staffName: {
+    fontSize: 11,
+    color: '#1f2937',
+    fontWeight: '600',
   },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(22,160,133,0.1)',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
+    marginTop: 8,
   },
   statItem: {
     flex: 1,
@@ -307,24 +313,36 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#16A085',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#64748b',
     fontWeight: '500',
   },
   statDivider: {
     width: 1,
     height: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#e2e8f0',
   },
   content: {
     flex: 1,
   },
-  section: {
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
     padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -332,8 +350,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#1e293b',
     marginLeft: 8,
   },
@@ -341,18 +359,13 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   actionCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-    borderLeftWidth: 4,
-    borderLeftColor: '#06b6d4',
+    padding: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   cardIconContainer: {
     width: 56,
@@ -366,15 +379,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748b',
-    lineHeight: 20,
   },
   cardArrow: {
     width: 40,
@@ -389,16 +401,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   featureCard: {
-    width: (width - 52) / 2,
-    backgroundColor: 'white',
+    width: (width - 80) / 2,
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   featureIcon: {
     width: 48,
@@ -411,7 +420,7 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#1e293b',
     marginBottom: 8,
     textAlign: 'center',
@@ -423,18 +432,15 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   infoBanner: {
-    margin: 20,
-    marginTop: 0,
     backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#f0f9ff',
+    elevation: 4,
   },
   infoContent: {
     flexDirection: 'row',
@@ -453,14 +459,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#1e293b',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   infoDescription: {
     fontSize: 14,
     color: '#64748b',
     lineHeight: 20,
   },
+  footer: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  tagline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94a3b8',
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  copyright: {
+    fontSize: 9,
+    color: '#cbd5e1',
+  },
 });
+
+/// fix the notes at the bottom 

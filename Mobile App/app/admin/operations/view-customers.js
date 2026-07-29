@@ -17,8 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-// import { API_BASE_URL } from '../../../config';
+import apiClient from '../../../hooks/services/client';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -62,25 +61,12 @@ export default function ViewCustomers() {
     status: false
   });
 
-  const apartmentTypes = [
-    { id: '1', name: 'Studio' },
-    { id: '2', name: '1 Bedroom' },
-    { id: '3', name: '2 Bedroom' },
-    { id: '4', name: '3 Bedroom' },
-    { id: '5', name: 'Penthouse' }
-  ];
-
-  const commercialSubtypes = [
-    { id: '1', name: 'Restaurant' },
-    { id: '2', name: 'Retail Store' },
-    { id: '3', name: 'Office' },
-    { id: '4', name: 'Hotel' },
-    { id: '5', name: 'Warehouse' }
-  ];
+ 
 
   const customerTypes = [
     { value: 'residential', label: 'Residential' },
-    { value: 'commercial', label: 'Commercial' }
+    { value: 'commercial', label: 'Commercial' },
+    { value: 'institutional', label: 'Institutional' }
   ];
 
   const statusOptions = [
@@ -95,26 +81,25 @@ export default function ViewCustomers() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
   const fetchCustomers = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
+     
+
       const [customersRes, streetsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/customers/all`, { headers }),
-        axios.get(`${API_BASE_URL}/api/street/all`, { headers })
+        apiClient.get(`/customers/all`),
+        apiClient.get(`/street/all`)
       ]);
-      
+
       setCustomers(customersRes.data.customers || []);
       setStreets(streetsRes.data.streets || []);
     } catch (error) {
@@ -131,12 +116,11 @@ export default function ViewCustomers() {
     fetchCustomers();
   };
 
-  // Filter customers based on search and filters
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          customer.phone.includes(searchQuery) ||
                          customer.street?.streetName?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesType = !filters.customer_type || customer.customer_type === filters.customer_type;
     const matchesStatus = !filters.status || customer.status === filters.status;
     const matchesStreet = !filters.street || customer.street?._id === filters.street;
@@ -173,8 +157,8 @@ export default function ViewCustomers() {
         'You have unsaved changes. Are you sure you want to close?',
         [
           { text: 'Keep Editing', style: 'cancel' },
-          { 
-            text: 'Discard', 
+          {
+            text: 'Discard',
             style: 'destructive',
             onPress: resetModal
           },
@@ -246,8 +230,7 @@ export default function ViewCustomers() {
     }
 
     setSaving(true);
-    
-    // TODO: API call will be added here
+
     setTimeout(() => {
       Alert.alert('Ready', 'API integration pending - edit functionality ready');
       setSaving(false);
@@ -271,8 +254,8 @@ export default function ViewCustomers() {
 
   const confirmDelete = async (customerId) => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/api/customer/${customerId}`, {
+      const token = await AsyncStorage.getItem('userToken');
+      await apiClient.delete(`/customer/${customerId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       Alert.alert('Success', 'Customer deleted successfully');
@@ -321,7 +304,7 @@ export default function ViewCustomers() {
                   {option.name || option.streetName || option.label}
                 </Text>
                 {editFormData[field] === (option.id || option._id || option.value) && (
-                  <Ionicons name="checkmark" size={20} color="#10b981" />
+                  <Ionicons name="checkmark" size={20} color="#16A085" />
                 )}
               </TouchableOpacity>
             ))}
@@ -359,9 +342,9 @@ export default function ViewCustomers() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10b981" />
+          <ActivityIndicator size="large" color="#16A085" />
           <Text style={styles.loadingText}>Loading customers...</Text>
         </View>
       </SafeAreaView>
@@ -370,16 +353,13 @@ export default function ViewCustomers() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#10b981" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>Customer Directory</Text>
@@ -387,11 +367,11 @@ export default function ViewCustomers() {
               {filteredCustomers.length} of {customers.length} customer{filteredCustomers.length !== 1 ? 's' : ''}
             </Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.filterButton}
             onPress={() => setFilterModalVisible(true)}
           >
-            <Ionicons name="filter" size={20} color="white" />
+            <Ionicons name="filter" size={20} color="#16A085" />
             {(filters.customer_type || filters.status || filters.street) && (
               <View style={styles.filterBadge} />
             )}
@@ -466,7 +446,7 @@ export default function ViewCustomers() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10b981']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#16A085']} tintColor="#16A085" />
         }
       >
         <View style={styles.customersContainer}>
@@ -477,8 +457,8 @@ export default function ViewCustomers() {
               </View>
               <Text style={styles.emptyTitle}>No customers found</Text>
               <Text style={styles.emptyText}>
-                {searchQuery || filters.customer_type || filters.status || filters.street 
-                  ? 'Try adjusting your search or filters' 
+                {searchQuery || filters.customer_type || filters.status || filters.street
+                  ? 'Try adjusting your search or filters'
                   : 'Add your first customer to get started'
                 }
               </Text>
@@ -489,6 +469,7 @@ export default function ViewCustomers() {
               ) : (
                 <TouchableOpacity
                   style={styles.emptyButton}
+                  //check on the route its sayig it does not exist when we click on it 
                   onPress={() => router.push('/admin/operations/add-customer')}
                 >
                   <Ionicons name="add" size={20} color="white" />
@@ -498,17 +479,17 @@ export default function ViewCustomers() {
             </View>
           ) : (
             filteredCustomers.map((customer) => (
-              <TouchableOpacity 
-                key={customer._id} 
+              <TouchableOpacity
+                key={customer._id}
                 style={styles.customerCard}
                 onPress={() => handleEditCustomer(customer)}
               >
                 <View style={styles.customerHeader}>
                   <View style={styles.customerAvatar}>
-                    <Ionicons 
-                      name={customer.customer_type === 'residential' ? 'home' : 'business'} 
-                      size={24} 
-                      color="white" 
+                    <Ionicons
+                      name={customer.customer_type === 'residential' ? 'home' : 'business'}
+                      size={24}
+                      color="white"
                     />
                   </View>
                   <View style={styles.customerInfo}>
@@ -519,10 +500,10 @@ export default function ViewCustomers() {
                     styles.statusIndicator,
                     customer.status === 'active' ? styles.statusActive : styles.statusInactive
                   ]}>
-                    <Ionicons 
-                      name={customer.status === 'active' ? 'checkmark' : 'close'} 
-                      size={16} 
-                      color="white" 
+                    <Ionicons
+                      name={customer.status === 'active' ? 'checkmark' : 'close'}
+                      size={16}
+                      color="white"
                     />
                   </View>
                 </View>
@@ -537,7 +518,7 @@ export default function ViewCustomers() {
                   <View style={styles.detailRow}>
                     <Ionicons name="business-outline" size={16} color="#64748b" />
                     <Text style={styles.detailText}>
-                      {customer.customer_type === 'residential' 
+                      {customer.customer_type === 'residential'
                         ? customer.apartment_type?.name || 'Residential'
                         : customer.commercial_subtype?.name || 'Commercial'
                       }
@@ -555,7 +536,7 @@ export default function ViewCustomers() {
                     </Text>
                   </View>
                   <View style={styles.actionIcons}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.actionIcon}
                       onPress={(e) => {
                         e.stopPropagation();
@@ -564,7 +545,7 @@ export default function ViewCustomers() {
                     >
                       <Ionicons name="create-outline" size={18} color="#3b82f6" />
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.actionIcon}
                       onPress={(e) => {
                         e.stopPropagation();
@@ -718,7 +699,7 @@ export default function ViewCustomers() {
                 <Ionicons name="close" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={styles.modalContent}>
               <FilterOption
                 title="Customer Type"
@@ -774,43 +755,55 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '500',
   },
+  // Header
   header: {
-    backgroundColor: '#10b981',
-    paddingBottom: 16,
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  headerContent: {
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    marginBottom: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   headerTextContainer: {
     flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#1e293b',
     marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#64748b',
+    fontWeight: '400',
   },
   filterButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(22, 160, 133, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -825,21 +818,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444',
   },
   searchContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    marginTop: 8,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
   searchInput: {
     flex: 1,
@@ -891,7 +880,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
-  // New Card Design
+  // Customer Card
   customerCard: {
     backgroundColor: 'white',
     borderRadius: 16,
@@ -903,7 +892,7 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
     borderLeftWidth: 4,
-    borderLeftColor: '#10b981',
+    borderLeftColor: '#16A085',
   },
   customerHeader: {
     flexDirection: 'row',
@@ -914,7 +903,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1022,7 +1011,7 @@ const styles = StyleSheet.create({
   emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -1045,7 +1034,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1141,8 +1130,8 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   filterOptionSelected: {
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
+    backgroundColor: '#16A085',
+    borderColor: '#16A085',
   },
   filterOptionText: {
     fontSize: 14,
@@ -1223,7 +1212,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#16A085',
   },
   saveButtonText: {
     color: 'white',

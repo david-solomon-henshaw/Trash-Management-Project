@@ -9,17 +9,21 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import { useSelector } from 'react-redux';
 
 const { width } = Dimensions.get('window');
 
 export default function ServiceReports() {
   const router = useRouter();
+  const user = useSelector((state) => state.auth.user);
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState({});
   const [dateRange, setDateRange] = useState('week'); // week, month, quarter, year
@@ -43,7 +47,7 @@ export default function ServiceReports() {
       datasets: [
         {
           data: [18, 22, 25, 24, 26, 20, 21],
-          color: () => '#06b6d4',
+          color: () => '#16A085',
         }
       ],
     },
@@ -82,28 +86,25 @@ export default function ServiceReports() {
   }, []);
 
   useEffect(() => {
-    // Simulate data refresh when date range changes
     if (reports.overview) {
       // In real app, this would fetch new data based on dateRange
-      // console.log('Fetching data for:', dateRange);
     }
   }, [dateRange]);
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
         return;
       }
-      // Simulate API call
       setTimeout(() => {
         setReports(dummyReports);
         setLoading(false);
       }, 2000);
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
@@ -114,7 +115,24 @@ export default function ServiceReports() {
   const handleExportReport = (format) => {
     setShowExportModal(false);
     Alert.alert('Export Started', `Your report is being exported as ${format.toUpperCase()}`);
-    // In real app, this would trigger the export process
+  };
+
+  const chartConfig = {
+    backgroundColor: '#ffffff',
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientTo: '#ffffff',
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(22, 160, 133, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+    style: {
+      borderRadius: 16,
+    },
+    propsForDots: {
+      r: '4',
+      strokeWidth: '2',
+      stroke: '#16A085',
+    },
+    barPercentage: 0.7,
   };
 
   const StatCard = ({ title, value, change, icon, color }) => (
@@ -128,15 +146,12 @@ export default function ServiceReports() {
       <Text style={styles.statValue}>{value}</Text>
       {change && (
         <View style={styles.changeIndicator}>
-          <Ionicons 
-            name={change > 0 ? "trending-up" : "trending-down"} 
-            size={16} 
-            color={change > 0 ? "#10b981" : "#ef4444"} 
+          <Ionicons
+            name={change > 0 ? "trending-up" : "trending-down"}
+            size={16}
+            color={change > 0 ? "#10b981" : "#ef4444"}
           />
-          <Text style={[
-            styles.changeText,
-            { color: change > 0 ? "#10b981" : "#ef4444" }
-          ]}>
+          <Text style={[styles.changeText, { color: change > 0 ? "#10b981" : "#ef4444" }]}>
             {Math.abs(change)}% {change > 0 ? 'increase' : 'decrease'}
           </Text>
         </View>
@@ -162,29 +177,11 @@ export default function ServiceReports() {
     </View>
   );
 
-  const chartConfig = {
-    backgroundColor: '#ffffff',
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientTo: '#ffffff',
-    decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(6, 182, 212, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-    style: {
-      borderRadius: 16,
-    },
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      stroke: '#06b6d4'
-    }
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#06b6d4" />
+          <ActivityIndicator size="large" color="#16A085" />
           <Text style={styles.loadingText}>Generating reports...</Text>
         </View>
       </SafeAreaView>
@@ -193,20 +190,23 @@ export default function ServiceReports() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#06b6d4" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTopRow}>
+        <View style={styles.headerTop}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Service Reports</Text>
-          <TouchableOpacity 
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Service Reports</Text>
+            <Text style={styles.headerSubtitle}>Service analytics and performance</Text>
+          </View>
+          <TouchableOpacity
             style={styles.exportButton}
             onPress={() => setShowExportModal(true)}
           >
-            <Ionicons name="download" size={20} color="white" />
+            <Ionicons name="download" size={20} color="#16A085" />
           </TouchableOpacity>
         </View>
 
@@ -216,16 +216,10 @@ export default function ServiceReports() {
             {['week', 'month', 'quarter', 'year'].map((range) => (
               <TouchableOpacity
                 key={range}
-                style={[
-                  styles.dateRangeButton,
-                  dateRange === range && styles.dateRangeButtonActive
-                ]}
+                style={[styles.dateRangeButton, dateRange === range && styles.dateRangeButtonActive]}
                 onPress={() => setDateRange(range)}
               >
-                <Text style={[
-                  styles.dateRangeText,
-                  dateRange === range && styles.dateRangeTextActive
-                ]}>
+                <Text style={[styles.dateRangeText, dateRange === range && styles.dateRangeTextActive]}>
                   {range.charAt(0).toUpperCase() + range.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -235,10 +229,9 @@ export default function ServiceReports() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.reportsContainer}>
-          
+        <View style={styles.scrollContent}>
           {/* Overview Stats */}
-          <View style={styles.section}>
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Performance Overview</Text>
               <Text style={styles.sectionSubtitle}>Last {dateRange}</Text>
@@ -249,7 +242,7 @@ export default function ServiceReports() {
                 value={reports.overview.totalServices}
                 change={8.5}
                 icon="business"
-                color="#06b6d4"
+                color="#16A085"
               />
               <StatCard
                 title="Completion Rate"
@@ -276,7 +269,7 @@ export default function ServiceReports() {
           </View>
 
           {/* Chart Selector */}
-          <View style={styles.section}>
+          <View style={styles.sectionCard}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chartSelectorScroll}>
               <View style={styles.chartSelector}>
                 {[
@@ -287,21 +280,15 @@ export default function ServiceReports() {
                 ].map((chart) => (
                   <TouchableOpacity
                     key={chart.id}
-                    style={[
-                      styles.chartButton,
-                      selectedChart === chart.id && styles.chartButtonActive
-                    ]}
+                    style={[styles.chartButton, selectedChart === chart.id && styles.chartButtonActive]}
                     onPress={() => setSelectedChart(chart.id)}
                   >
-                    <Ionicons 
-                      name={chart.icon} 
-                      size={16} 
-                      color={selectedChart === chart.id ? "#06b6d4" : "#64748b"} 
+                    <Ionicons
+                      name={chart.icon}
+                      size={16}
+                      color={selectedChart === chart.id ? "#16A085" : "#64748b"}
                     />
-                    <Text style={[
-                      styles.chartButtonText,
-                      selectedChart === chart.id && styles.chartButtonTextActive
-                    ]}>
+                    <Text style={[styles.chartButtonText, selectedChart === chart.id && styles.chartButtonTextActive]}>
                       {chart.label}
                     </Text>
                   </TouchableOpacity>
@@ -369,7 +356,7 @@ export default function ServiceReports() {
                       datasets: [
                         {
                           data: reports.monthlyComparison.currentYear,
-                          color: () => '#06b6d4',
+                          color: () => '#16A085',
                         },
                         {
                           data: reports.monthlyComparison.previousYear,
@@ -390,7 +377,7 @@ export default function ServiceReports() {
           </View>
 
           {/* Top Performers */}
-          <View style={styles.section}>
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Top Performers</Text>
               <Text style={styles.sectionSubtitle}>This {dateRange}</Text>
@@ -407,7 +394,7 @@ export default function ServiceReports() {
           </View>
 
           {/* Route Performance */}
-          <View style={styles.section}>
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Route Performance</Text>
               <Text style={styles.sectionSubtitle}>Efficiency metrics</Text>
@@ -431,7 +418,7 @@ export default function ServiceReports() {
           </View>
 
           {/* Service Breakdown */}
-          <View style={styles.section}>
+          <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Service Breakdown</Text>
             </View>
@@ -468,6 +455,12 @@ export default function ServiceReports() {
               </View>
             </View>
           </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.tagline}>CLEAN • SMART • RELIABLE</Text>
+            <Text style={styles.copyright}>© 2026 CleanHaul • B2B Waste Operations</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -496,10 +489,10 @@ export default function ServiceReports() {
                   style={styles.exportOption}
                   onPress={() => handleExportReport(format)}
                 >
-                  <Ionicons 
-                    name={format === 'pdf' ? 'document-text' : format === 'excel' ? 'table' : 'grid'} 
-                    size={24} 
-                    color="#06b6d4" 
+                  <Ionicons
+                    name={format === 'pdf' ? 'document-text' : format === 'excel' ? 'table' : 'grid'}
+                    size={24}
+                    color="#16A085"
                   />
                   <Text style={styles.exportOptionText}>
                     {format.toUpperCase()}
@@ -519,41 +512,71 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
-  header: {
-    backgroundColor: '#06b6d4',
-    paddingBottom: 16,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 12,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  // Header
+  header: {
+    flexDirection: 'column',
     marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '400',
   },
   exportButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(22,160,133,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   dateRangeScroll: {
-    paddingHorizontal: 20,
+    marginTop: 8,
   },
   dateRangeContainer: {
     flexDirection: 'row',
@@ -563,37 +586,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#f1f5f9',
   },
   dateRangeButtonActive: {
-    backgroundColor: 'white',
+    backgroundColor: '#16A085',
   },
   dateRangeText: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#64748b',
   },
   dateRangeTextActive: {
-    color: '#06b6d4',
+    color: 'white',
   },
   content: {
     flex: 1,
   },
-  reportsContainer: {
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  sectionCard: {
+    backgroundColor: 'white',
+    borderRadius: 24,
     padding: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    color: '#64748b',
-    fontSize: 16,
-  },
-  section: {
-    marginBottom: 24,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 4,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -602,8 +624,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1e293b',
   },
   sectionSubtitle: {
@@ -617,16 +639,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    flex: 1,
-    minWidth: '48%',
-    backgroundColor: 'white',
+    width: '48%',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   statHeader: {
     flexDirection: 'row',
@@ -671,21 +689,17 @@ const styles = StyleSheet.create({
   chartButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   chartButtonActive: {
     backgroundColor: '#f0f9ff',
-    borderWidth: 2,
-    borderColor: '#06b6d4',
+    borderColor: '#16A085',
   },
   chartButtonText: {
     fontSize: 14,
@@ -693,17 +707,10 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   chartButtonTextActive: {
-    color: '#06b6d4',
+    color: '#16A085',
   },
   chartContainer: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    marginTop: 8,
   },
   chartSection: {
     alignItems: 'center',
@@ -725,21 +732,18 @@ const styles = StyleSheet.create({
   performerCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     gap: 12,
   },
   rankBadge: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#06b6d4',
+    backgroundColor: '#16A085',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -767,7 +771,7 @@ const styles = StyleSheet.create({
   revenueText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#10b981',
+    color: '#16A085',
     marginBottom: 2,
   },
   revenueLabel: {
@@ -780,14 +784,11 @@ const styles = StyleSheet.create({
   routeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     justifyContent: 'space-between',
   },
   routeInfo: {
@@ -813,7 +814,7 @@ const styles = StyleSheet.create({
   efficiencyText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#06b6d4',
+    color: '#16A085',
     marginBottom: 2,
   },
   efficiencyLabel: {
@@ -826,15 +827,12 @@ const styles = StyleSheet.create({
   },
   breakdownItem: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#f8fafc',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   breakdownIcon: {
     width: 48,
@@ -858,7 +856,23 @@ const styles = StyleSheet.create({
   breakdownPercentage: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#06b6d4',
+    color: '#16A085',
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  tagline: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94a3b8',
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  copyright: {
+    fontSize: 9,
+    color: '#cbd5e1',
   },
   // Modal Styles
   modalOverlay: {
@@ -870,7 +884,7 @@ const styles = StyleSheet.create({
   },
   exportModal: {
     backgroundColor: 'white',
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
     width: '100%',
     maxWidth: 400,
@@ -907,6 +921,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     fontWeight: '600',
-    color: '#06b6d4',
+    color: '#16A085',
   },
 });
+
+// fix with real actual data 

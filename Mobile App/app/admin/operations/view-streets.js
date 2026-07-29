@@ -16,8 +16,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-// import { API_BASE_URL } from '../../../config';
+import apiClient from '../../../hooks/services/client';
+
+
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -42,22 +43,20 @@ export default function ViewStreets() {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        router.replace('/Login');
+        router.replace('/');
       }
     } catch (error) {
       console.error('Auth check error:', error);
-      router.replace('/Login');
+      router.replace('/');
     }
   };
 
   const fetchStreets = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const response = await axios.get(`${API_BASE_URL}/api/street/all`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await apiClient.get(`/street/all`);
       setStreets(response.data.streets || []);
     } catch (error) {
       Alert.alert('Error', 'Failed to fetch streets');
@@ -83,7 +82,6 @@ export default function ViewStreets() {
   };
 
   const handleCloseModal = () => {
-    // Check if there are unsaved changes
     if (selectedStreet) {
       const hasChanges =
         editFormData.streetName.trim() !== selectedStreet.streetName ||
@@ -153,9 +151,9 @@ export default function ViewStreets() {
     setSaving(true);
 
     try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.put(
-        `${API_BASE_URL}/api/street/${selectedStreet._id}`,
+      const token = await AsyncStorage.getItem('userToken');
+      await apiClient.put(
+        `/street/${selectedStreet._id}`,
         {
           streetName: editFormData.streetName.trim(),
           details: editFormData.details.trim(),
@@ -169,7 +167,7 @@ export default function ViewStreets() {
       setEditModalVisible(false);
       setSelectedStreet(null);
       setEditFormData({ streetName: '', details: '' });
-      fetchStreets(); // Refresh the list
+      fetchStreets();
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to update street';
       Alert.alert('Error', errorMessage);
@@ -195,8 +193,8 @@ export default function ViewStreets() {
 
   const confirmDelete = async (streetId) => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      await axios.delete(`${API_BASE_URL}/api/street/${streetId}`, {
+      const token = await AsyncStorage.getItem('userToken');
+      await apiClient.delete(`/street/${streetId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       Alert.alert('Success', 'Street deleted successfully');
@@ -214,9 +212,9 @@ export default function ViewStreets() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2E8B57" />
+          <ActivityIndicator size="large" color="#16A085" />
           <Text style={styles.loadingText}>Loading streets...</Text>
         </View>
       </SafeAreaView>
@@ -225,23 +223,39 @@ export default function ViewStreets() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#2E8B57" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            accessibilityLabel="Go back"
-          >
-            <Text style={styles.backButtonText}>←</Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
             <Text style={styles.headerTitle}>All Streets</Text>
             <Text style={styles.headerSubtitle}>
               {filteredStreets.length} street{filteredStreets.length !== 1 ? 's' : ''} registered
             </Text>
+          </View>
+          <View style={styles.headerPlaceholder} />
+        </View>
+
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#64748b" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search streets by name..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#94a3b8"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -251,7 +265,7 @@ export default function ViewStreets() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E8B57']} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#16A085']} tintColor="#16A085" />
         }
       >
         <View style={styles.streetsContainer}>
@@ -276,7 +290,7 @@ export default function ViewStreets() {
               <View key={street._id} style={styles.streetCard}>
                 <View style={styles.streetHeader}>
                   <View style={styles.streetIcon}>
-                    <Ionicons name="location" size={24} color="#2E8B57" />
+                    <Ionicons name="location" size={24} color="#16A085" />
                   </View>
                   <View style={styles.streetInfo}>
                     <Text style={styles.streetName}>{street.streetName}</Text>
@@ -318,7 +332,6 @@ export default function ViewStreets() {
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push('/admin/streets/add-street')}
-        accessibilityLabel="Add new street"
       >
         <Ionicons name="add" size={28} color="white" />
       </TouchableOpacity>
@@ -335,21 +348,16 @@ export default function ViewStreets() {
           style={styles.modalOverlay}
         >
           <View style={styles.modalContainer}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>Edit Street</Text>
                 <Text style={styles.modalSubtitle}>Update street information</Text>
               </View>
-              <TouchableOpacity
-                onPress={handleCloseModal}
-                style={styles.modalCloseButton}
-              >
+              <TouchableOpacity onPress={handleCloseModal} style={styles.modalCloseButton}>
                 <Ionicons name="close" size={24} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            {/* Change Indicator */}
             {hasChanges() && (
               <View style={styles.changeIndicator}>
                 <Ionicons name="alert-circle" size={16} color="#92400E" />
@@ -357,16 +365,11 @@ export default function ViewStreets() {
               </View>
             )}
 
-            {/* Modal Content */}
             <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-              {/* Street Name Input */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Street Name *</Text>
-                <View style={[
-                  styles.outlineInput,
-                  editFormData.streetName.trim() && styles.inputWithValue
-                ]}>
-                  <Text style={styles.inputIcon}>🛣️</Text>
+                <View style={[styles.inputContainer, editFormData.streetName.trim() && styles.inputWithValue]}>
+                  <Ionicons name="location" size={20} color="#64748b" style={styles.inputIcon} />
                   <TextInput
                     style={styles.textInput}
                     placeholder="Enter street name"
@@ -382,15 +385,10 @@ export default function ViewStreets() {
                 </Text>
               </View>
 
-              {/* Details Input */}
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Additional Details</Text>
-                <View style={[
-                  styles.outlineInput,
-                  styles.textAreaInput,
-                  editFormData.details.trim() && styles.inputWithValue
-                ]}>
-                  <Text style={[styles.inputIcon, styles.textAreaIcon]}>📝</Text>
+                <View style={[styles.inputContainer, editFormData.details.trim() && styles.inputWithValue]}>
+                  <Ionicons name="document-text" size={20} color="#64748b" style={styles.inputIcon} />
                   <TextInput
                     style={[styles.textInput, styles.textArea]}
                     placeholder="Enter additional details"
@@ -408,7 +406,6 @@ export default function ViewStreets() {
                 </Text>
               </View>
 
-              {/* Preview */}
               {(editFormData.streetName.trim() || editFormData.details.trim()) && (
                 <View style={styles.previewSection}>
                   <Text style={styles.previewTitle}>Preview</Text>
@@ -424,7 +421,6 @@ export default function ViewStreets() {
               )}
             </ScrollView>
 
-            {/* Modal Footer */}
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.cancelButton]}
@@ -443,10 +439,7 @@ export default function ViewStreets() {
                 onPress={handleSaveEdit}
                 disabled={saving || !hasChanges()}
               >
-                <Text style={[
-                  styles.saveButtonText,
-                  (saving || !hasChanges()) && styles.disabledButtonText
-                ]}>
+                <Text style={[styles.saveButtonText, (saving || !hasChanges()) && styles.disabledButtonText]}>
                   {saving ? 'Saving...' : 'Save Changes'}
                 </Text>
               </TouchableOpacity>
@@ -461,7 +454,7 @@ export default function ViewStreets() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f8fafc',
   },
   loadingContainer: {
     flex: 1,
@@ -473,43 +466,71 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#64748B',
   },
+  // Header
   header: {
-    backgroundColor: '#2E8B57',
-    paddingBottom: 24,
+    flexDirection: 'column',
+    marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  headerContent: {
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    marginBottom: 12,
   },
   backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
-  },
-  backButtonText: {
-    fontSize: 20,
-    color: 'white',
-    fontWeight: '600',
   },
   headerTextContainer: {
     flex: 1,
+    marginLeft: 12,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1e293b',
     marginBottom: 2,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#64748b',
     fontWeight: '400',
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  searchContainer: {
+    marginTop: 8,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1e293b',
+    marginHorizontal: 12,
   },
   content: {
     flex: 1,
@@ -520,14 +541,16 @@ const styles = StyleSheet.create({
   },
   streetCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
-    padding: 16,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#16A085',
   },
   streetHeader: {
     flexDirection: 'row',
@@ -546,7 +569,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   streetName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1E293B',
     marginBottom: 4,
@@ -616,10 +639,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#2E8B57',
+    backgroundColor: '#16A085',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   emptyButtonText: {
     color: 'white',
@@ -633,7 +661,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2E8B57',
+    backgroundColor: '#16A085',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -709,43 +737,32 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 8,
   },
-  outlineInput: {
-    minHeight: 48,
-    borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    backgroundColor: 'white',
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 16,
     paddingVertical: 12,
   },
   inputWithValue: {
-    borderColor: '#2E8B57',
+    borderColor: '#16A085',
     backgroundColor: '#F0FDF4',
   },
-  textAreaInput: {
-    minHeight: 100,
-    alignItems: 'flex-start',
-  },
   inputIcon: {
-    fontSize: 18,
     marginRight: 12,
-    width: 20,
     marginTop: 2,
-  },
-  textAreaIcon: {
-    marginTop: 0,
   },
   textInput: {
     flex: 1,
     fontSize: 16,
-    color: '#111827',
-    lineHeight: 22,
+    color: '#1e293b',
   },
   textArea: {
+    minHeight: 100,
     textAlignVertical: 'top',
-    minHeight: 70,
   },
   helperText: {
     fontSize: 12,
@@ -791,7 +808,7 @@ const styles = StyleSheet.create({
   modalButton: {
     flex: 1,
     height: 48,
-    borderRadius: 8,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -806,7 +823,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveButton: {
-    backgroundColor: '#2E8B57',
+    backgroundColor: '#16A085',
   },
   saveButtonText: {
     color: 'white',

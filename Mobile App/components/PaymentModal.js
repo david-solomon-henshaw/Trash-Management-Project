@@ -84,7 +84,7 @@ export default function PaymentModal({ visible, onClose }) {
 
   const checkAuth = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
         Alert.alert('Error', 'Please login again');
         handleClose();
@@ -105,10 +105,10 @@ export default function PaymentModal({ visible, onClose }) {
 
   const fetchData = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
 
-      const streetData = await axios.get(`${API_BASE_URL}/api/street/all`, { headers });
+      const streetData = await apiClient.get(`/street/all`);
       setStreets(streetData.data.streets || []);
 
       setLoading(false);
@@ -121,9 +121,9 @@ export default function PaymentModal({ visible, onClose }) {
   const fetchCustomersByStreet = async (streetId) => {
     setLoadingCustomers(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.get(`${API_BASE_URL}/api/customers/by-street/${streetId}`, { headers });
+      const token = await AsyncStorage.getItem('userToken');
+     
+      const response = await apiClient.get(`/customers/by-street/${streetId}`);
       setCustomers(response.data.customers || []);
       
       if (response.data.customers.length === 0) {
@@ -141,15 +141,15 @@ export default function PaymentModal({ visible, onClose }) {
   const fetchCustomerPaymentHistory = async (customerId) => {
     setLoadingHistory(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
       
       // Fetch customer details
-      const customerResponse = await axios.get(`${API_BASE_URL}/api/customers/${customerId}`, { headers });
+      const customerResponse = await apiClient.get(`/customers/${customerId}`);
       setSelectedCustomerDetails(customerResponse.data.customer);
       
       // Fetch payment summary
-      const summaryResponse = await axios.get(`${API_BASE_URL}/api/payments/summary/${customerId}`, { headers });
+      const summaryResponse = await apiClient.get(`/payments/summary/${customerId}`);
       setCustomerPaymentHistory(summaryResponse.data);
       
       // Calculate balance for the currently selected month
@@ -270,8 +270,8 @@ export default function PaymentModal({ visible, onClose }) {
   const submitPayment = async (amount) => {
     setSubmitting(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const token = await AsyncStorage.getItem('userToken');
+     
       const payload = {
         customer_id: formData.customer,
         amount: amount,
@@ -285,7 +285,7 @@ export default function PaymentModal({ visible, onClose }) {
         allow_overpayment: true
       };
       
-      const response = await axios.post(`${API_BASE_URL}/api/payments`, payload, { headers });
+      const response = await apiClient.post(`/payments`, payload);
       
       const summary = response.data.payment_summary;
       const receipt = response.data.receipt;

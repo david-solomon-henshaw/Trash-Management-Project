@@ -38,7 +38,7 @@ export default function PaymentHistory() {
 
   const getAuthToken = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('userToken');
       return token;
     } catch (error) {
       console.error('Error getting auth token:', error);
@@ -50,8 +50,8 @@ export default function PaymentHistory() {
     try {
       setLoading(true);
       const token = await getAuthToken();
-      const url = `${API_BASE_URL}/api/billing/search?query=${encodeURIComponent(query)}`;
-      const response = await axios.get(url, {
+      const url = `/billing/search?query=${encodeURIComponent(query)}`;
+      const response = await apiClient.get(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export default function PaymentHistory() {
   const prefetchCustomerBillingHistory = async (customerId) => {
     try {
       const token = await getAuthToken();
-      const response = await axios.get(`${API_BASE_URL}/api/billing/customer/${customerId}`, {
+      const response = await apiClient.get(`/billing/customer/${customerId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ export default function PaymentHistory() {
     try {
       if (paymentDetails[paymentId]) return;
       const token = await getAuthToken();
-      const response = await axios.get(`${API_BASE_URL}/api/billing/payment/${paymentId}`, {
+      const response = await apiClient.get(`/billing/payment/${paymentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
